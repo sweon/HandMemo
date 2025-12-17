@@ -5,6 +5,7 @@ import { db } from '../../db';
 import { Link, useNavigate, useParams } from 'react-router-dom'; // Ensure react-router-dom is installed
 import { FiPlus, FiSettings, FiSun, FiMoon, FiSearch } from 'react-icons/fi';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useSearch } from '../../contexts/SearchContext';
 import { format } from 'date-fns';
 
 const SidebarContainer = styled.div`
@@ -133,7 +134,7 @@ interface SidebarProps {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
-  const [search, setSearch] = useState('');
+  const { searchQuery, setSearchQuery } = useSearch();
   const [sortBy, setSortBy] = useState<'date-desc' | 'date-asc' | 'model'>('date-desc');
   const { mode, toggleTheme } = useTheme();
   const navigate = useNavigate();
@@ -146,9 +147,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
     let result = await collection;
 
     // Filter
-    if (search) {
-      if (search.startsWith('tag:')) {
-        const tag = search.slice(4).trim();
+    if (searchQuery) {
+      if (searchQuery.startsWith('tag:')) {
+        const tag = searchQuery.slice(4).trim();
         // For tag search, we might want to use the index, but mixing with sort can be tricky in Dexie raw.
         // Simpler to filter in memory for this scale if we want flexible sorting on top.
         // Or use index then sort in memory.
@@ -157,7 +158,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
           result = tagged;
         }
       } else {
-        const lowerSearch = search.toLowerCase();
+        const lowerSearch = searchQuery.toLowerCase();
         result = result.filter(l => l.title.toLowerCase().includes(lowerSearch) || l.tags.some(t => t.toLowerCase().includes(lowerSearch)));
       }
     }
@@ -182,7 +183,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
       return 0;
     });
 
-  }, [search, sortBy, models]);
+  }, [searchQuery, sortBy, models]);
 
   return (
     <SidebarContainer>
@@ -191,8 +192,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
           <SearchIcon size={16} />
           <SearchInput
             placeholder="Search... (tag:name for tags)"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
           />
         </SearchInputWrapper>
         <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>

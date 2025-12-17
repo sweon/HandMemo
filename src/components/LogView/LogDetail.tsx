@@ -3,6 +3,7 @@ import styled from 'styled-components';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../../db';
+import { useSearch } from '../../contexts/SearchContext';
 
 import { MarkdownEditor } from '../Editor/MarkdownEditor';
 import { MarkdownView } from '../Editor/MarkdownView';
@@ -104,6 +105,7 @@ const ModelSelect = styled.select`
 export const LogDetail: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
+    const { setSearchQuery } = useSearch();
     const isNew = id === undefined;
 
     const [isEditing, setIsEditing] = useState(isNew);
@@ -219,8 +221,19 @@ export const LogDetail: React.FC = () => {
                             <span>•</span>
                             <span>{log && format(log.createdAt, 'MMM d, yyyy')}</span>
                             {log?.tags.map(t => (
-                                <span key={t} style={{ background: '#eee', padding: '2px 6px', borderRadius: '4px', fontSize: '12px', color: '#333' }}>
-                                    #{t}
+                                <span
+                                    key={t}
+                                    onClick={() => setSearchQuery(`tag:${t}`)}
+                                    style={{
+                                        background: '#eee',
+                                        padding: '2px 6px',
+                                        borderRadius: '4px',
+                                        fontSize: '12px',
+                                        color: '#333',
+                                        cursor: 'pointer'
+                                    }}
+                                >
+                                    {t}
                                 </span>
                             ))}
                         </>
