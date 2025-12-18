@@ -9,6 +9,8 @@ const Container = styled.div`
   padding: 2rem;
   max-width: 800px;
   margin: 0 auto;
+  height: 100%;
+  overflow-y: auto;
 `;
 
 const Section = styled.div`
