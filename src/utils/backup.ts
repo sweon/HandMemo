@@ -36,8 +36,8 @@ export const exportData = async (selectedLogIds?: number[], customFileName?: str
     let fileName = customFileName;
     if (!fileName) {
         fileName = selectedLogIds && selectedLogIds.length > 0
-            ? `llm-logs-partial-${new Date().toISOString().slice(0, 10)}.json`
-            : `llm-logs-backup-${new Date().toISOString().slice(0, 10)}.json`;
+            ? `llmemo-partial-${new Date().toISOString().slice(0, 10)}.json`
+            : `llmemo-backup-${new Date().toISOString().slice(0, 10)}.json`;
     }
 
     if (!fileName.toLowerCase().endsWith('.json')) {
