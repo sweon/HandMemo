@@ -158,7 +158,7 @@ export const SettingsPage: React.FC = () => {
         setShowExportModal(true);
         setExportMode('all');
         setSelectedLogs(new Set());
-        setExportFileName(`llm-logs-backup-${new Date().toISOString().slice(0, 10)}`);
+        setExportFileName(`llmemo-backup-${new Date().toISOString().slice(0, 10)}`);
     };
 
     const confirmExport = async () => {
