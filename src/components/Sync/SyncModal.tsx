@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import styled from 'styled-components';
 import { SyncService, type SyncStatus } from '../../services/SyncService';
-import { FaTimes, FaSync } from 'react-icons/fa';
+import { FaTimes, FaSync, FaRegCopy, FaRedo } from 'react-icons/fa';
+import { v4 as uuidv4 } from 'uuid';
 
 interface SyncModalProps {
     isOpen: boolean;
@@ -23,27 +24,54 @@ const Overlay = styled.div`
 
 const ModalContainer = styled.div`
     background-color: var(--bg-secondary);
-    padding: 24px;
     border-radius: 12px;
     width: 450px;
     max-width: 90%;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
     color: var(--text-primary);
+    overflow: hidden;
 `;
 
 const Header = styled.div`
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 20px;
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border-color);
 
     h2 {
         margin: 0;
-        font-size: 1.5rem;
+        font-size: 1.2rem;
         display: flex;
         align-items: center;
         gap: 10px;
     }
+`;
+
+const TabContainer = styled.div`
+    display: flex;
+    background-color: var(--bg-tertiary);
+`;
+
+const Tab = styled.button<{ $active: boolean }>`
+    flex: 1;
+    padding: 16px;
+    background: ${props => props.$active ? 'var(--bg-secondary)' : 'transparent'};
+    border: none;
+    border-bottom: 2px solid ${props => props.$active ? 'var(--primary-color)' : 'transparent'};
+    color: ${props => props.$active ? 'var(--primary-color)' : 'var(--text-secondary)'};
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+
+    &:hover {
+        background: var(--bg-secondary);
+        color: ${props => props.$active ? 'var(--primary-color)' : 'var(--text-primary)'};
+    }
+`;
+
+const Content = styled.div`
+    padding: 24px;
 `;
 
 const CloseButton = styled.button`
@@ -58,10 +86,6 @@ const CloseButton = styled.button`
     }
 `;
 
-const Section = styled.div`
-    margin-bottom: 24px;
-`;
-
 const Label = styled.label`
     display: block;
     margin-bottom: 8px;
@@ -71,26 +95,52 @@ const Label = styled.label`
 
 const InputGroup = styled.div`
     display: flex;
-    gap: 10px;
+    gap: 8px;
+    margin-bottom: 20px;
 `;
 
 const Input = styled.input`
     flex: 1;
-    padding: 10px;
+    padding: 12px;
     border-radius: 6px;
     border: 1px solid var(--border-color);
     background-color: var(--bg-primary);
     color: var(--text-primary);
     font-size: 1rem;
+    font-family: monospace;
 
     &:focus {
         outline: none;
         border-color: var(--primary-color);
     }
+    
+    &:disabled {
+        background-color: var(--bg-tertiary);
+        color: var(--text-secondary);
+    }
 `;
 
-const Button = styled.button<{ $variant?: 'primary' | 'secondary' }>`
-    padding: 10px 16px;
+const IconButton = styled.button`
+    padding: 12px;
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    background-color: var(--bg-secondary);
+    color: var(--text-secondary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+
+    &:hover {
+        background-color: var(--bg-tertiary);
+        color: var(--text-primary);
+        border-color: var(--text-secondary);
+    }
+`;
+
+const Button = styled.button<{ $variant?: 'primary' | 'secondary'; $fullWidth?: boolean }>`
+    padding: 12px 16px;
     border-radius: 6px;
     border: none;
     cursor: pointer;
@@ -98,6 +148,7 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' }>`
     transition: background-color 0.2s;
     background-color: ${props => props.$variant === 'secondary' ? 'var(--bg-tertiary)' : 'var(--primary-color)'};
     color: ${props => props.$variant === 'secondary' ? 'var(--text-primary)' : '#fff'};
+    width: ${props => props.$fullWidth ? '100%' : 'auto'};
 
     &:hover {
         opacity: 0.9;
@@ -130,25 +181,9 @@ const StatusBox = styled.div<{ $status: SyncStatus }>`
     }};
 `;
 
-const Divider = styled.div`
-    height: 1px;
-    background-color: var(--border-color);
-    margin: 20px 0;
-    position: relative;
-    
-    span {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        background-color: var(--bg-secondary);
-        padding: 0 10px;
-        color: var(--text-secondary);
-        font-size: 0.8rem;
-    }
-`;
 
 export const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose }) => {
+    const [activeTab, setActiveTab] = useState<'host' | 'join'>('host');
     const [roomId, setRoomId] = useState('');
     const [targetRoomId, setTargetRoomId] = useState('');
     const [status, setStatus] = useState<SyncStatus>('disconnected');
@@ -157,9 +192,13 @@ export const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose }) => {
     const syncService = useRef<SyncService | null>(null);
 
     useEffect(() => {
-        if (!isOpen) {
-            // Cleanup on close? Maybe keep connection? 
-            // For now, let's cleanup to avoid zombie connections
+        if (isOpen) {
+            // Auto generate ID if empty
+            if (!roomId) {
+                setRoomId(uuidv4());
+            }
+        } else {
+            // Cleanup
             if (syncService.current) {
                 syncService.current.destroy();
                 syncService.current = null;
@@ -167,7 +206,7 @@ export const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose }) => {
             setStatus('disconnected');
             setStatusMessage('');
         }
-    }, [isOpen]);
+    }, [isOpen, roomId]);
 
     const handleStatusChange = (newStatus: SyncStatus, msg?: string) => {
         setStatus(newStatus);
@@ -179,10 +218,7 @@ export const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose }) => {
             syncService.current = new SyncService({
                 onStatusChange: handleStatusChange,
                 onDataReceived: () => {
-                    // Refresh data? App might need context update.
-                    // Ideally, we trigger a reload or context refresh.
-                    // For now, user can just close modal and navigate.
-                    window.location.reload(); // Brute force refresh for now to ensure DB updates are seen
+                    window.location.reload();
                 }
             });
         }
@@ -205,6 +241,16 @@ export const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose }) => {
         svc.connect(targetRoomId);
     };
 
+    const copyToClipboard = () => {
+        navigator.clipboard.writeText(roomId);
+        // Could show toast
+    };
+
+    const regenerateId = () => {
+        if (status !== 'disconnected' && status !== 'error' && status !== 'completed') return;
+        setRoomId(uuidv4());
+    };
+
     if (!isOpen) return null;
 
     return (
@@ -215,41 +261,75 @@ export const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose }) => {
                     <CloseButton onClick={onClose}><FaTimes /></CloseButton>
                 </Header>
 
-                <Section>
-                    <Label>Your Room ID (Share this to let others join)</Label>
-                    <InputGroup>
-                        <Input
-                            placeholder="e.g. my-secret-room"
-                            value={roomId}
-                            onChange={e => setRoomId(e.target.value)}
-                        />
-                        <Button onClick={startHosting} disabled={status === 'connected' || status === 'syncing'}>
-                            Start Hosting
-                        </Button>
-                    </InputGroup>
-                </Section>
+                <TabContainer>
+                    <Tab
+                        $active={activeTab === 'host'}
+                        onClick={() => setActiveTab('host')}
+                        disabled={status === 'connected' || status === 'syncing'}
+                    >
+                        Host Session
+                    </Tab>
+                    <Tab
+                        $active={activeTab === 'join'}
+                        onClick={() => setActiveTab('join')}
+                        disabled={status === 'connected' || status === 'syncing'}
+                    >
+                        Join Session
+                    </Tab>
+                </TabContainer>
 
-                <Divider><span>OR</span></Divider>
+                <Content>
+                    {activeTab === 'host' ? (
+                        <>
+                            <Label>Your Room ID</Label>
+                            <InputGroup>
+                                <Input
+                                    readOnly
+                                    value={roomId}
+                                    disabled={status === 'connected'}
+                                />
+                                <IconButton onClick={copyToClipboard} title="Copy ID">
+                                    <FaRegCopy />
+                                </IconButton>
+                                <IconButton onClick={regenerateId} disabled={status === 'connected'} title="Regenerate ID">
+                                    <FaRedo />
+                                </IconButton>
+                            </InputGroup>
+                            <Button
+                                $fullWidth
+                                onClick={startHosting}
+                                disabled={status === 'connected' || status === 'syncing'}
+                            >
+                                {status === 'connected' ? 'Hosting...' : 'Start Hosting'}
+                            </Button>
+                        </>
+                    ) : (
+                        <>
+                            <Label>Target Room ID</Label>
+                            <InputGroup>
+                                <Input
+                                    placeholder="Paste Room ID here"
+                                    value={targetRoomId}
+                                    onChange={e => setTargetRoomId(e.target.value)}
+                                    disabled={status === 'connected'}
+                                />
+                            </InputGroup>
+                            <Button
+                                $fullWidth
+                                onClick={connectToPeer}
+                                disabled={!targetRoomId || status === 'connected' || status === 'syncing'}
+                            >
+                                {status === 'connected' ? 'Connected' : 'Connect'}
+                            </Button>
+                        </>
+                    )}
 
-                <Section>
-                    <Label>Target Room ID (Enter ID to join)</Label>
-                    <InputGroup>
-                        <Input
-                            placeholder="Enter Room ID to join"
-                            value={targetRoomId}
-                            onChange={e => setTargetRoomId(e.target.value)}
-                        />
-                        <Button onClick={connectToPeer} disabled={status === 'connected' || status === 'syncing'}>
-                            Connect
-                        </Button>
-                    </InputGroup>
-                </Section>
-
-                {statusMessage && (
-                    <StatusBox $status={status}>
-                        {statusMessage}
-                    </StatusBox>
-                )}
+                    {statusMessage && (
+                        <StatusBox $status={status}>
+                            {statusMessage}
+                        </StatusBox>
+                    )}
+                </Content>
             </ModalContainer>
         </Overlay>
     );
