@@ -208,16 +208,16 @@ export const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose }) => {
             if (!roomId) {
                 setRoomId(generateShortId());
             }
-        } else {
-            // Cleanup
-            if (syncService.current) {
+        }
+
+        // Proper cleanup on unmount or when isOpen changes to false
+        return () => {
+            if (!isOpen && syncService.current) {
                 syncService.current.destroy();
                 syncService.current = null;
             }
-            setStatus('disconnected');
-            setStatusMessage('');
-        }
-    }, [isOpen, roomId]);
+        };
+    }, [isOpen]); // Removed roomId from dependency to avoid re-running on typing
 
     const handleStatusChange = (newStatus: SyncStatus, msg?: string) => {
         setStatus(newStatus);

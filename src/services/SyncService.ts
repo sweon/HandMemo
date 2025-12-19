@@ -16,6 +16,8 @@ export class SyncService {
 
     constructor(options: SyncServiceOptions) {
         this.options = options;
+        // Bind methods to avoid context loss
+        this.handleConnection = this.handleConnection.bind(this);
     }
 
     public async initialize(roomId: string): Promise<string> {
@@ -71,14 +73,16 @@ export class SyncService {
         this.conn = conn;
 
         conn.on('open', async () => {
+            console.log('Connection opened:', conn.peer);
             this.options.onStatusChange('connected', 'Peer Connected!');
 
             // Start Heartbeat
             this.startHeartbeat();
 
-            // Auto sync on connect?
-            // Let's send our data immediately
-            await this.syncData();
+            // Wait a bit before syncing to ensure stable connection
+            setTimeout(async () => {
+                await this.syncData();
+            }, 1000);
         });
 
         conn.on('data', async (data: any) => {
@@ -104,6 +108,9 @@ export class SyncService {
         });
 
         conn.on('error', (err) => {
+            console.error('Connection Error:', err);
+            // Don't close immediately on error, might be recoverable?
+            // But usually PeerJS errors on conn are fatal for that conn.
             this.stopHeartbeat();
             this.options.onStatusChange('error', `Connection Error: ${err.message}`);
         });
