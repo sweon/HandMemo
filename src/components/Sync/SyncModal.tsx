@@ -209,15 +209,19 @@ export const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose }) => {
                 setRoomId(generateShortId());
             }
         }
+        // Removing automatic cleanup in useEffect to prevent accidental closure during potential re-renders.
+        // Cleanup is now handled strictly in handleClose.
+    }, [isOpen]);
 
-        // Proper cleanup on unmount or when isOpen changes to false
-        return () => {
-            if (!isOpen && syncService.current) {
-                syncService.current.destroy();
-                syncService.current = null;
-            }
-        };
-    }, [isOpen]); // Removed roomId from dependency to avoid re-running on typing
+    const handleClose = () => {
+        if (syncService.current) {
+            syncService.current.destroy();
+            syncService.current = null;
+        }
+        setStatus('disconnected');
+        setStatusMessage('');
+        onClose();
+    };
 
     const handleStatusChange = (newStatus: SyncStatus, msg?: string) => {
         setStatus(newStatus);
@@ -265,11 +269,11 @@ export const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose }) => {
     if (!isOpen) return null;
 
     return (
-        <Overlay onClick={onClose}>
+        <Overlay onClick={handleClose}>
             <ModalContainer onClick={e => e.stopPropagation()}>
                 <Header>
                     <h2><FaSync /> Sync Data</h2>
-                    <CloseButton onClick={onClose}><FaTimes /></CloseButton>
+                    <CloseButton onClick={handleClose}><FaTimes /></CloseButton>
                 </Header>
 
                 <TabContainer>

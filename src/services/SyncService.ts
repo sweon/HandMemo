@@ -65,7 +65,9 @@ export class SyncService {
         this.options.onStatusChange('connecting', `Connecting to ${targetPeerId}...`);
         if (!this.peer) return;
 
-        const conn = this.peer.connect(targetPeerId);
+        const conn = this.peer.connect(targetPeerId, {
+            reliable: true
+        });
         this.handleConnection(conn);
     }
 
