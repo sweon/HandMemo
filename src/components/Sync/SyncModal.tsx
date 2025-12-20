@@ -486,10 +486,10 @@ export const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose }) => {
                                 $fullWidth
                                 $variant="host"
                                 onClick={() => startHosting()}
-                                disabled={status === 'syncing' || status === 'connected'}
+                                disabled={status === 'syncing' || status === 'connected' || status === 'connecting'}
                                 style={{ marginBottom: '20px' }}
                             >
-                                {status === 'ready' ? 'Restart Hosting' : 'Start Hosting'}
+                                {status === 'connecting' ? 'Connecting...' : (status === 'ready' ? 'Restart Hosting' : 'Start Hosting')}
                             </Button>
 
                             <div style={{ textAlign: 'center' }}>

@@ -28,6 +28,7 @@ export class SyncService {
 
     public async initialize(roomId: string): Promise<string> {
         this.isHost = true;
+        this.options.onStatusChange('connecting', 'Starting PeerJS server...');
         return new Promise((resolve, reject) => {
             if (this.peer) {
                 this.peer.destroy();
@@ -38,7 +39,7 @@ export class SyncService {
 
             // Highly optimized PeerJS config for stability
             this.peer = new Peer(cleanId, {
-                debug: 0, // Disable debug logs
+                debug: 1, // Re-enabled for troubleshooting on mobile
                 config: {
                     'iceServers': [
                         { urls: 'stun:stun.l.google.com:19302' },
@@ -58,8 +59,16 @@ export class SyncService {
             });
 
             this.peer.on('error', (err) => {
-                console.error('Peer Error:', err);
-                this.options.onStatusChange('error', `Peer Error: ${err.message}`);
+                let message = err.message;
+                if (err.type === 'unavailable-id') {
+                    message = 'This Room ID is already in use. Please try a different one.';
+                } else if (err.type === 'network') {
+                    message = 'Network error. Please check your connection.';
+                } else if (err.type === 'browser-incompatible') {
+                    message = 'Your browser does not support WebRTC sync.';
+                }
+
+                this.options.onStatusChange('error', message);
                 reject(err);
             });
 
@@ -75,7 +84,7 @@ export class SyncService {
         if (!this.peer) {
             // If connecting as client without hosting, we need a random ID
             this.peer = new Peer({
-                debug: 0,
+                debug: 1,
                 config: {
                     'iceServers': [
                         { urls: 'stun:stun.l.google.com:19302' },
@@ -87,7 +96,11 @@ export class SyncService {
                 this._connect(cleanRoomId(targetPeerId));
             });
             this.peer.on('error', (err) => {
-                this.options.onStatusChange('error', `Peer Error: ${err.message}`);
+                let message = err.message;
+                if (err.type === 'peer-unavailable') {
+                    message = 'Peer not found. Make sure the Host ID is correct.';
+                }
+                this.options.onStatusChange('error', message);
             });
         } else {
             this._connect(cleanRoomId(targetPeerId));
