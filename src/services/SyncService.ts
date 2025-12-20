@@ -90,13 +90,25 @@ export class SyncService {
         });
     }
 
-    public connect(targetPeerId: string) {
+    public async connect(targetPeerId: string) {
+        const cleanTargetId = cleanRoomId(targetPeerId);
+
+        // If we were hosting, or if the peer is in a bad state, start fresh
+        if (this.peer && (this.isHost || this.peer.disconnected || this.peer.destroyed)) {
+            console.log('Recreating peer for client connection...');
+            this.peer.destroy();
+            this.peer = null;
+            await new Promise(r => setTimeout(r, 500));
+        }
+
         this.isHost = false;
+
         if (!this.peer) {
-            // If connecting as client without hosting, we need a random ID
+            this.options.onStatusChange('connecting', 'Initializing peer connection...');
             this.peer = new Peer({
                 debug: 2,
                 secure: true,
+                pingInterval: 3000,
                 config: {
                     'iceServers': [
                         { urls: 'stun:stun.l.google.com:19302' },
@@ -104,18 +116,29 @@ export class SyncService {
                     ]
                 }
             });
-            this.peer.on('open', () => {
-                this._connect(cleanRoomId(targetPeerId));
+
+            this.peer.on('open', (id) => {
+                console.log('Client peer opened with ID:', id);
+                this._connect(cleanTargetId);
             });
-            this.peer.on('error', (err) => {
+
+            this.peer.on('error', (err: any) => {
+                console.error('Client Peer Error:', err.type, err);
                 let message = err.message;
                 if (err.type === 'peer-unavailable') {
-                    message = 'Peer not found. Make sure the Host ID is correct.';
+                    message = 'Host not found. Check if the Host ID is correct and active.';
+                } else if (err.type === 'network') {
+                    message = 'Signaling server connection lost.';
                 }
                 this.options.onStatusChange('error', message);
             });
+
+            this.peer.on('disconnected', () => {
+                console.log('Client peer disconnected from signaling server');
+                // Don't auto-reconnect for client as it might be better to just fail and let user retry
+            });
         } else {
-            this._connect(cleanRoomId(targetPeerId));
+            this._connect(cleanTargetId);
         }
     }
 

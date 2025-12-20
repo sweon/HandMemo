@@ -412,7 +412,8 @@ export const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose }) => {
 
     const connectToPeer = (id?: string) => {
         const targetId = id || targetRoomId;
-        if (!targetId.trim()) return;
+        if (!targetId.trim() || status === 'connecting' || status === 'connected' || status === 'syncing') return;
+
         const svc = getService();
         svc.connect(targetId);
         if (isScanning) {
