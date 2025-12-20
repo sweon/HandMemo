@@ -198,8 +198,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
 
   const handleUpdateCheck = async () => {
     if (needRefresh) {
-      setToastMessage('Updating to latest version...');
-      setTimeout(() => updateServiceWorker(true), 500);
+      setToastMessage('Installing update...');
+      // Ensure the UI has a moment to show the message before reload
+      setTimeout(() => {
+        updateServiceWorker(true);
+        // Fallback reload if SW doesn't trigger it within 3s
+        setTimeout(() => window.location.reload(), 3000);
+      }, 500);
       return;
     }
 
@@ -209,19 +214,22 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
     if ('serviceWorker' in navigator) {
       try {
         const registration = await navigator.serviceWorker.ready;
+        // Check for updates on the server
         await registration.update();
 
-        // Give it 1.5s to detect and manifest the change if any
+        // Wait for the state to propagate
         setTimeout(() => {
           setIsCheckingUpdate(false);
-          if (!needRefreshRef.current) {
+          if (needRefreshRef.current) {
+            setToastMessage('Update found! Click again to install.');
+          } else {
             setToastMessage('You are up to date!');
           }
-        }, 1500);
+        }, 2000);
       } catch (error) {
         console.error('Error checking for updates:', error);
         setIsCheckingUpdate(false);
-        setToastMessage('Update check failed');
+        setToastMessage('Check failed. Try again.');
       }
     } else {
       setIsCheckingUpdate(false);
