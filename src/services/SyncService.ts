@@ -30,22 +30,26 @@ export class SyncService {
         this.isHost = true;
         this.isInitiator = false;
 
-        this.options.onStatusChange('connecting', 'Connecting to global server...');
+        this.options.onStatusChange('connecting', 'Connecting to global sync network...');
 
         if (this.peer && !this.peer.destroyed) {
             if (this.peer.id === cleanRoomId(roomId)) {
                 return this.peer.id;
             }
             this.peer.destroy();
-            await new Promise(r => setTimeout(r, 500));
+            await new Promise(r => setTimeout(r, 800));
         }
 
         return new Promise((resolve, reject) => {
             const cleanId = cleanRoomId(roomId);
 
+            // Explicitly configuring PeerJS Cloud Server for better reliability
             this.peer = new Peer(cleanId, {
-                debug: 1,
+                host: '0.peerjs.com',
+                port: 443,
+                path: '/',
                 secure: true,
+                debug: 1,
                 config: {
                     'iceServers': [
                         { urls: 'stun:stun.l.google.com:19302' },
@@ -55,6 +59,7 @@ export class SyncService {
             });
 
             this.peer.on('open', (id) => {
+                console.log('Successfully registered with signaling server:', id);
                 this.options.onStatusChange('ready', `Room: ${id}`);
                 resolve(id);
             });
@@ -64,18 +69,35 @@ export class SyncService {
             });
 
             this.peer.on('error', (err: any) => {
-                console.error('Peer Error:', err.type);
+                console.error('PeerJS Specific Error:', err.type, err);
+
+                let userFriendlyMsg = `Error: ${err.type}`;
                 if (err.type === 'unavailable-id') {
-                    this.options.onStatusChange('error', 'Room already in use');
-                } else if (!this.conn?.open) {
-                    this.options.onStatusChange('error', `Server error: ${err.type}`);
+                    userFriendlyMsg = 'Room ID is already taken. Please refresh.';
+                } else if (err.type === 'network') {
+                    userFriendlyMsg = 'Server unreachable. Check your internet/firewall.';
+                } else if (err.type === 'server-error') {
+                    userFriendlyMsg = 'Signaling server is busy. Try again later.';
                 }
-                reject(err);
+
+                this.options.onStatusChange('error', userFriendlyMsg);
+
+                // Don't reject if we are just disconnected from server but P2P might work
+                if (!this.conn?.open) {
+                    reject(err);
+                }
             });
 
             this.peer.on('disconnected', () => {
-                if (this.peer && !this.peer.destroyed) {
-                    this.peer.reconnect();
+                console.warn('Disconnected from signaling server.');
+                // Only try to reconnect once after a small delay to avoid spamming the server
+                if (this.peer && !this.peer.destroyed && !this.conn?.open) {
+                    this.options.onStatusChange('connecting', 'Waiting for server reconnect...');
+                    setTimeout(() => {
+                        if (this.peer && !this.peer.destroyed && this.peer.disconnected) {
+                            this.peer.reconnect();
+                        }
+                    }, 5000);
                 }
             });
         });
@@ -87,16 +109,19 @@ export class SyncService {
         this.isHost = false;
         this.isInitiator = true;
 
-        const setupClient = () => {
-            this.options.onStatusChange('connecting', `Searching for ${cleanTargetId}...`);
+        const initiateP2P = () => {
+            this.options.onStatusChange('connecting', `Dialing ${cleanTargetId}...`);
             this._connect(cleanTargetId);
         };
 
         if (!this.peer || this.peer.destroyed) {
-            this.options.onStatusChange('connecting', 'Connecting to server...');
+            this.options.onStatusChange('connecting', 'Initializing link...');
             this.peer = new Peer({
-                debug: 1,
+                host: '0.peerjs.com',
+                port: 443,
+                path: '/',
                 secure: true,
+                debug: 1,
                 config: {
                     'iceServers': [
                         { urls: 'stun:stun.l.google.com:19302' },
@@ -105,19 +130,29 @@ export class SyncService {
                 }
             });
 
-            this.peer.on('open', setupClient);
+            this.peer.on('open', initiateP2P);
             this.peer.on('error', (err: any) => {
+                console.error('Client PeerJS Error:', err.type);
                 if (!this.conn?.open) {
-                    this.options.onStatusChange('error', `Server error: ${err.type}`);
+                    this.options.onStatusChange('error', `Server link failed (${err.type})`);
                 }
             });
         } else {
-            setupClient();
+            initiateP2P();
         }
     }
 
     private _connect(targetPeerId: string) {
-        if (!this.peer || this.peer.destroyed) return;
+        if (!this.peer || this.peer.destroyed || this.peer.disconnected) {
+            // If disconnected from server, try to reconnect first
+            if (this.peer && this.peer.disconnected) {
+                this.peer.reconnect();
+                // Wait a bit and try again
+                setTimeout(() => this._connect(targetPeerId), 2000);
+                return;
+            }
+            return;
+        }
 
         const conn = this.peer.connect(targetPeerId, {
             reliable: true,
