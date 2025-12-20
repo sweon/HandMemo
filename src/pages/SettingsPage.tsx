@@ -196,10 +196,17 @@ export const SettingsPage: React.FC = () => {
 
     const handleAddModel = async () => {
         if (newModel.trim()) {
-            const count = await db.models.count();
-            await db.models.add({
-                name: newModel.trim(),
-                order: count
+            await db.transaction('rw', db.models, async () => {
+                const allModels = await db.models.toArray();
+                // Increment order of all existing models
+                for (const m of allModels) {
+                    await db.models.update(m.id!, { order: (m.order ?? 0) + 1 });
+                }
+                // Add new model at the top
+                await db.models.add({
+                    name: newModel.trim(),
+                    order: 0
+                });
             });
             setNewModel('');
         }
