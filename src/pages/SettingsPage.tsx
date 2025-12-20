@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import styled from 'styled-components';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
@@ -144,23 +144,23 @@ const CheckboxLabel = styled.label`
 `;
 
 export const SettingsPage: React.FC = () => {
-    const models = useLiveQuery(async () => {
-        const result = await db.models.toArray();
-        // Check if any models lack an 'order' field
-        if (result.length > 0 && result.some(m => m.order === undefined)) {
-            // Assign serial order if missing
-            await db.transaction('rw', db.models, async () => {
-                for (let i = 0; i < result.length; i++) {
-                    if (result[i].order === undefined) {
-                        await db.models.update(result[i].id!, { order: i });
+    const models = useLiveQuery(() => db.models.orderBy('order').toArray());
+
+    useEffect(() => {
+        const initializeOrder = async () => {
+            const allModels = await db.models.toArray();
+            if (allModels.length > 0 && allModels.some(m => m.order === undefined)) {
+                await db.transaction('rw', db.models, async () => {
+                    for (let i = 0; i < allModels.length; i++) {
+                        if (allModels[i].order === undefined) {
+                            await db.models.update(allModels[i].id!, { order: i });
+                        }
                     }
-                }
-            });
-            // Re-fetch sorted
-            return await db.models.orderBy('order').toArray();
-        }
-        return result.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
-    });
+                });
+            }
+        };
+        initializeOrder();
+    }, []);
 
     const [newModel, setNewModel] = useState('');
     const fileInputRef = useRef<HTMLInputElement>(null);
