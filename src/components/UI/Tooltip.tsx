@@ -14,11 +14,11 @@ const TooltipBox = styled.div<{ $top: number; $left: number }>`
   top: ${props => props.$top}px;
   left: ${props => props.$left}px;
   transform: translateX(-50%);
-  padding: 4px 8px;
+  padding: 2px 6px;
   background-color: #333; // Dark background
   color: #fff;
   border-radius: 4px;
-  font-size: 0.7rem;
+  font-size: 0.65rem;
   white-space: nowrap;
   pointer-events: none;
   z-index: 9999;
