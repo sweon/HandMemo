@@ -547,22 +547,9 @@ export const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose }) => {
                     )}
 
                     {statusMessage && (
-                        <div style={{ marginTop: '20px' }}>
-                            <StatusBox $status={status}>
-                                {statusMessage}
-                            </StatusBox>
-
-                            {(status === 'connected' || status === 'ready' || status === 'completed' || status === 'error') && (
-                                <Button
-                                    $fullWidth
-                                    $variant="secondary"
-                                    onClick={() => syncService.current?.syncData()}
-                                    style={{ marginTop: '12px', fontSize: '0.9rem', padding: '8px' }}
-                                >
-                                    <FaSync /> Push Data to Peer Now
-                                </Button>
-                            )}
-                        </div>
+                        <StatusBox $status={status}>
+                            {statusMessage}
+                        </StatusBox>
                     )}
                 </Content>
             </ModalContainer>
