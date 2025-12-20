@@ -100,8 +100,7 @@ export class SyncService {
         if (!this.peer) return;
 
         const conn = this.peer.connect(targetPeerId, {
-            reliable: true,
-            serialization: 'json'
+            reliable: true
         });
         this.handleConnection(conn);
     }
@@ -121,8 +120,9 @@ export class SyncService {
             this.lastPong = Date.now();
             this.startHeartbeat();
 
-            // Host side waits for client to initiate, or wait longer to be safe
-            const delay = this.isHost ? 2000 : 500;
+            // Host side needs to wait longer for the data channel to be fully ready
+            // especially on mobile/Android.
+            const delay = this.isHost ? 3000 : 800;
 
             setTimeout(async () => {
                 if (this.conn && this.conn.open) {
