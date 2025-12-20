@@ -1,6 +1,7 @@
 import type { DefaultTheme } from 'styled-components';
 
 export const lightTheme: DefaultTheme = {
+    fontSize: 16,
     colors: {
         background: '#ffffff',
         surface: '#f3f4f6', // gray-100
@@ -15,6 +16,7 @@ export const lightTheme: DefaultTheme = {
 };
 
 export const darkTheme: DefaultTheme = {
+    fontSize: 16,
     colors: {
         background: '#0f172a', // slate-900
         surface: '#1e293b', // slate-800
