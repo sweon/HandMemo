@@ -3,7 +3,10 @@ import styled from 'styled-components';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
 import { exportData, importData } from '../utils/backup';
-import { FiTrash2, FiPlus, FiDownload, FiUpload, FiChevronUp, FiChevronDown } from 'react-icons/fi';
+import { FiTrash2, FiPlus, FiDownload, FiUpload } from 'react-icons/fi';
+import { MdDragIndicator } from 'react-icons/md';
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
+import type { DropResult } from '@hello-pangea/dnd';
 
 const Container = styled.div`
   padding: 2rem;
@@ -28,14 +31,36 @@ const ModelList = styled.ul`
   padding: 0;
 `;
 
-const ModelItem = styled.li`
+const ModelItem = styled.li<{ $isDragging?: boolean }>`
   display: flex;
   align-items: center;
   gap: 1rem;
   margin-bottom: 0.5rem;
-  padding: 0.5rem;
-  background: ${({ theme }) => theme.colors.surface};
-  border-radius: 6px;
+  padding: 0.75rem;
+  background: ${({ theme, $isDragging }) => $isDragging ? theme.colors.border : theme.colors.surface};
+  border-radius: 8px;
+  border: 1px solid ${({ theme, $isDragging }) => $isDragging ? theme.colors.primary : 'transparent'};
+  box-shadow: ${({ $isDragging }) => $isDragging ? '0 5px 15px rgba(0,0,0,0.15)' : 'none'};
+  transition: background-color 0.2s, box-shadow 0.2s;
+`;
+
+const DragHandle = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: ${({ theme }) => theme.colors.textSecondary};
+  cursor: grab;
+  padding: 4px;
+  border-radius: 4px;
+  
+  &:hover {
+    background-color: ${({ theme }) => theme.colors.background};
+    color: ${({ theme }) => theme.colors.text};
+  }
+
+  &:active {
+    cursor: grabbing;
+  }
 `;
 
 const Input = styled.input`
@@ -49,8 +74,18 @@ const IconButton = styled.button`
   background: transparent;
   border: none;
   cursor: pointer;
-  color: ${({ theme }) => theme.colors.text};
-  &:hover { color: ${({ theme }) => theme.colors.danger}; }
+  color: ${({ theme }) => theme.colors.textSecondary};
+  padding: 8px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+
+  &:hover { 
+    color: ${({ theme }) => theme.colors.danger};
+    background-color: ${({ theme }) => theme.colors.background};
+  }
 `;
 
 const Button = styled.button`
@@ -63,10 +98,15 @@ const Button = styled.button`
   border: none;
   border-radius: 6px;
   cursor: pointer;
+  font-weight: 500;
   
   &:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+  }
+
+  &:hover:not(:disabled) {
+    filter: brightness(1.1);
   }
 `;
 
@@ -81,18 +121,19 @@ const ModalOverlay = styled.div`
   justify-content: center;
   align-items: center;
   z-index: 1000;
+  backdrop-filter: blur(4px);
 `;
 
 const ModalContent = styled.div`
   background: ${({ theme }) => theme.colors.surface};
   padding: 2rem;
-  border-radius: 8px;
+  border-radius: 12px;
   width: 90%;
   max-width: 500px;
   max-height: 80vh;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
 `;
 
 const ModalHeader = styled.h3`
@@ -197,15 +238,15 @@ export const SettingsPage: React.FC = () => {
     const handleAddModel = async () => {
         if (newModel.trim()) {
             await db.transaction('rw', db.models, async () => {
-                const allModels = await db.models.toArray();
-                // Increment order of all existing models
-                for (const m of allModels) {
-                    await db.models.update(m.id!, { order: (m.order ?? 0) + 1 });
-                }
-                // Add new model at the top
+                const allModels = await db.models.orderBy('order').toArray();
+                // Add new model at the bottom (highest order)
+                const maxOrder = allModels.length > 0
+                    ? Math.max(...allModels.map(m => m.order ?? 0))
+                    : -1;
+
                 await db.models.add({
                     name: newModel.trim(),
-                    order: 0
+                    order: maxOrder + 1
                 });
             });
             setNewModel('');
@@ -215,24 +256,28 @@ export const SettingsPage: React.FC = () => {
     const handleDeleteModel = async (id: number) => {
         if (confirm('Delete this model? Existing logs linked to this model will lose the reference.')) {
             await db.models.delete(id);
-            // Optionally re-shift orders here, but id/order gaps typically fine
         }
     };
 
-    const handleMoveModel = async (index: number, direction: 'up' | 'down') => {
-        if (!models) return;
-        const targetIndex = direction === 'up' ? index - 1 : index + 1;
-        if (targetIndex < 0 || targetIndex >= models.length) return;
+    const onDragEnd = async (result: DropResult) => {
+        if (!result.destination || !models) return;
 
-        const currentModel = models[index];
-        const targetModel = models[targetIndex];
+        const sourceIndex = result.source.index;
+        const destIndex = result.destination.index;
 
-        if (currentModel.id === undefined || targetModel.id === undefined) return;
+        if (sourceIndex === destIndex) return;
 
+        const newModels = Array.from(models);
+        const [removed] = newModels.splice(sourceIndex, 1);
+        newModels.splice(destIndex, 0, removed);
+
+        // Update orders in DB
         await db.transaction('rw', db.models, async () => {
-            const tempOrder = currentModel.order;
-            await db.models.update(currentModel.id!, { order: targetModel.order });
-            await db.models.update(targetModel.id!, { order: tempOrder });
+            for (let i = 0; i < newModels.length; i++) {
+                if (newModels[i].id !== undefined) {
+                    await db.models.update(newModels[i].id!, { order: i });
+                }
+            }
         });
     };
 
@@ -254,39 +299,44 @@ export const SettingsPage: React.FC = () => {
         <Container>
             <Section>
                 <Title>Manage LLM Models</Title>
-                <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
+                <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem' }}>
                     <Input
                         value={newModel}
                         onChange={e => setNewModel(e.target.value)}
                         placeholder="Add new model name..."
+                        onKeyDown={(e) => e.key === 'Enter' && newModel.trim() && handleAddModel()}
                     />
                     <Button onClick={handleAddModel} disabled={!newModel.trim()}><FiPlus /> Add</Button>
                 </div>
 
-                <ModelList>
-                    {models?.map((m, index) => (
-                        <ModelItem key={m.id}>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                                <IconButton
-                                    onClick={() => handleMoveModel(index, 'up')}
-                                    disabled={index === 0}
-                                    style={{ padding: '2px', fontSize: '0.8rem', opacity: index === 0 ? 0.3 : 1 }}
-                                >
-                                    <FiChevronUp />
-                                </IconButton>
-                                <IconButton
-                                    onClick={() => handleMoveModel(index, 'down')}
-                                    disabled={index === models.length - 1}
-                                    style={{ padding: '2px', fontSize: '0.8rem', opacity: index === models.length - 1 ? 0.3 : 1 }}
-                                >
-                                    <FiChevronDown />
-                                </IconButton>
-                            </div>
-                            <span style={{ flex: 1 }}>{m.name}</span>
-                            <IconButton onClick={() => handleDeleteModel(m.id!)}><FiTrash2 /></IconButton>
-                        </ModelItem>
-                    ))}
-                </ModelList>
+                <DragDropContext onDragEnd={onDragEnd}>
+                    <Droppable droppableId="models">
+                        {(provided) => (
+                            <ModelList {...provided.droppableProps} ref={provided.innerRef}>
+                                {models?.map((m, index) => (
+                                    <Draggable key={m.id} draggableId={m.id!.toString()} index={index}>
+                                        {(provided, snapshot) => (
+                                            <ModelItem
+                                                ref={provided.innerRef}
+                                                {...provided.draggableProps}
+                                                $isDragging={snapshot.isDragging}
+                                            >
+                                                <DragHandle {...provided.dragHandleProps}>
+                                                    <MdDragIndicator size={20} />
+                                                </DragHandle>
+                                                <span style={{ flex: 1, fontWeight: 500 }}>{m.name}</span>
+                                                <IconButton onClick={() => handleDeleteModel(m.id!)}>
+                                                    <FiTrash2 size={18} />
+                                                </IconButton>
+                                            </ModelItem>
+                                        )}
+                                    </Draggable>
+                                ))}
+                                {provided.placeholder}
+                            </ModelList>
+                        )}
+                    </Droppable>
+                </DragDropContext>
             </Section>
 
             <Section>
@@ -305,7 +355,7 @@ export const SettingsPage: React.FC = () => {
                         onChange={handleImport}
                     />
                 </div>
-                <p style={{ marginTop: '1rem', color: '#666', fontSize: '0.9rem' }}>
+                <p style={{ marginTop: '1rem', color: 'var(--text-secondary)', fontSize: '0.9rem', opacity: 0.8 }}>
                     Note: Importing merges data. Duplicate items (by ID) are treated as new entries with mapped relationships.
                 </p>
             </Section>
@@ -334,7 +384,7 @@ export const SettingsPage: React.FC = () => {
                             </RadioLabel>
 
                             <div style={{ marginTop: '1rem', marginBottom: '1rem' }}>
-                                <label style={{ display: 'block', marginBottom: '0.5rem', color: '#333' }}>Filename (optional):</label>
+                                <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Filename (optional):</label>
                                 <Input
                                     value={exportFileName}
                                     onChange={e => setExportFileName(e.target.value)}
@@ -365,7 +415,7 @@ export const SettingsPage: React.FC = () => {
                             )}
                         </ModalBody>
                         <ModalFooter>
-                            <Button onClick={() => setShowExportModal(false)} style={{ background: 'transparent', border: '1px solid #ccc', color: 'inherit' }}>
+                            <Button onClick={() => setShowExportModal(false)} style={{ background: 'transparent', border: '1px solid var(--border-color)', color: 'inherit' }}>
                                 Cancel
                             </Button>
                             <Button onClick={confirmExport} disabled={exportMode === 'selected' && selectedLogs.size === 0}>
@@ -378,3 +428,4 @@ export const SettingsPage: React.FC = () => {
         </Container>
     );
 };
+
