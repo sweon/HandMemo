@@ -26,23 +26,28 @@ export class SyncService {
         this.handleConnection = this.handleConnection.bind(this);
     }
 
+    private isInitializing: boolean = false;
+
     public async initialize(roomId: string): Promise<string> {
+        if (this.isInitializing) return "";
+        this.isInitializing = true;
+
         this.isHost = true;
         this.isInitiator = false;
-        this.options.onStatusChange('connecting', 'Starting PeerJS server...');
+        this.options.onStatusChange('connecting', 'Connecting to signaling server...');
 
         if (this.peer) {
             this.peer.destroy();
-            await new Promise(r => setTimeout(r, 500));
+            await new Promise(r => setTimeout(r, 800));
         }
 
         return new Promise(async (resolve, reject) => {
             const cleanId = cleanRoomId(roomId);
 
             this.peer = new Peer(cleanId, {
-                debug: 1,
+                debug: 2,
                 secure: true,
-                pingInterval: 5000,
+                pingInterval: 15000,
                 config: {
                     'iceServers': [
                         { urls: 'stun:stun.l.google.com:19302' },
@@ -53,6 +58,7 @@ export class SyncService {
 
             this.peer.on('open', (id) => {
                 this.options.onStatusChange('ready', `Host Mode: ${id}`);
+                this.isInitializing = false;
                 resolve(id);
             });
 
@@ -62,6 +68,12 @@ export class SyncService {
             });
 
             this.peer.on('error', (err: any) => {
+                // Ignore signaling server errors if P2P is already active
+                if (this.conn?.open && (err.type === 'network' || err.type === 'disconnected')) {
+                    console.warn('Signaling server link lost, but P2P remains active.');
+                    return;
+                }
+
                 console.error('PeerJS Error:', err.type, err);
                 let message = err.message;
                 if (err.type === 'unavailable-id') {
@@ -69,38 +81,43 @@ export class SyncService {
                 } else if (err.type === 'network') {
                     message = 'Signaling network error.';
                 }
+
+                this.isInitializing = false;
                 this.options.onStatusChange('error', message);
                 reject(err);
             });
 
             this.peer.on('disconnected', () => {
                 console.log('Peer server disconnected');
-                // Don't auto-reconnect if we are already connected to a peer
-                if (!this.conn) {
-                    this.peer?.reconnect();
+                // Don't auto-reconnect if we are already connected to a peer or destroyed
+                if (!this.conn?.open && this.peer && !this.peer.destroyed) {
+                    this.peer.reconnect();
                 }
             });
         });
     }
 
     public async connect(targetPeerId: string) {
+        if (this.isInitializing) return;
+
         const cleanTargetId = cleanRoomId(targetPeerId);
 
         if (this.peer && (this.isHost || this.peer.disconnected || this.peer.destroyed)) {
             this.peer.destroy();
             this.peer = null;
-            await new Promise(r => setTimeout(r, 500));
+            await new Promise(r => setTimeout(r, 800));
         }
 
         this.isHost = false;
         this.isInitiator = true;
 
         if (!this.peer) {
-            this.options.onStatusChange('connecting', 'Starting client peer...');
+            this.isInitializing = true;
+            this.options.onStatusChange('connecting', 'Initializing client...');
             this.peer = new Peer({
-                debug: 1,
+                debug: 2,
                 secure: true,
-                pingInterval: 5000,
+                pingInterval: 15000,
                 config: {
                     'iceServers': [{ urls: 'stun:stun.l.google.com:19302' }]
                 }
@@ -108,10 +125,15 @@ export class SyncService {
 
             this.peer.on('open', (id) => {
                 console.log('Client identity:', id);
+                this.isInitializing = false;
                 this._connect(cleanTargetId);
             });
 
             this.peer.on('error', (err: any) => {
+                if (this.conn?.open && (err.type === 'network' || err.type === 'disconnected')) {
+                    return;
+                }
+                this.isInitializing = false;
                 this.options.onStatusChange('error', `Connection error: ${err.type}`);
             });
         } else {
