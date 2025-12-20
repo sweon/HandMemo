@@ -31,13 +31,13 @@ const SidebarContainer = styled.div`
 `;
 
 const Header = styled.div`
-  padding: 1rem;
+  padding: 0.75rem 1rem;
   border-bottom: 1px solid ${({ theme }) => theme.colors.border};
 `;
 
 const SearchInputWrapper = styled.div`
   position: relative;
-  margin-bottom: 1rem;
+  margin-bottom: 0.5rem;
 `;
 
 const SearchIcon = styled(FiSearch)`
@@ -108,7 +108,7 @@ const TopActions = styled.div`
   align-items: center;
   justify-content: space-between;
   gap: 0.5rem;
-  margin-bottom: 1rem;
+  margin-bottom: 0.5rem;
 `;
 
 const LogList = styled.div`
@@ -119,9 +119,9 @@ const LogList = styled.div`
 
 const LogItem = styled(Link) <{ $isActive: boolean }>`
   display: block;
-  padding: 0.75rem;
+  padding: 0.5rem 0.75rem;
   border-radius: 6px;
-  margin-bottom: 0.25rem;
+  margin-bottom: 0.125rem;
   text-decoration: none;
   background: ${({ $isActive, theme }) => ($isActive ? theme.colors.border : 'transparent')};
   color: ${({ theme }) => theme.colors.text}; // Ensure text color is set explicitly
@@ -142,7 +142,7 @@ const LogTitle = styled.div`
 const LogDate = styled.div`
   font-size: 0.75rem;
   color: ${({ theme }) => theme.colors.textSecondary};
-  margin-top: 0.25rem;
+  margin-top: 0.1rem;
 `;
 
 
