@@ -1,6 +1,7 @@
 import type { DefaultTheme } from 'styled-components';
 
 export const lightTheme: DefaultTheme = {
+    mode: 'light',
     fontSize: 16,
     colors: {
         background: '#ffffff',
@@ -16,6 +17,7 @@ export const lightTheme: DefaultTheme = {
 };
 
 export const darkTheme: DefaultTheme = {
+    mode: 'dark',
     fontSize: 16,
     colors: {
         background: '#0f172a', // slate-900

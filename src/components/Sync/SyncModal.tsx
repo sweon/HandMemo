@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import styled from 'styled-components';
+import styled, { useTheme as useStyledTheme } from 'styled-components';
 import { SyncService, cleanRoomId, type SyncStatus } from '../../services/SyncService';
-import { FaTimes, FaSync, FaRegCopy, FaRedo, FaCamera, FaStop, FaCheck } from 'react-icons/fa';
+import { FaTimes, FaSync, FaRegCopy, FaRedo, FaCamera, FaStop, FaCheck, FaLink } from 'react-icons/fa';
 import { QRCodeSVG } from 'qrcode.react';
 import { Html5QrcodeScanner } from 'html5-qrcode';
 
@@ -20,8 +20,8 @@ const Overlay = styled.div`
     left: 0;
     right: 0;
     bottom: 0;
-    background-color: rgba(0, 0, 0, 0.85);
-    backdrop-filter: blur(5px);
+    background-color: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(8px);
     display: flex;
     justify-content: center;
     align-items: center;
@@ -29,71 +29,62 @@ const Overlay = styled.div`
 `;
 
 const ModalContainer = styled.div`
-    background-color: var(--bg-secondary);
-    border: 1px solid transparent;
-    border-radius: 16px;
-    width: 480px;
-    max-width: 90%;
+    background-color: ${({ theme }) => theme.colors.background};
+    border: 1px solid ${({ theme }) => theme.colors.border};
+    border-radius: 20px;
+    width: 440px;
+    max-width: 95%;
     max-height: 90vh;
     display: flex;
     flex-direction: column;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
-    color: var(--text-primary);
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+    color: ${({ theme }) => theme.colors.text};
     overflow: hidden;
-    background-image: linear-gradient(var(--bg-secondary), var(--bg-secondary)), linear-gradient(to right, #6a11cb, #2575fc);
-    background-origin: border-box;
-    background-clip: content-box, border-box;
 `;
 
 const Header = styled.div`
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 24px;
-    /* border-bottom: 2px solid var(--border-color); */
-    background: linear-gradient(135deg, rgba(81, 79, 240, 0.1) 0%, rgba(37, 117, 252, 0.1) 100%);
-    border-bottom: 1px solid rgba(81, 79, 240, 0.2);
+    padding: 20px 24px;
+    background: ${({ theme }) => theme.mode === 'dark' ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.02)'};
+    border-bottom: 1px solid ${({ theme }) => theme.colors.border};
 
     h2 {
         margin: 0;
-        font-size: 1.4rem;
-        font-weight: 600;
+        font-size: 1.25rem;
+        font-weight: 700;
         display: flex;
         align-items: center;
         gap: 12px;
-        color: var(--primary-color);
+        color: ${({ theme }) => theme.colors.primary};
     }
 `;
 
 const TabContainer = styled.div`
     display: flex;
-    background-color: var(--bg-tertiary);
-    border-bottom: 1px solid var(--border-color);
-    padding: 0 24px;
-    gap: 24px;
+    background: ${({ theme }) => theme.colors.surface};
+    margin: 16px 24px;
+    padding: 4px;
+    border-radius: 12px;
+    gap: 4px;
 `;
 
-const Tab = styled.button<{ $active: boolean; $type: 'host' | 'join' }>`
-    padding: 16px 4px;
-    background: transparent;
+const Tab = styled.button<{ $active: boolean }>`
+    flex: 1;
+    padding: 10px;
+    background: ${props => props.$active ? props.theme.colors.background : 'transparent'};
     border: none;
-    border-bottom: 3px solid ${props => {
-        if (!props.$active) return 'transparent';
-        return props.$type === 'host' ? '#6a11cb' : '#2575fc';
-    }};
-    color: ${props => {
-        if (!props.$active) return 'var(--text-secondary)';
-        return props.$type === 'host' ? '#6a11cb' : '#2575fc';
-    }};
+    border-radius: 8px;
+    color: ${props => props.$active ? props.theme.colors.primary : props.theme.colors.textSecondary};
     font-weight: ${props => props.$active ? '600' : '500'};
     cursor: pointer;
-    transition: all 0.2s;
-    font-size: 1rem;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    font-size: 0.95rem;
+    box-shadow: ${props => props.$active ? '0 2px 8px rgba(0,0,0,0.1)' : 'none'};
 
     &:hover {
-        color: ${props => props.$active
-        ? (props.$type === 'host' ? '#6a11cb' : '#2575fc')
-        : 'var(--text-primary)'};
+        color: ${props => props.$active ? props.theme.colors.primary : props.theme.colors.text};
     }
     
     &:disabled {
@@ -103,43 +94,38 @@ const Tab = styled.button<{ $active: boolean; $type: 'host' | 'join' }>`
 `;
 
 const Content = styled.div`
-    padding: 24px;
+    padding: 8px 24px 24px;
     overflow-y: auto;
     flex: 1;
-
-    /* Custom scrollbar */
-    &::-webkit-scrollbar {
-        width: 6px;
-    }
-    &::-webkit-scrollbar-track {
-        background: transparent;
-    }
-    &::-webkit-scrollbar-thumb {
-        background: var(--border-color);
-        border-radius: 3px;
-    }
-    &::-webkit-scrollbar-thumb:hover {
-        background: var(--text-secondary);
-    }
 `;
 
 const CloseButton = styled.button`
     background: none;
     border: none;
-    color: var(--text-secondary);
+    color: ${({ theme }) => theme.colors.textSecondary};
     cursor: pointer;
     font-size: 1.2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px;
+    border-radius: 50%;
+    transition: all 0.2s;
     
     &:hover {
-        color: var(--text-primary);
+        background-color: ${({ theme }) => theme.colors.surface};
+        color: ${({ theme }) => theme.colors.text};
     }
 `;
 
 const Label = styled.label`
     display: block;
     margin-bottom: 8px;
-    color: var(--text-secondary);
-    font-size: 0.9rem;
+    color: ${({ theme }) => theme.colors.textSecondary};
+    font-size: 0.85rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
 `;
 
 const InputGroup = styled.div`
@@ -150,68 +136,83 @@ const InputGroup = styled.div`
 
 const Input = styled.input`
     flex: 1;
-    padding: 14px;
-    border-radius: 8px;
-    border: 2px solid var(--border-color);
-    background-color: var(--bg-primary);
-    color: var(--text-primary);
-    font-size: 1.1rem;
-    font-family: monospace;
-    transition: border-color 0.2s;
+    padding: 12px 16px;
+    border-radius: 10px;
+    border: 2px solid ${({ theme }) => theme.colors.border};
+    background-color: ${({ theme }) => theme.colors.surface};
+    color: ${({ theme }) => theme.colors.text};
+    font-size: 1rem;
+    font-family: inherit;
+    transition: all 0.2s;
 
     &:focus {
         outline: none;
-        border-color: var(--primary-color);
-        box-shadow: 0 0 0 4px rgba(0, 0, 0, 0.05);
+        border-color: ${({ theme }) => theme.colors.primary};
+        background-color: ${({ theme }) => theme.colors.background};
     }
     
     &:disabled {
-        background-color: var(--bg-tertiary);
-        color: var(--text-secondary);
-        border-color: transparent;
+        opacity: 0.6;
+        cursor: not-allowed;
     }
 `;
 
 const IconButton = styled.button`
-    padding: 12px;
-    border-radius: 6px;
-    border: 1px solid var(--border-color);
-    background-color: var(--bg-secondary);
-    color: var(--text-secondary);
+    width: 48px;
+    height: 48px;
+    border-radius: 10px;
+    border: 2px solid ${({ theme }) => theme.colors.border};
+    background-color: ${({ theme }) => theme.colors.surface};
+    color: ${({ theme }) => theme.colors.textSecondary};
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
     transition: all 0.2s;
 
-    &:hover {
-        background-color: var(--bg-tertiary);
-        color: var(--text-primary);
-        border-color: var(--text-secondary);
+    &:hover:not(:disabled) {
+        border-color: ${({ theme }) => theme.colors.textSecondary};
+        color: ${({ theme }) => theme.colors.text};
+    }
+
+    &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
     }
 `;
 
-const Button = styled.button<{ $variant?: 'primary' | 'secondary' | 'host' | 'join'; $fullWidth?: boolean }>`
-    padding: 12px 16px;
-    border-radius: 6px;
+const ActionButton = styled.button<{ $variant?: 'primary' | 'secondary' | 'danger'; $fullWidth?: boolean }>`
+    padding: 14px 24px;
+    border-radius: 12px;
     border: none;
     cursor: pointer;
-    font-weight: 500;
-    transition: background-color 0.2s;
+    font-weight: 600;
+    font-size: 1rem;
     transition: all 0.2s;
-    background: ${props => props.$variant === 'secondary'
-        ? 'var(--bg-tertiary)'
-        : 'linear-gradient(90deg, #6a11cb 0%, #2575fc 100%)'};
-    color: ${props => props.$variant === 'secondary' ? 'var(--text-primary)' : '#fff'};
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
     width: ${props => props.$fullWidth ? '100%' : 'auto'};
-    box-shadow: ${props => props.$variant !== 'secondary' ? '0 4px 15px rgba(37, 117, 252, 0.3)' : 'none'};
+    
+    background-color: ${props => {
+        if (props.$variant === 'secondary') return props.theme.colors.surface;
+        if (props.$variant === 'danger') return props.theme.colors.danger;
+        return props.theme.colors.primary;
+    }};
+    
+    color: ${props => (props.$variant === 'secondary' ? props.theme.colors.text : '#ffffff')};
 
-    &:hover {
-        opacity: 0.95;
+    &:hover:not(:disabled) {
+        filter: brightness(1.1);
         transform: translateY(-1px);
-        box-shadow: ${props => props.$variant !== 'secondary' ? '0 6px 20px rgba(37, 117, 252, 0.4)' : 'none'};
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     }
     
+    &:active:not(:disabled) {
+        transform: translateY(0);
+    }
+
     &:disabled {
         opacity: 0.5;
         cursor: not-allowed;
@@ -220,8 +221,8 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' | 'host' | 'jo
 
 const StatusBox = styled.div<{ $status: SyncStatus }>`
     padding: 16px;
-    border-radius: 8px;
-    background-color: var(--bg-primary);
+    border-radius: 12px;
+    background-color: ${({ theme }) => theme.colors.surface};
     margin-top: 24px;
     text-align: center;
     font-weight: 500;
@@ -229,45 +230,45 @@ const StatusBox = styled.div<{ $status: SyncStatus }>`
     align-items: center;
     justify-content: center;
     gap: 10px;
+    font-size: 0.9rem;
     
     color: ${props => {
-        if (props.$status === 'error') return '#fa5252';
-        if (props.$status === 'completed') return '#40c057';
-        if (props.$status === 'ready' || props.$status === 'connected') return '#228be6';
-        if (props.$status === 'connecting') return '#fab005';
-        return 'var(--text-secondary)';
+        if (props.$status === 'error') return props.theme.colors.danger;
+        if (props.$status === 'completed') return props.theme.colors.success;
+        if (props.$status === 'ready' || props.$status === 'connected') return props.theme.colors.primary;
+        if (props.$status === 'connecting') return '#f59e0b';
+        return props.theme.colors.textSecondary;
     }};
     
     border: 1px solid ${props => {
-        if (props.$status === 'error') return '#fa525240';
-        if (props.$status === 'completed') return '#40c05740';
-        if (props.$status === 'ready' || props.$status === 'connected') return '#228be640';
-        if (props.$status === 'connecting') return '#fab00540';
-        return 'var(--border-color)';
+        if (props.$status === 'error') return props.theme.colors.danger + '40';
+        if (props.$status === 'completed') return props.theme.colors.success + '40';
+        if (props.$status === 'ready' || props.$status === 'connected') return props.theme.colors.primary + '40';
+        if (props.$status === 'connecting') return '#f59e0b40';
+        return props.theme.colors.border;
     }};
-
-    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
 `;
 
-const QRContainer = styled.div`
+const QRWrapper = styled.div`
     background: white;
-    padding: 16px;
-    border-radius: 12px;
+    padding: 24px;
+    border-radius: 16px;
     margin: 20px auto;
     width: fit-content;
     display: flex;
     justify-content: center;
     align-items: center;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
 `;
 
 const ScannerContainer = styled.div`
     width: 100%;
-    max-width: 400px;
-    margin: 0 auto 20px;
+    aspect-ratio: 1;
+    max-width: 320px;
+    margin: 0 auto 24px;
     overflow: hidden;
-    border-radius: 12px;
-    border: 2px solid var(--border-color);
+    border-radius: 16px;
+    border: 2px solid ${({ theme }) => theme.colors.border};
     background: #000;
     position: relative;
     
@@ -281,16 +282,42 @@ const ScannerContainer = styled.div`
     }
 
     #reader__dashboard_section_csr button {
-        background-color: var(--primary-color) !important;
+        background-color: ${({ theme }) => theme.colors.primary} !important;
         color: white !important;
         border: none !important;
         padding: 8px 16px !important;
-        border-radius: 4px !important;
+        border-radius: 8px !important;
         cursor: pointer !important;
         margin: 10px !important;
+        font-weight: 600 !important;
     }
 `;
 
+const Divider = styled.div`
+    display: flex;
+    align-items: center;
+    text-align: center;
+    margin: 24px 0;
+    color: ${({ theme }) => theme.colors.textSecondary};
+    font-size: 0.8rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+
+    &::before, &::after {
+        content: '';
+        flex: 1;
+        border-bottom: 1px solid ${({ theme }) => theme.colors.border};
+    }
+
+    &::before {
+        margin-right: 16px;
+    }
+
+    &::after {
+        margin-left: 16px;
+    }
+`;
 
 export const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose }) => {
     const [activeTab, setActiveTab] = useState<'host' | 'join'>('host');
@@ -301,35 +328,29 @@ export const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose }) => {
     const [isScanning, setIsScanning] = useState(false);
     const [copied, setCopied] = useState(false);
     const scannerRef = useRef<Html5QrcodeScanner | null>(null);
-
     const syncService = useRef<SyncService | null>(null);
+    const theme = useStyledTheme();
 
     useEffect(() => {
         if (isOpen) {
-            // Auto generate ID if empty
             if (!roomId) {
-                const newId = generateShortId();
-                setRoomId(newId);
-                // We no longer auto-host here to give the user manual control
+                setRoomId(generateShortId());
             }
         }
     }, [isOpen]);
 
     useEffect(() => {
-        // Handle scanner lifecycle
         if (isScanning && !scannerRef.current) {
             const scanner = new Html5QrcodeScanner(
                 "reader",
                 { fps: 10, qrbox: { width: 250, height: 250 } },
-                /* verbose= */ false
+                false
             );
 
             scanner.render((decodedText) => {
                 setTargetRoomId(decodedText);
                 connectToPeer(decodedText);
-            }, () => {
-                // Occasional scanning errors are expected and usually ignored
-            });
+            }, () => { });
 
             scannerRef.current = scanner;
         }
@@ -367,7 +388,6 @@ export const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose }) => {
             syncService.current = new SyncService({
                 onStatusChange: handleStatusChange,
                 onDataReceived: () => {
-                    // Show completion message for a bit before reloading
                     setStatus('completed');
                     setStatusMessage('Data synced! Reloading in 3 seconds...');
                     setTimeout(() => {
@@ -396,16 +416,8 @@ export const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose }) => {
         const svc = getService();
         svc.connect(targetId);
         if (isScanning) {
-            stopScanning();
+            setIsScanning(false);
         }
-    };
-
-    const startScanning = () => {
-        setIsScanning(true);
-    };
-
-    const stopScanning = () => {
-        setIsScanning(false);
     };
 
     const copyToClipboard = () => {
@@ -417,7 +429,6 @@ export const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose }) => {
     const regenerateId = () => {
         if (status === 'syncing' || status === 'connected') return;
 
-        // Stop current peer before regenerating
         if (syncService.current) {
             syncService.current.destroy();
             syncService.current = null;
@@ -428,7 +439,6 @@ export const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose }) => {
         setStatus('disconnected');
         setStatusMessage('');
 
-        // Re-start hosting with new ID if in host tab
         if (activeTab === 'host') {
             startHosting(newId);
         }
@@ -447,7 +457,6 @@ export const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose }) => {
                 <TabContainer>
                     <Tab
                         $active={activeTab === 'host'}
-                        $type="host"
                         onClick={() => setActiveTab('host')}
                         disabled={status === 'syncing' || (status === 'connected' && activeTab === 'join')}
                     >
@@ -455,7 +464,6 @@ export const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose }) => {
                     </Tab>
                     <Tab
                         $active={activeTab === 'join'}
-                        $type="join"
                         onClick={() => setActiveTab('join')}
                         disabled={status === 'syncing' || (status === 'connected' && activeTab === 'host')}
                     >
@@ -475,33 +483,29 @@ export const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose }) => {
                                     placeholder="Enter your custom ID"
                                 />
                                 <IconButton onClick={copyToClipboard} title={copied ? "Copied!" : "Copy ID"}>
-                                    {copied ? <FaCheck style={{ color: '#40c057' }} /> : <FaRegCopy />}
+                                    {copied ? <FaCheck style={{ color: theme.colors.success }} /> : <FaRegCopy />}
                                 </IconButton>
                                 <IconButton onClick={regenerateId} disabled={status === 'syncing' || status === 'connected'} title="Regenerate ID">
                                     <FaRedo />
                                 </IconButton>
                             </InputGroup>
 
-                            <Button
+                            <ActionButton
                                 $fullWidth
-                                $variant="host"
                                 onClick={() => startHosting()}
                                 disabled={status === 'syncing' || status === 'connected' || status === 'connecting'}
-                                style={{ marginBottom: '20px' }}
                             >
                                 {status === 'connecting' ? 'Connecting...' : (status === 'ready' ? 'Restart Hosting' : 'Start Hosting')}
-                            </Button>
+                            </ActionButton>
 
-                            <div style={{ textAlign: 'center' }}>
-                                <QRContainer>
-                                    <QRCodeSVG value={cleanRoomId(roomId)} size={200} level="H" />
-                                </QRContainer>
-                                <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginTop: '-10px' }}>
-                                    {status === 'connected' || status === 'syncing'
-                                        ? 'Connected to peer'
-                                        : 'Scan this code on the other device to sync'}
-                                </p>
-                            </div>
+                            <QRWrapper>
+                                <QRCodeSVG value={cleanRoomId(roomId)} size={180} level="H" />
+                            </QRWrapper>
+                            <p style={{ fontSize: '0.85rem', color: theme.colors.textSecondary, textAlign: 'center', marginTop: -8 }}>
+                                {status === 'connected' || status === 'syncing'
+                                    ? 'Connected to peer'
+                                    : 'Scan this code on your other device to start syncing.'}
+                            </p>
                         </>
                     ) : (
                         <>
@@ -510,45 +514,52 @@ export const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose }) => {
                                     <ScannerContainer>
                                         <div id="reader"></div>
                                     </ScannerContainer>
-                                    <Button
+                                    <ActionButton
                                         $fullWidth
                                         $variant="secondary"
-                                        onClick={stopScanning}
-                                        style={{ marginBottom: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                                        onClick={() => setIsScanning(false)}
                                     >
                                         <FaStop /> Stop Scanning
-                                    </Button>
+                                    </ActionButton>
                                 </>
                             ) : (
                                 <>
-                                    <Label>Target Room ID</Label>
+                                    <ActionButton
+                                        $fullWidth
+                                        onClick={() => setIsScanning(true)}
+                                        disabled={status === 'connected'}
+                                        style={{ marginBottom: 12, marginTop: 8 }}
+                                    >
+                                        <FaCamera /> Scan QR Code
+                                    </ActionButton>
+
+                                    <Divider>OR</Divider>
+
+                                    <Label>Manual Entry</Label>
                                     <InputGroup>
                                         <Input
-                                            placeholder="Paste Room ID or scan QR"
+                                            placeholder="Enter Room ID"
                                             value={targetRoomId}
                                             onChange={(e: React.ChangeEvent<HTMLInputElement>) => setTargetRoomId(e.target.value)}
                                             disabled={status === 'connected'}
                                         />
-                                        <IconButton onClick={startScanning} disabled={status === 'connected'} title="Scan QR Code">
-                                            <FaCamera />
+                                        <IconButton
+                                            onClick={() => connectToPeer()}
+                                            disabled={!targetRoomId || status === 'connected' || status === 'syncing'}
+                                            title="Connect"
+                                        >
+                                            {status === 'connected' ? <FaCheck style={{ color: theme.colors.success }} /> : <FaLink />}
                                         </IconButton>
                                     </InputGroup>
-                                    <Button
-                                        $fullWidth
-                                        $variant="join"
-                                        onClick={() => connectToPeer()}
-                                        disabled={!targetRoomId || status === 'connected' || status === 'syncing'}
-                                    >
-                                        {status === 'connected' ? 'Connected' : 'Connect'}
-                                    </Button>
                                 </>
                             )}
                         </>
                     )}
 
-                    {statusMessage && (
+                    {(statusMessage || status !== 'disconnected') && (
                         <StatusBox $status={status}>
-                            {statusMessage}
+                            {status === 'connecting' && <FaSync className="fa-spin" />}
+                            {statusMessage || (status === 'ready' ? 'Ready to share' : status === 'connected' ? 'Connected' : '')}
                         </StatusBox>
                     )}
                 </Content>
@@ -556,3 +567,4 @@ export const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose }) => {
         </Overlay>
     );
 };
+
