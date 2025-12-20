@@ -26,28 +26,23 @@ export class SyncService {
         this.handleConnection = this.handleConnection.bind(this);
     }
 
-    private isInitializing: boolean = false;
-
     public async initialize(roomId: string): Promise<string> {
-        if (this.isInitializing) return "";
-        this.isInitializing = true;
-
         this.isHost = true;
         this.isInitiator = false;
-        this.options.onStatusChange('connecting', 'Linking to global sync network...');
 
-        if (this.peer) {
+        if (this.peer && !this.peer.destroyed) {
             this.peer.destroy();
-            await new Promise(r => setTimeout(r, 1000));
+            await new Promise(r => setTimeout(r, 500));
         }
 
-        return new Promise(async (resolve, reject) => {
+        this.options.onStatusChange('connecting', 'Registering Room ID...');
+
+        return new Promise((resolve, reject) => {
             const cleanId = cleanRoomId(roomId);
 
             this.peer = new Peer(cleanId, {
-                debug: 2,
+                debug: 1,
                 secure: true,
-                pingInterval: 5000,
                 config: {
                     'iceServers': [
                         { urls: 'stun:stun.l.google.com:19302' },
@@ -57,47 +52,26 @@ export class SyncService {
             });
 
             this.peer.on('open', (id) => {
-                console.log('Host registered with ID:', id);
                 this.options.onStatusChange('ready', `Host Active: ${id}`);
-                this.isInitializing = false;
                 resolve(id);
             });
 
             this.peer.on('connection', (conn) => {
-                console.log('Incoming connection from:', conn.peer);
                 this.handleConnection(conn);
             });
 
             this.peer.on('error', (err: any) => {
-                // If ID is taken, this IS fatal
+                console.error('Peer Error:', err.type);
                 if (err.type === 'unavailable-id') {
-                    this.isInitializing = false;
-                    this.options.onStatusChange('error', 'Room ID already in use.');
-                    reject(err);
-                    return;
+                    this.options.onStatusChange('error', 'ID already in use.');
+                } else if (!this.conn?.open) {
+                    this.options.onStatusChange('error', `Connection error: ${err.type}`);
                 }
-
-                // For other errors, if P2P is active, ignore
-                if (this.conn?.open) {
-                    console.warn('Signaling error (P2P active):', err.type);
-                    return;
-                }
-
-                console.error('Host Peer Error:', err.type, err);
-                // Don't show error immediately for network hiccups unless it's a critical incompatibility
-                if (err.type === 'network' || err.type === 'disconnected' || err.type === 'socket-error') {
-                    console.log('Signaling server link issue, waiting for auto-recovery...');
-                    return;
-                }
-
-                this.isInitializing = false;
-                this.options.onStatusChange('error', `Status: ${err.type}`);
                 reject(err);
             });
 
             this.peer.on('disconnected', () => {
-                console.log('Host disconnected from signaling server, reconnecting...');
-                if (this.peer && !this.peer.destroyed) {
+                if (this.peer && !this.peer.destroyed && !this.conn?.open) {
                     this.peer.reconnect();
                 }
             });
@@ -105,26 +79,23 @@ export class SyncService {
     }
 
     public async connect(targetPeerId: string) {
-        if (this.isInitializing) return;
-
         const cleanTargetId = cleanRoomId(targetPeerId);
 
-        if (this.peer) {
+        // Only destroy if we were previously a host or if peer is dead
+        if (this.peer && (this.isHost || this.peer.destroyed)) {
             this.peer.destroy();
             this.peer = null;
-            await new Promise(r => setTimeout(r, 1000));
+            await new Promise(r => setTimeout(r, 500));
         }
 
         this.isHost = false;
         this.isInitiator = true;
 
-        if (!this.peer) {
-            this.isInitializing = true;
-            this.options.onStatusChange('connecting', 'Initializing client...');
+        if (!this.peer || this.peer.destroyed) {
+            this.options.onStatusChange('connecting', 'Starting client...');
             this.peer = new Peer({
-                debug: 2,
+                debug: 1,
                 secure: true,
-                pingInterval: 5000,
                 config: {
                     'iceServers': [
                         { urls: 'stun:stun.l.google.com:19302' },
@@ -133,16 +104,20 @@ export class SyncService {
                 }
             });
 
-            this.peer.on('open', (id) => {
-                console.log('Client identity:', id);
-                this.isInitializing = false;
+            this.peer.on('open', () => {
                 this._connect(cleanTargetId);
             });
 
             this.peer.on('error', (err: any) => {
-                if (this.conn?.open) return;
-                this.isInitializing = false;
-                this.options.onStatusChange('error', `Link failed: ${err.type}`);
+                if (!this.conn?.open) {
+                    this.options.onStatusChange('error', `Link failed: ${err.type}`);
+                }
+            });
+
+            this.peer.on('disconnected', () => {
+                if (this.peer && !this.peer.destroyed && !this.conn?.open) {
+                    this.peer.reconnect();
+                }
             });
         } else {
             this._connect(cleanTargetId);
