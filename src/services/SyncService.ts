@@ -113,8 +113,7 @@ export class SyncService {
         this.conn = conn;
 
         conn.on('open', async () => {
-            console.log('Connection established with:', conn.peer);
-            this.options.onStatusChange('connected', 'Peer Connected!');
+            this.options.onStatusChange('connected', 'Peer Connected! Initializing sync...');
 
             this.lastPong = Date.now();
             this.startHeartbeat();
