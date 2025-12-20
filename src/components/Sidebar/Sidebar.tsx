@@ -265,7 +265,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
           }}>
             <FiPlus /> New
           </Button>
-          <div style={{ display: 'flex', gap: '0.125rem', alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: '0rem', alignItems: 'center' }}>
             <Tooltip content="Decrease Font Size">
               <IconButton onClick={decreaseFontSize}>
                 <FiMinus size={16} />
