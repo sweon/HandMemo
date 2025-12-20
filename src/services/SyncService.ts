@@ -30,39 +30,46 @@ export class SyncService {
         this.isHost = true;
         this.isInitiator = false;
 
-        if (this.peer) {
+        this.options.onStatusChange('connecting', 'Connecting to global server...');
+
+        if (this.peer && !this.peer.destroyed) {
+            if (this.peer.id === cleanRoomId(roomId)) {
+                return this.peer.id;
+            }
             this.peer.destroy();
             await new Promise(r => setTimeout(r, 500));
         }
 
-        this.options.onStatusChange('connecting', 'Starting sync server...');
-
         return new Promise((resolve, reject) => {
             const cleanId = cleanRoomId(roomId);
 
-            // Back to basics: use default PeerJS configuration
             this.peer = new Peer(cleanId, {
-                debug: 2,
-                secure: true
+                debug: 1,
+                secure: true,
+                config: {
+                    'iceServers': [
+                        { urls: 'stun:stun.l.google.com:19302' },
+                        { urls: 'stun:global.stun.twilio.com:3478' }
+                    ]
+                }
             });
 
             this.peer.on('open', (id) => {
-                this.options.onStatusChange('ready', `ID: ${id}`);
+                this.options.onStatusChange('ready', `Room: ${id}`);
                 resolve(id);
             });
 
             this.peer.on('connection', (conn) => {
-                console.log('Peer connected as client');
                 this.handleConnection(conn);
             });
 
             this.peer.on('error', (err: any) => {
-                console.error('PeerJS error:', err.type);
-                let msg = 'Connection failed';
-                if (err.type === 'unavailable-id') msg = 'ID already in use';
-                if (err.type === 'network') msg = 'Network issue';
-
-                this.options.onStatusChange('error', msg);
+                console.error('Peer Error:', err.type);
+                if (err.type === 'unavailable-id') {
+                    this.options.onStatusChange('error', 'Room already in use');
+                } else if (!this.conn?.open) {
+                    this.options.onStatusChange('error', `Server error: ${err.type}`);
+                }
                 reject(err);
             });
 
@@ -77,35 +84,46 @@ export class SyncService {
     public async connect(targetPeerId: string) {
         const cleanTargetId = cleanRoomId(targetPeerId);
 
-        // Always start fresh for a new connection attempt
-        if (this.peer) {
-            this.peer.destroy();
-            await new Promise(r => setTimeout(r, 500));
-        }
-
         this.isHost = false;
         this.isInitiator = true;
-        this.options.onStatusChange('connecting', 'Linking...');
 
-        this.peer = new Peer({
-            debug: 2,
-            secure: true
-        });
-
-        this.peer.on('open', (id) => {
-            console.log('Client identity established:', id);
+        const setupClient = () => {
+            this.options.onStatusChange('connecting', `Searching for ${cleanTargetId}...`);
             this._connect(cleanTargetId);
-        });
+        };
 
-        this.peer.on('error', (err: any) => {
-            console.error('Client error:', err.type);
-            this.options.onStatusChange('error', `Fail: ${err.type}`);
-        });
+        if (!this.peer || this.peer.destroyed) {
+            this.options.onStatusChange('connecting', 'Connecting to server...');
+            this.peer = new Peer({
+                debug: 1,
+                secure: true,
+                config: {
+                    'iceServers': [
+                        { urls: 'stun:stun.l.google.com:19302' },
+                        { urls: 'stun:global.stun.twilio.com:3478' }
+                    ]
+                }
+            });
+
+            this.peer.on('open', setupClient);
+            this.peer.on('error', (err: any) => {
+                if (!this.conn?.open) {
+                    this.options.onStatusChange('error', `Server error: ${err.type}`);
+                }
+            });
+        } else {
+            setupClient();
+        }
     }
 
     private _connect(targetPeerId: string) {
-        if (!this.peer) return;
-        const conn = this.peer.connect(targetPeerId, { reliable: true });
+        if (!this.peer || this.peer.destroyed) return;
+
+        const conn = this.peer.connect(targetPeerId, {
+            reliable: true,
+            serialization: 'json'
+        });
+
         this.handleConnection(conn);
     }
 
