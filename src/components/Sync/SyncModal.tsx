@@ -488,18 +488,16 @@ export const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose }) => {
                                 {status === 'ready' ? 'Restart Hosting' : 'Start Hosting'}
                             </Button>
 
-                            {(status === 'ready' || status === 'connected' || status === 'connecting' || status === 'syncing') && (
-                                <div style={{ textAlign: 'center' }}>
-                                    <QRContainer>
-                                        <QRCodeSVG value={cleanRoomId(roomId)} size={200} level="H" />
-                                    </QRContainer>
-                                    <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginTop: '-10px' }}>
-                                        {status === 'connected' || status === 'syncing'
-                                            ? 'Connected to peer'
-                                            : 'Scan this code on the other device to sync'}
-                                    </p>
-                                </div>
-                            )}
+                            <div style={{ textAlign: 'center' }}>
+                                <QRContainer>
+                                    <QRCodeSVG value={cleanRoomId(roomId)} size={200} level="H" />
+                                </QRContainer>
+                                <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginTop: '-10px' }}>
+                                    {status === 'connected' || status === 'syncing'
+                                        ? 'Connected to peer'
+                                        : 'Scan this code on the other device to sync'}
+                                </p>
+                            </div>
                         </>
                     ) : (
                         <>
