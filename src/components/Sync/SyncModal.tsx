@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import styled from 'styled-components';
 import { SyncService, type SyncStatus } from '../../services/SyncService';
-import { FaTimes, FaSync, FaRegCopy, FaRedo } from 'react-icons/fa';
+import { FaTimes, FaSync, FaRegCopy, FaRedo, FaCamera, FaStop } from 'react-icons/fa';
+import { QRCodeSVG } from 'qrcode.react';
+import { Html5QrcodeScanner } from 'html5-qrcode';
 
 const generateShortId = () => {
     return Math.random().toString(36).substring(2, 8).toUpperCase();
@@ -227,6 +229,48 @@ const StatusBox = styled.div<{ $status: SyncStatus }>`
     box-shadow: 0 4px 12px rgba(0,0,0,0.05);
 `;
 
+const QRContainer = styled.div`
+    background: white;
+    padding: 16px;
+    border-radius: 12px;
+    margin: 20px auto;
+    width: fit-content;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+`;
+
+const ScannerContainer = styled.div`
+    width: 100%;
+    max-width: 400px;
+    margin: 0 auto 20px;
+    overflow: hidden;
+    border-radius: 12px;
+    border: 2px solid var(--border-color);
+    background: #000;
+    position: relative;
+    
+    #reader {
+        width: 100% !important;
+        border: none !important;
+    }
+
+    #reader__scan_region {
+        background: #000 !important;
+    }
+
+    #reader__dashboard_section_csr button {
+        background-color: var(--primary-color) !important;
+        color: white !important;
+        border: none !important;
+        padding: 8px 16px !important;
+        border-radius: 4px !important;
+        cursor: pointer !important;
+        margin: 10px !important;
+    }
+`;
+
 
 export const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose }) => {
     const [activeTab, setActiveTab] = useState<'host' | 'join'>('host');
@@ -234,6 +278,8 @@ export const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose }) => {
     const [targetRoomId, setTargetRoomId] = useState('');
     const [status, setStatus] = useState<SyncStatus>('disconnected');
     const [statusMessage, setStatusMessage] = useState('');
+    const [isScanning, setIsScanning] = useState(false);
+    const scannerRef = useRef<Html5QrcodeScanner | null>(null);
 
     const syncService = useRef<SyncService | null>(null);
 
@@ -285,10 +331,42 @@ export const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose }) => {
         }
     };
 
-    const connectToPeer = () => {
-        if (!targetRoomId.trim()) return;
+    const connectToPeer = (id?: string) => {
+        const targetId = id || targetRoomId;
+        if (!targetId.trim()) return;
         const svc = getService();
-        svc.connect(targetRoomId);
+        svc.connect(targetId);
+        if (isScanning) {
+            stopScanning();
+        }
+    };
+
+    const startScanning = () => {
+        setIsScanning(true);
+        setTimeout(() => {
+            const scanner = new Html5QrcodeScanner(
+                "reader",
+                { fps: 10, qrbox: { width: 250, height: 250 } },
+                /* verbose= */ false
+            );
+
+            scanner.render((decodedText) => {
+                setTargetRoomId(decodedText);
+                connectToPeer(decodedText);
+            }, (error) => {
+                // Ignore errors
+            });
+
+            scannerRef.current = scanner;
+        }, 100);
+    };
+
+    const stopScanning = () => {
+        if (scannerRef.current) {
+            scannerRef.current.clear().catch(console.error);
+            scannerRef.current = null;
+        }
+        setIsScanning(false);
     };
 
     const copyToClipboard = () => {
@@ -353,29 +431,57 @@ export const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose }) => {
                                 $variant="host"
                                 onClick={startHosting}
                                 disabled={status === 'connected' || status === 'syncing'}
+                                style={{ marginBottom: '20px' }}
                             >
                                 {status === 'connected' ? 'Hosting...' : 'Start Hosting'}
                             </Button>
+
+                            {status === 'connected' && (
+                                <QRContainer>
+                                    <QRCodeSVG value={roomId} size={200} level="H" />
+                                </QRContainer>
+                            )}
                         </>
                     ) : (
                         <>
-                            <Label>Target Room ID</Label>
-                            <InputGroup>
-                                <Input
-                                    placeholder="Paste Room ID here"
-                                    value={targetRoomId}
-                                    onChange={e => setTargetRoomId(e.target.value)}
-                                    disabled={status === 'connected'}
-                                />
-                            </InputGroup>
-                            <Button
-                                $fullWidth
-                                $variant="join"
-                                onClick={connectToPeer}
-                                disabled={!targetRoomId || status === 'connected' || status === 'syncing'}
-                            >
-                                {status === 'connected' ? 'Connected' : 'Connect'}
-                            </Button>
+                            {isScanning ? (
+                                <>
+                                    <ScannerContainer>
+                                        <div id="reader"></div>
+                                    </ScannerContainer>
+                                    <Button
+                                        $fullWidth
+                                        $variant="secondary"
+                                        onClick={stopScanning}
+                                        style={{ marginBottom: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                                    >
+                                        <FaStop /> Stop Scanning
+                                    </Button>
+                                </>
+                            ) : (
+                                <>
+                                    <Label>Target Room ID</Label>
+                                    <InputGroup>
+                                        <Input
+                                            placeholder="Paste Room ID or scan QR"
+                                            value={targetRoomId}
+                                            onChange={e => setTargetRoomId(e.target.value)}
+                                            disabled={status === 'connected'}
+                                        />
+                                        <IconButton onClick={startScanning} disabled={status === 'connected'} title="Scan QR Code">
+                                            <FaCamera />
+                                        </IconButton>
+                                    </InputGroup>
+                                    <Button
+                                        $fullWidth
+                                        $variant="join"
+                                        onClick={() => connectToPeer()}
+                                        disabled={!targetRoomId || status === 'connected' || status === 'syncing'}
+                                    >
+                                        {status === 'connected' ? 'Connected' : 'Connect'}
+                                    </Button>
+                                </>
+                            )}
                         </>
                     )}
 
