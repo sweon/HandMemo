@@ -239,14 +239,17 @@ export const SettingsPage: React.FC = () => {
         if (newModel.trim()) {
             await db.transaction('rw', db.models, async () => {
                 const allModels = await db.models.orderBy('order').toArray();
-                // Add new model at the bottom (highest order)
-                const maxOrder = allModels.length > 0
-                    ? Math.max(...allModels.map(m => m.order ?? 0))
-                    : -1;
+
+                // Shift all existing models' orders by +1 to put the new one at the top (order: 0)
+                for (const m of allModels) {
+                    if (m.id !== undefined) {
+                        await db.models.update(m.id, { order: (m.order ?? 0) + 1 });
+                    }
+                }
 
                 await db.models.add({
                     name: newModel.trim(),
-                    order: maxOrder + 1
+                    order: 0
                 });
             });
             setNewModel('');
