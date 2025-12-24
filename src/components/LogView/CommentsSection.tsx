@@ -8,6 +8,7 @@ import { MarkdownView } from '../Editor/MarkdownView';
 import { FiEdit2, FiTrash2, FiPlus, FiSave, FiX } from 'react-icons/fi';
 import { format } from 'date-fns';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 const Section = styled.div`
   margin-top: 3rem;
@@ -88,6 +89,7 @@ const CancelButton = styled.button`
 
 export const CommentsSection: React.FC<{ logId: number }> = ({ logId }) => {
     const { theme } = useTheme(); // Access the current theme object
+    const { t } = useLanguage();
     const comments = useLiveQuery(
         () => db.comments.where('logId').equals(logId).sortBy('createdAt'),
         [logId]
@@ -112,7 +114,7 @@ export const CommentsSection: React.FC<{ logId: number }> = ({ logId }) => {
     };
 
     const handleDelete = async (id: number) => {
-        if (confirm('Delete this comment?')) {
+        if (confirm(t.comments.delete_confirm)) {
             await db.comments.delete(id);
         }
     };
@@ -134,7 +136,7 @@ export const CommentsSection: React.FC<{ logId: number }> = ({ logId }) => {
 
     return (
         <Section>
-            <SectionHeader>Comments</SectionHeader>
+            <SectionHeader>{t.comments.title}</SectionHeader>
 
             <CommentList>
                 {comments?.map(c => (
@@ -169,13 +171,13 @@ export const CommentsSection: React.FC<{ logId: number }> = ({ logId }) => {
                 <div style={{ marginTop: '1rem' }}>
                     <MarkdownEditor value={newContent} onChange={setNewContent} />
                     <div style={{ marginTop: '0.5rem', display: 'flex', gap: '0.5rem' }}>
-                        <AddButton onClick={handleAdd}>Save Comment</AddButton>
-                        <CancelButton onClick={() => setIsAdding(false)}>Cancel</CancelButton>
+                        <AddButton onClick={handleAdd}>{t.comments.save_comment}</AddButton>
+                        <CancelButton onClick={() => setIsAdding(false)}>{t.comments.cancel}</CancelButton>
                     </div>
                 </div>
             ) : (
                 <AddButton onClick={() => setIsAdding(true)}>
-                    <FiPlus /> Add Comment
+                    <FiPlus /> {t.comments.add_button}
                 </AddButton>
             )}
         </Section>

@@ -4,6 +4,7 @@ import { SyncService, cleanRoomId, type SyncStatus } from '../../services/SyncSe
 import { FaTimes, FaSync, FaRegCopy, FaRedo, FaCamera, FaStop, FaCheck, FaLink } from 'react-icons/fa';
 import { QRCodeSVG } from 'qrcode.react';
 import { Html5QrcodeScanner } from 'html5-qrcode';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 const generateShortId = () => {
     return Math.random().toString(36).substring(2, 8).toUpperCase();
@@ -330,6 +331,7 @@ export const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose }) => {
     const scannerRef = useRef<Html5QrcodeScanner | null>(null);
     const syncService = useRef<SyncService | null>(null);
     const theme = useStyledTheme();
+    const { t } = useLanguage();
 
     useEffect(() => {
         if (isOpen) {
@@ -389,7 +391,7 @@ export const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose }) => {
                 onStatusChange: handleStatusChange,
                 onDataReceived: () => {
                     setStatus('completed');
-                    setStatusMessage('Data synced! Reloading in 3 seconds...');
+                    setStatusMessage(t.sync.data_synced_reload);
                     setTimeout(() => {
                         window.location.reload();
                     }, 3000);
@@ -451,7 +453,7 @@ export const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose }) => {
         <Overlay onClick={handleClose}>
             <ModalContainer onClick={(e: React.MouseEvent) => e.stopPropagation()}>
                 <Header>
-                    <h2><FaSync /> Sync Data</h2>
+                    <h2><FaSync /> {t.sync.title}</h2>
                     <CloseButton onClick={handleClose}><FaTimes /></CloseButton>
                 </Header>
 
@@ -461,32 +463,32 @@ export const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose }) => {
                         onClick={() => setActiveTab('host')}
                         disabled={status === 'syncing' || (status === 'connected' && activeTab === 'join')}
                     >
-                        Host Session
+                        {t.sync.host_session}
                     </Tab>
                     <Tab
                         $active={activeTab === 'join'}
                         onClick={() => setActiveTab('join')}
                         disabled={status === 'syncing' || (status === 'connected' && activeTab === 'host')}
                     >
-                        Join Session
+                        {t.sync.join_session}
                     </Tab>
                 </TabContainer>
 
                 <Content>
                     {activeTab === 'host' ? (
                         <>
-                            <Label>Your Room ID</Label>
+                            <Label>{t.sync.your_room_id}</Label>
                             <InputGroup>
                                 <Input
                                     value={roomId}
                                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => setRoomId(e.target.value)}
                                     disabled={status === 'connected' || status === 'connecting' || status === 'syncing'}
-                                    placeholder="Enter your custom ID"
+                                    placeholder={t.sync.enter_custom_id}
                                 />
-                                <IconButton onClick={copyToClipboard} title={copied ? "Copied!" : "Copy ID"}>
+                                <IconButton onClick={copyToClipboard} title={copied ? t.sync.copied : t.sync.copy_id}>
                                     {copied ? <FaCheck style={{ color: theme.colors.success }} /> : <FaRegCopy />}
                                 </IconButton>
-                                <IconButton onClick={regenerateId} disabled={status === 'syncing' || status === 'connected'} title="Regenerate ID">
+                                <IconButton onClick={regenerateId} disabled={status === 'syncing' || status === 'connected'} title={t.sync.regenerate_id}>
                                     <FaRedo />
                                 </IconButton>
                             </InputGroup>
@@ -496,7 +498,7 @@ export const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose }) => {
                                 onClick={() => startHosting()}
                                 disabled={status === 'syncing' || status === 'connected' || status === 'connecting'}
                             >
-                                {status === 'connecting' ? 'Connecting...' : (status === 'ready' ? 'Restart Hosting' : 'Start Hosting')}
+                                {status === 'connecting' ? t.sync.connecting : (status === 'ready' ? t.sync.restart_hosting : t.sync.start_host)}
                             </ActionButton>
 
                             <QRWrapper>
@@ -504,8 +506,8 @@ export const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose }) => {
                             </QRWrapper>
                             <p style={{ fontSize: '0.85rem', color: theme.colors.textSecondary, textAlign: 'center', marginTop: -8 }}>
                                 {status === 'connected' || status === 'syncing'
-                                    ? 'Connected to peer'
-                                    : 'Scan this code on your other device to start syncing.'}
+                                    ? t.sync.connected_to_peer
+                                    : t.sync.scan_hint}
                             </p>
                         </>
                     ) : (
@@ -520,7 +522,7 @@ export const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose }) => {
                                         $variant="secondary"
                                         onClick={() => setIsScanning(false)}
                                     >
-                                        <FaStop /> Stop Scanning
+                                        <FaStop /> {t.sync.stop_scanning}
                                     </ActionButton>
                                 </>
                             ) : (
@@ -531,15 +533,15 @@ export const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose }) => {
                                         disabled={status === 'connected'}
                                         style={{ marginBottom: 12, marginTop: 8 }}
                                     >
-                                        <FaCamera /> Scan QR Code
+                                        <FaCamera /> {t.sync.scan_qr}
                                     </ActionButton>
 
-                                    <Divider>OR</Divider>
+                                    <Divider>{t.sync.or}</Divider>
 
-                                    <Label>Manual Entry</Label>
+                                    <Label>{t.sync.manual_entry}</Label>
                                     <InputGroup>
                                         <Input
-                                            placeholder="Enter Room ID"
+                                            placeholder={t.sync.enter_room_id}
                                             value={targetRoomId}
                                             onChange={(e: React.ChangeEvent<HTMLInputElement>) => setTargetRoomId(e.target.value)}
                                             disabled={status === 'connected'}
@@ -547,7 +549,7 @@ export const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose }) => {
                                         <IconButton
                                             onClick={() => connectToPeer()}
                                             disabled={!targetRoomId || status === 'connected' || status === 'syncing'}
-                                            title="Connect"
+                                            title={t.sync.connect}
                                         >
                                             {status === 'connected' ? <FaCheck style={{ color: theme.colors.success }} /> : <FaLink />}
                                         </IconButton>
@@ -560,7 +562,7 @@ export const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose }) => {
                     {(statusMessage || status !== 'disconnected') && (
                         <StatusBox $status={status}>
                             {status === 'connecting' && <FaSync className="fa-spin" />}
-                            {statusMessage || (status === 'ready' ? 'Ready to share' : status === 'connected' ? 'Connected' : '')}
+                            {statusMessage || (status === 'ready' ? t.sync.ready_to_share : status === 'connected' ? t.sync.connected : '')}
                         </StatusBox>
                     )}
                 </Content>

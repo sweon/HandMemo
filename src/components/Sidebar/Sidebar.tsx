@@ -10,6 +10,7 @@ import { SyncModal } from '../Sync/SyncModal';
 import { Toast } from '../UI/Toast';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useSearch } from '../../contexts/SearchContext';
+import { useLanguage } from '../../contexts/LanguageContext';
 import { format } from 'date-fns';
 
 const SidebarContainer = styled.div`
@@ -170,6 +171,7 @@ interface SidebarProps {
 
 export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
   const { searchQuery, setSearchQuery } = useSearch();
+  const { t } = useLanguage();
   const [sortBy, setSortBy] = useState<'date-desc' | 'date-asc' | 'model'>('date-desc');
   const { mode, toggleTheme, increaseFontSize, decreaseFontSize } = useTheme();
   const navigate = useNavigate();
@@ -198,7 +200,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
 
   const handleUpdateCheck = async () => {
     if (needRefresh) {
-      setToastMessage('Installing update...');
+      setToastMessage(t.sidebar.install_update);
       // Ensure the UI has a moment to show the message before reload
       setTimeout(() => {
         updateServiceWorker(true);
@@ -221,19 +223,19 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
         setTimeout(() => {
           setIsCheckingUpdate(false);
           if (needRefreshRef.current) {
-            setToastMessage('Update found! Click again to install.');
+            setToastMessage(t.sidebar.update_found);
           } else {
-            setToastMessage('You are up to date!');
+            setToastMessage(t.sidebar.up_to_date);
           }
         }, 2000);
       } catch (error) {
         console.error('Error checking for updates:', error);
         setIsCheckingUpdate(false);
-        setToastMessage('Check failed. Try again.');
+        setToastMessage(t.sidebar.check_failed);
       }
     } else {
       setIsCheckingUpdate(false);
-      setToastMessage('PWA not supported');
+      setToastMessage(t.sidebar.pwa_not_supported);
     }
   };
 
@@ -290,27 +292,27 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
             navigate('/new');
             onCloseMobile();
           }}>
-            <FiPlus /> New
+            <FiPlus /> {t.sidebar.new}
           </Button>
           <div style={{ display: 'flex', gap: '0rem', alignItems: 'center' }}>
-            <Tooltip content="Decrease Font Size">
+            <Tooltip content={t.sidebar.decrease_font}>
               <IconButton onClick={decreaseFontSize}>
                 <FiMinus size={16} />
               </IconButton>
             </Tooltip>
-            <Tooltip content="Increase Font Size">
+            <Tooltip content={t.sidebar.increase_font}>
               <IconButton onClick={increaseFontSize}>
                 <FiPlus size={16} />
               </IconButton>
             </Tooltip>
 
-            <Tooltip content="Sync Data">
+            <Tooltip content={t.sidebar.sync_data}>
               <IconButton onClick={() => setIsSyncModalOpen(true)}>
                 <FiRefreshCw size={18} />
               </IconButton>
             </Tooltip>
 
-            <Tooltip content={needRefresh ? "Install Update" : "Check for Updates"}>
+            <Tooltip content={needRefresh ? t.sidebar.install_update : t.sidebar.check_updates}>
               <IconButton
                 onClick={handleUpdateCheck}
                 style={{ position: 'relative' }}
@@ -331,13 +333,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
               </IconButton>
             </Tooltip>
 
-            <Tooltip content={mode === 'light' ? "Switch to Dark Mode" : "Switch to Light Mode"}>
+            <Tooltip content={mode === 'light' ? t.sidebar.switch_dark : t.sidebar.switch_light}>
               <IconButton onClick={toggleTheme}>
                 {mode === 'light' ? <FiMoon size={18} /> : <FiSun size={18} />}
               </IconButton>
             </Tooltip>
 
-            <Tooltip content="Settings">
+            <Tooltip content={t.sidebar.settings}>
               <IconButton onClick={() => navigate('/settings')}>
                 <FiSettings size={18} />
               </IconButton>
@@ -348,7 +350,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
         <SearchInputWrapper>
           <SearchIcon size={16} />
           <SearchInput
-            placeholder="Search... (tag:name for tags)"
+            placeholder={t.sidebar.search}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
@@ -371,9 +373,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
               color: mode === 'dark' ? '#f8fafc' : '#111827'
             }}
           >
-            <option value="date-desc">Date (Newest)</option>
-            <option value="date-asc">Date (Oldest)</option>
-            <option value="model">Model Name</option>
+            <option value="date-desc">{t.sidebar.newest}</option>
+            <option value="date-asc">{t.sidebar.oldest}</option>
+            <option value="model">{t.sidebar.model_name}</option>
           </select>
         </div>
       </Header>
@@ -386,7 +388,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
             $isActive={Number(id) === log.id}
             onClick={onCloseMobile}
           >
-            <LogTitle title={log.title || 'Untitled Log'}>{log.title || 'Untitled Log'}</LogTitle>
+            <LogTitle title={log.title || t.sidebar.untitled}>{log.title || t.sidebar.untitled}</LogTitle>
             <LogDate>
               {format(log.createdAt, 'MMM d, yyyy HH:mm')}
               {sortBy === 'model' && log.modelId && models && (

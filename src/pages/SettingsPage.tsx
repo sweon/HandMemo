@@ -7,6 +7,8 @@ import { FiTrash2, FiPlus, FiDownload, FiUpload } from 'react-icons/fi';
 import { MdDragIndicator } from 'react-icons/md';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import type { DropResult } from '@hello-pangea/dnd';
+import { useLanguage } from '../contexts/LanguageContext';
+import type { Language } from '../translations';
 
 const Container = styled.div`
   padding: 2rem;
@@ -184,7 +186,24 @@ const CheckboxLabel = styled.label`
   color: ${({ theme }) => theme.colors.text};
 `;
 
+const Select = styled.select`
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  background: ${({ theme }) => theme.colors.background};
+  color: ${({ theme }) => theme.colors.text};
+  font-size: 1rem;
+  width: 200px;
+  cursor: pointer;
+
+  &:focus {
+    outline: none;
+    border-color: ${({ theme }) => theme.colors.primary};
+  }
+`;
+
 export const SettingsPage: React.FC = () => {
+    const { t, language, setLanguage } = useLanguage();
     const models = useLiveQuery(() => db.models.orderBy('order').toArray());
 
     useEffect(() => {
@@ -257,7 +276,7 @@ export const SettingsPage: React.FC = () => {
     };
 
     const handleDeleteModel = async (id: number) => {
-        if (confirm('Delete this model? Existing logs linked to this model will lose the reference.')) {
+        if (confirm(t.settings.delete_confirm)) {
             await db.models.delete(id);
         }
     };
@@ -287,12 +306,12 @@ export const SettingsPage: React.FC = () => {
     const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
-            if (confirm('Import data? This will merge with existing data.')) {
+            if (confirm(t.settings.import_confirm)) {
                 try {
                     await importData(file);
-                    alert('Import successful!');
+                    alert(t.settings.import_success);
                 } catch (err) {
-                    alert('Import failed: ' + err);
+                    alert(t.settings.import_failed + err);
                 }
             }
         }
@@ -301,15 +320,15 @@ export const SettingsPage: React.FC = () => {
     return (
         <Container>
             <Section>
-                <Title>Manage LLM Models</Title>
+                <Title>{t.settings.manage_models}</Title>
                 <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem' }}>
                     <Input
                         value={newModel}
                         onChange={e => setNewModel(e.target.value)}
-                        placeholder="Add new model name..."
+                        placeholder={t.settings.add_model_placeholder}
                         onKeyDown={(e) => e.key === 'Enter' && newModel.trim() && handleAddModel()}
                     />
-                    <Button onClick={handleAddModel} disabled={!newModel.trim()}><FiPlus /> Add</Button>
+                    <Button onClick={handleAddModel} disabled={!newModel.trim()}><FiPlus /> {t.settings.add}</Button>
                 </div>
 
                 <DragDropContext onDragEnd={onDragEnd}>
@@ -343,12 +362,12 @@ export const SettingsPage: React.FC = () => {
             </Section>
 
             <Section>
-                <Title>Data Management</Title>
+                <Title>{t.settings.data_management}</Title>
                 <div style={{ display: 'flex', gap: '1rem' }}>
-                    <Button onClick={handleExportClick}><FiDownload /> Export / Backup</Button>
+                    <Button onClick={handleExportClick}><FiDownload /> {t.settings.export_backup}</Button>
 
                     <Button onClick={() => fileInputRef.current?.click()} style={{ background: '#10b981' }}>
-                        <FiUpload /> Import / Restore
+                        <FiUpload /> {t.settings.import_restore}
                     </Button>
                     <input
                         type="file"
@@ -359,14 +378,25 @@ export const SettingsPage: React.FC = () => {
                     />
                 </div>
                 <p style={{ marginTop: '1rem', color: 'var(--text-secondary)', fontSize: '0.9rem', opacity: 0.8 }}>
-                    Note: Importing merges data. Duplicate items (by ID) are treated as new entries with mapped relationships.
+                    {t.settings.import_note}
                 </p>
+            </Section>
+
+            <Section>
+                <Title>{t.settings.language}</Title>
+                <Select
+                    value={language}
+                    onChange={(e) => setLanguage(e.target.value as Language)}
+                >
+                    <option value="en">{t.settings.english}</option>
+                    <option value="ko">{t.settings.korean}</option>
+                </Select>
             </Section>
 
             {showExportModal && (
                 <ModalOverlay onClick={() => setShowExportModal(false)}>
                     <ModalContent onClick={e => e.stopPropagation()}>
-                        <ModalHeader>Export Data</ModalHeader>
+                        <ModalHeader>{t.settings.export_data}</ModalHeader>
                         <ModalBody>
                             <RadioLabel>
                                 <input
@@ -374,7 +404,7 @@ export const SettingsPage: React.FC = () => {
                                     checked={exportMode === 'all'}
                                     onChange={() => setExportMode('all')}
                                 />
-                                All Data (Default)
+                                {t.settings.all_data}
                             </RadioLabel>
 
                             <RadioLabel>
@@ -383,15 +413,15 @@ export const SettingsPage: React.FC = () => {
                                     checked={exportMode === 'selected'}
                                     onChange={() => setExportMode('selected')}
                                 />
-                                Select Logs
+                                {t.settings.select_logs}
                             </RadioLabel>
 
                             <div style={{ marginTop: '1rem', marginBottom: '1rem' }}>
-                                <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Filename (optional):</label>
+                                <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>{t.settings.filename_optional}</label>
                                 <Input
                                     value={exportFileName}
                                     onChange={e => setExportFileName(e.target.value)}
-                                    placeholder="Enter filename..."
+                                    placeholder={t.settings.enter_filename}
                                     style={{ width: '100%' }}
                                 />
                             </div>
@@ -399,7 +429,7 @@ export const SettingsPage: React.FC = () => {
                             {exportMode === 'selected' && (
                                 <ScrollableList>
                                     {allLogs?.length === 0 ? (
-                                        <div style={{ padding: '0.5rem', opacity: 0.6 }}>No logs found.</div>
+                                        <div style={{ padding: '0.5rem', opacity: 0.6 }}>{t.settings.no_logs_found}</div>
                                     ) : (
                                         allLogs?.map(log => (
                                             <CheckboxLabel key={log.id}>
@@ -409,7 +439,7 @@ export const SettingsPage: React.FC = () => {
                                                     onChange={() => toggleLogSelection(log.id!)}
                                                 />
                                                 <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                                    {log.title || 'Untitled'}
+                                                    {log.title || t.sidebar.untitled}
                                                 </span>
                                             </CheckboxLabel>
                                         ))
@@ -419,10 +449,10 @@ export const SettingsPage: React.FC = () => {
                         </ModalBody>
                         <ModalFooter>
                             <Button onClick={() => setShowExportModal(false)} style={{ background: 'transparent', border: '1px solid var(--border-color)', color: 'inherit' }}>
-                                Cancel
+                                {t.settings.cancel}
                             </Button>
                             <Button onClick={confirmExport} disabled={exportMode === 'selected' && selectedLogs.size === 0}>
-                                <FiDownload /> Export
+                                <FiDownload /> {t.settings.export}
                             </Button>
                         </ModalFooter>
                     </ModalContent>

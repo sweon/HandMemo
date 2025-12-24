@@ -4,6 +4,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../../db';
 import { useSearch } from '../../contexts/SearchContext';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 import { MarkdownEditor } from '../Editor/MarkdownEditor';
 import { MarkdownView } from '../Editor/MarkdownView';
@@ -106,6 +107,7 @@ export const LogDetail: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const { setSearchQuery } = useSearch();
+    const { t } = useLanguage();
     const isNew = id === undefined;
 
     const [isEditing, setIsEditing] = useState(isNew);
@@ -159,7 +161,7 @@ export const LogDetail: React.FC = () => {
             setIsEditing(false);
         } else {
             const newId = await db.logs.add({
-                title: title || 'Untitled',
+                title: title || t.log_detail.untitled,
                 content,
                 tags: tagArray,
                 modelId: modelId ? Number(modelId) : undefined,
@@ -171,16 +173,16 @@ export const LogDetail: React.FC = () => {
     };
 
     const handleDelete = async () => {
-        if (id && confirm('Are you sure you want to delete this log?')) {
+        if (id && confirm(t.log_detail.delete_confirm)) {
             await db.logs.delete(Number(id));
             await db.comments.where('logId').equals(Number(id)).delete();
             navigate('/');
         }
     };
 
-    const currentModelName = models?.find(m => m.id === modelId)?.name || 'Unknown';
+    const currentModelName = models?.find(m => m.id === modelId)?.name || t.log_detail.unknown_model;
 
-    if (!isNew && !log) return <Container>Loading...</Container>;
+    if (!isNew && !log) return <Container>{t.log_detail.loading}</Container>;
 
     return (
         <Container>
@@ -189,7 +191,7 @@ export const LogDetail: React.FC = () => {
                     <TitleInput
                         value={title}
                         onChange={e => setTitle(e.target.value)}
-                        placeholder="Log Title"
+                        placeholder={t.log_detail.title_placeholder}
                         autoFocus
                     />
                 ) : (
@@ -210,7 +212,7 @@ export const LogDetail: React.FC = () => {
                             <TagInput
                                 value={tags}
                                 onChange={e => setTags(e.target.value)}
-                                placeholder="Tags (comma separated)"
+                                placeholder={t.log_detail.tags_placeholder}
                             />
                         </>
                     ) : (
@@ -242,21 +244,21 @@ export const LogDetail: React.FC = () => {
                     {isEditing ? (
                         <>
                             <ActionButton $variant="primary" onClick={handleSave}>
-                                <FiSave /> Save
+                                <FiSave /> {t.log_detail.save}
                             </ActionButton>
                             {!isNew && (
                                 <ActionButton onClick={() => setIsEditing(false)}>
-                                    <FiX /> Cancel
+                                    <FiX /> {t.log_detail.cancel}
                                 </ActionButton>
                             )}
                         </>
                     ) : (
                         <>
                             <ActionButton onClick={() => setIsEditing(true)}>
-                                <FiEdit2 /> Edit
+                                <FiEdit2 /> {t.log_detail.edit}
                             </ActionButton>
                             <ActionButton $variant="danger" onClick={handleDelete}>
-                                <FiTrash2 /> Delete
+                                <FiTrash2 /> {t.log_detail.delete}
                             </ActionButton>
                         </>
                     )}
