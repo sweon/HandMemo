@@ -12,6 +12,7 @@ const Container = styled.div<{ $isResizing: boolean }>`
   ${({ $isResizing }) => $isResizing && `
     cursor: col-resize;
     user-select: none;
+    -webkit-user-select: none;
   `}
 `;
 
@@ -22,12 +23,12 @@ const SidebarWrapper = styled.div<{ $isOpen: boolean; $width: number }>`
   background: ${({ theme }) => theme.colors.surface};
   display: flex;
   flex-direction: column;
-  transition: transform 0.3s ease;
+  transition: transform 0.3s ease, width 0.1s ease;
   position: relative;
 
   @media (max-width: 768px) {
-    width: 300px !important;
-    min-width: 300px !important;
+    width: ${({ $width }) => Math.min($width, 320)}px !important;
+    min-width: ${({ $width }) => Math.min($width, 240)}px !important;
     position: absolute;
     z-index: 10;
     height: 100%;
@@ -49,9 +50,19 @@ const ResizeHandle = styled.div<{ $isResizing: boolean }>`
   cursor: col-resize;
   background: ${({ $isResizing, theme }) => $isResizing ? theme.colors.primary : 'transparent'};
   transition: background 0.2s;
-  z-index: 5;
+  z-index: 15;
   margin-left: -2px;
   position: relative;
+  touch-action: none;
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: -10px;
+    right: -10px;
+  }
 
   &:hover {
     background: ${({ theme }) => theme.colors.primary};
@@ -59,7 +70,11 @@ const ResizeHandle = styled.div<{ $isResizing: boolean }>`
   }
 
   @media (max-width: 768px) {
-    display: none;
+    z-index: 20;
+    position: fixed;
+    height: 100%;
+    /* Only show handle when it's being used or sidebar is open on mobile */
+    left: var(--sidebar-x, 0px);
   }
 `;
 
@@ -92,7 +107,7 @@ const Overlay = styled.div<{ $isOpen: boolean }>`
 
 const STORAGE_KEY = 'llmemo-sidebar-width';
 const DEFAULT_WIDTH = 300;
-const MIN_WIDTH = 280; // Set to prevent header content from wrapping
+const MIN_WIDTH = 280;
 const MAX_WIDTH = 600;
 
 export const MainLayout: React.FC = () => {
@@ -104,18 +119,31 @@ export const MainLayout: React.FC = () => {
   });
   const [isResizing, setIsResizing] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const longPressTimer = useRef<any>(null);
 
-  const startResizing = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    setIsResizing(true);
+  const startResizing = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+    if ('touches' in e) {
+      // Long press logic for touch
+      longPressTimer.current = setTimeout(() => {
+        setIsResizing(true);
+        if (navigator.vibrate) navigator.vibrate(50);
+      }, 500);
+    } else {
+      e.preventDefault();
+      setIsResizing(true);
+    }
   }, []);
 
   const stopResizing = useCallback(() => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
     setIsResizing(false);
     localStorage.setItem(STORAGE_KEY, sidebarWidth.toString());
   }, [sidebarWidth]);
 
-  const resize = useCallback((e: MouseEvent) => {
+  const handleMouseMove = useCallback((e: MouseEvent) => {
     if (isResizing) {
       const newWidth = e.clientX;
       if (newWidth >= MIN_WIDTH && newWidth <= MAX_WIDTH) {
@@ -124,19 +152,39 @@ export const MainLayout: React.FC = () => {
     }
   }, [isResizing]);
 
+  const handleTouchMove = useCallback((e: TouchEvent) => {
+    if (isResizing) {
+      const newWidth = e.touches[0].clientX;
+      if (newWidth >= MIN_WIDTH && newWidth <= MAX_WIDTH) {
+        setSidebarWidth(newWidth);
+      }
+    }
+  }, [isResizing]);
+
   useEffect(() => {
     if (isResizing) {
-      window.addEventListener('mousemove', resize);
+      window.addEventListener('mousemove', handleMouseMove);
       window.addEventListener('mouseup', stopResizing);
+      window.addEventListener('touchmove', handleTouchMove, { passive: false });
+      window.addEventListener('touchend', stopResizing);
     } else {
-      window.removeEventListener('mousemove', resize);
+      window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', stopResizing);
+      window.removeEventListener('touchmove', handleTouchMove);
+      window.removeEventListener('touchend', stopResizing);
     }
     return () => {
-      window.removeEventListener('mousemove', resize);
+      window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', stopResizing);
+      window.removeEventListener('touchmove', handleTouchMove);
+      window.removeEventListener('touchend', stopResizing);
     };
-  }, [isResizing, resize, stopResizing]);
+  }, [isResizing, handleMouseMove, handleTouchMove, stopResizing]);
+
+  // CSS Variable to sync handle position on mobile
+  useEffect(() => {
+    document.documentElement.style.setProperty('--sidebar-x', `${sidebarWidth}px`);
+  }, [sidebarWidth]);
 
   return (
     <Container ref={containerRef} $isResizing={isResizing}>
@@ -144,7 +192,12 @@ export const MainLayout: React.FC = () => {
       <SidebarWrapper $isOpen={isSidebarOpen} $width={sidebarWidth}>
         <Sidebar onCloseMobile={() => setSidebarOpen(false)} />
       </SidebarWrapper>
-      <ResizeHandle $isResizing={isResizing} onMouseDown={startResizing} />
+      <ResizeHandle
+        $isResizing={isResizing}
+        onMouseDown={startResizing}
+        onTouchStart={startResizing}
+        onTouchEnd={stopResizing}
+      />
       <ContentWrapper>
         <MobileHeader>
           <FiMenu size={24} onClick={() => setSidebarOpen(true)} />
