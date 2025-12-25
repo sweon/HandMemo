@@ -3,7 +3,7 @@ import styled from 'styled-components';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
 import { exportData, importData } from '../utils/backup';
-import { FiTrash2, FiPlus, FiDownload, FiUpload, FiHelpCircle } from 'react-icons/fi';
+import { FiTrash2, FiPlus, FiDownload, FiUpload, FiChevronRight, FiArrowLeft, FiDatabase, FiCpu, FiGlobe, FiInfo } from 'react-icons/fi';
 import { MdDragIndicator } from 'react-icons/md';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import type { DropResult } from '@hello-pangea/dnd';
@@ -11,21 +11,125 @@ import { useLanguage } from '../contexts/LanguageContext';
 import type { Language } from '../translations';
 
 const Container = styled.div`
-  padding: 2rem;
-  max-width: 800px;
+  padding: 1.5rem;
+  max-width: 600px;
   margin: 0 auto;
   height: 100%;
   overflow-y: auto;
+  
+  @media (max-width: 600px) {
+    padding: 1rem;
+  }
 `;
 
 const Section = styled.div`
-  margin-bottom: 3rem;
+  margin-bottom: 2rem;
+  animation: fadeIn 0.3s ease-out;
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+`;
+
+const Header = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
+  padding-bottom: 1rem;
 `;
 
 const Title = styled.h2`
-  margin-bottom: 1.5rem;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
-  padding-bottom: 0.5rem;
+  margin: 0;
+  font-size: 1.5rem;
+  color: ${({ theme }) => theme.colors.text};
+`;
+
+const MenuList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+`;
+
+const MenuButton = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.25rem;
+  background: ${({ theme }) => theme.colors.surface};
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  width: 100%;
+  text-align: left;
+  
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    border-color: ${({ theme }) => theme.colors.primary};
+    background: ${({ theme }) => theme.colors.background};
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+
+  .icon-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    background: ${({ theme }) => theme.colors.background};
+    border-radius: 10px;
+    color: ${({ theme }) => theme.colors.primary};
+    font-size: 1.25rem;
+  }
+
+  .label-wrapper {
+    flex: 1;
+    
+    .title {
+      display: block;
+      font-weight: 600;
+      font-size: 1.05rem;
+      color: ${({ theme }) => theme.colors.text};
+      margin-bottom: 0.2rem;
+    }
+    
+    .desc {
+      display: block;
+      font-size: 0.85rem;
+      color: ${({ theme }) => theme.colors.textSecondary};
+      opacity: 0.8;
+    }
+  }
+
+  .chevron {
+    color: ${({ theme }) => theme.colors.textSecondary};
+    opacity: 0.5;
+  }
+`;
+
+const BackButton = styled.button`
+  background: transparent;
+  border: none;
+  color: ${({ theme }) => theme.colors.textSecondary};
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+
+  &:hover {
+    background: ${({ theme }) => theme.colors.border};
+    color: ${({ theme }) => theme.colors.text};
+  }
 `;
 
 const ModelList = styled.ul`
@@ -67,9 +171,17 @@ const DragHandle = styled.div`
 
 const Input = styled.input`
   flex: 1;
-  padding: 0.5rem;
-  border-radius: 4px;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
   border: 1px solid ${({ theme }) => theme.colors.border};
+  background: ${({ theme }) => theme.colors.background};
+  color: ${({ theme }) => theme.colors.text};
+  font-size: 1rem;
+
+  &:focus {
+    outline: none;
+    border-color: ${({ theme }) => theme.colors.primary};
+  }
 `;
 
 const IconButton = styled.button`
@@ -90,17 +202,23 @@ const IconButton = styled.button`
   }
 `;
 
-const Button = styled.button`
+const ActionButton = styled.button<{ $variant?: 'primary' | 'success' | 'secondary' }>`
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 1rem;
-  background: ${({ theme }) => theme.colors.primary};
-  color: white;
-  border: none;
-  border-radius: 6px;
+  justify-content: center;
+  gap: 0.6rem;
+  padding: 0.75rem 1.25rem;
+  background: ${({ theme, $variant }) =>
+        $variant === 'success' ? '#10b981' :
+            $variant === 'secondary' ? 'transparent' :
+                theme.colors.primary};
+  color: ${({ $variant }) => $variant === 'secondary' ? 'inherit' : 'white'};
+  border: ${({ $variant, theme }) => $variant === 'secondary' ? `1px solid ${theme.colors.border}` : 'none'};
+  border-radius: 8px;
   cursor: pointer;
   font-weight: 500;
+  font-size: 0.95rem;
+  transition: all 0.2s;
   
   &:disabled {
     opacity: 0.5;
@@ -109,6 +227,11 @@ const Button = styled.button`
 
   &:hover:not(:disabled) {
     filter: brightness(1.1);
+    transform: translateY(-1px);
+    ${({ $variant, theme }) => $variant === 'secondary' && `
+      background: ${theme.colors.border};
+      border-color: ${theme.colors.textSecondary};
+    `}
   }
 `;
 
@@ -160,40 +283,64 @@ const RadioLabel = styled.label`
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  margin-bottom: 0.5rem;
+  margin-bottom: 1.25rem;
+  padding: 1rem;
+  background: ${({ theme }) => theme.colors.background};
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 8px;
   cursor: pointer;
   color: ${({ theme }) => theme.colors.text};
+  transition: all 0.2s;
+
+  &:hover {
+    border-color: ${({ theme }) => theme.colors.primary};
+  }
+
+  input {
+    width: 18px;
+    height: 18px;
+    accent-color: ${({ theme }) => theme.colors.primary};
+  }
 `;
 
 const ScrollableList = styled.div`
   border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: 4px;
+  border-radius: 8px;
   max-height: 200px;
   overflow-y: auto;
   padding: 0.5rem;
   margin-top: 0.5rem;
-  margin-left: 1.5rem;
-  background: ${({ theme }) => theme.colors.background};
+  background: ${({ theme }) => theme.colors.surface};
 `;
 
 const CheckboxLabel = styled.label`
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.75rem;
   margin-bottom: 0.25rem;
+  padding: 0.5rem;
+  border-radius: 4px;
   font-size: 0.9rem;
   cursor: pointer;
   color: ${({ theme }) => theme.colors.text};
+  
+  &:hover {
+    background: ${({ theme }) => theme.colors.background};
+  }
+
+  input {
+    accent-color: ${({ theme }) => theme.colors.primary};
+  }
 `;
 
 const Select = styled.select`
-  padding: 0.5rem 1rem;
-  border-radius: 6px;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
   border: 1px solid ${({ theme }) => theme.colors.border};
   background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.text};
   font-size: 1rem;
-  width: 200px;
+  width: 100%;
   cursor: pointer;
 
   &:focus {
@@ -202,8 +349,33 @@ const Select = styled.select`
   }
 `;
 
+const HelpList = styled.ul`
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  
+  li {
+    margin-bottom: 1rem;
+    padding-left: 1rem;
+    position: relative;
+    line-height: 1.6;
+    color: ${({ theme }) => theme.colors.text};
+    
+    &::before {
+      content: '•';
+      position: absolute;
+      left: 0;
+      color: ${({ theme }) => theme.colors.primary};
+      font-weight: bold;
+    }
+  }
+`;
+
+type SubMenu = 'main' | 'models' | 'data' | 'language' | 'about';
+
 export const SettingsPage: React.FC = () => {
     const { t, language, setLanguage } = useLanguage();
+    const [currentSubMenu, setCurrentSubMenu] = useState<SubMenu>('main');
     const models = useLiveQuery(() => db.models.orderBy('order').toArray());
 
     useEffect(() => {
@@ -229,7 +401,6 @@ export const SettingsPage: React.FC = () => {
     const [exportMode, setExportMode] = useState<'all' | 'selected'>('all');
     const [selectedLogs, setSelectedLogs] = useState<Set<number>>(new Set());
     const [exportFileName, setExportFileName] = useState('');
-    const [showHelpModal, setShowHelpModal] = useState(false);
     const allLogs = useLiveQuery(() => db.logs.orderBy('createdAt').reverse().toArray());
 
     const handleExportClick = () => {
@@ -259,14 +430,11 @@ export const SettingsPage: React.FC = () => {
         if (newModel.trim()) {
             await db.transaction('rw', db.models, async () => {
                 const allModels = await db.models.orderBy('order').toArray();
-
-                // Shift all existing models' orders by +1 to put the new one at the top (order: 0)
                 for (const m of allModels) {
                     if (m.id !== undefined) {
                         await db.models.update(m.id, { order: (m.order ?? 0) + 1 });
                     }
                 }
-
                 await db.models.add({
                     name: newModel.trim(),
                     order: 0
@@ -284,17 +452,12 @@ export const SettingsPage: React.FC = () => {
 
     const onDragEnd = async (result: DropResult) => {
         if (!result.destination || !models) return;
-
         const sourceIndex = result.source.index;
         const destIndex = result.destination.index;
-
         if (sourceIndex === destIndex) return;
-
         const newModels = Array.from(models);
         const [removed] = newModels.splice(sourceIndex, 1);
         newModels.splice(destIndex, 0, removed);
-
-        // Update orders in DB
         await db.transaction('rw', db.models, async () => {
             for (let i = 0; i < newModels.length; i++) {
                 if (newModels[i].id !== undefined) {
@@ -318,74 +481,124 @@ export const SettingsPage: React.FC = () => {
         }
     };
 
+    const renderHeader = (title: string) => (
+        <Header>
+            <BackButton onClick={() => setCurrentSubMenu('main')}>
+                <FiArrowLeft size={20} />
+            </BackButton>
+            <Title>{title}</Title>
+        </Header>
+    );
+
     return (
         <Container>
-            <Section>
-                <Title>{t.settings.manage_models}</Title>
-                <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem' }}>
-                    <Input
-                        value={newModel}
-                        onChange={e => setNewModel(e.target.value)}
-                        placeholder={t.settings.add_model_placeholder}
-                        onKeyDown={(e) => e.key === 'Enter' && newModel.trim() && handleAddModel()}
-                    />
-                    <Button onClick={handleAddModel} disabled={!newModel.trim()}><FiPlus /> {t.settings.add}</Button>
-                </div>
+            {currentSubMenu === 'main' && (
+                <Section>
+                    <Title style={{ marginBottom: '1.5rem' }}>{t.settings.title}</Title>
+                    <MenuList>
+                        <MenuButton onClick={() => setCurrentSubMenu('models')}>
+                            <div className="icon-wrapper"><FiCpu /></div>
+                            <div className="label-wrapper">
+                                <span className="title">{t.settings.manage_models}</span>
+                                <span className="desc">Reorder or add LLM services</span>
+                            </div>
+                            <FiChevronRight className="chevron" />
+                        </MenuButton>
 
-                <DragDropContext onDragEnd={onDragEnd}>
-                    <Droppable droppableId="models">
-                        {(provided) => (
-                            <ModelList {...provided.droppableProps} ref={provided.innerRef}>
-                                {models?.map((m, index) => (
-                                    <Draggable key={m.id} draggableId={m.id!.toString()} index={index}>
-                                        {(provided, snapshot) => (
-                                            <ModelItem
-                                                ref={provided.innerRef}
-                                                {...provided.draggableProps}
-                                                $isDragging={snapshot.isDragging}
-                                            >
-                                                <DragHandle {...provided.dragHandleProps}>
-                                                    <MdDragIndicator size={20} />
-                                                </DragHandle>
-                                                <span style={{ flex: 1, fontWeight: 500 }}>{m.name}</span>
-                                                <IconButton onClick={() => handleDeleteModel(m.id!)}>
-                                                    <FiTrash2 size={18} />
-                                                </IconButton>
-                                            </ModelItem>
-                                        )}
-                                    </Draggable>
-                                ))}
-                                {provided.placeholder}
-                            </ModelList>
-                        )}
-                    </Droppable>
-                </DragDropContext>
-            </Section>
+                        <MenuButton onClick={() => setCurrentSubMenu('data')}>
+                            <div className="icon-wrapper"><FiDatabase /></div>
+                            <div className="label-wrapper">
+                                <span className="title">{t.settings.data_management}</span>
+                                <span className="desc">Export, import or backup data</span>
+                            </div>
+                            <FiChevronRight className="chevron" />
+                        </MenuButton>
 
-            <Section>
-                <Title>{t.settings.data_management}</Title>
-                <div style={{ display: 'flex', gap: '1rem' }}>
-                    <Button onClick={handleExportClick}><FiDownload /> {t.settings.export_backup}</Button>
+                        <MenuButton onClick={() => setCurrentSubMenu('language')}>
+                            <div className="icon-wrapper"><FiGlobe /></div>
+                            <div className="label-wrapper">
+                                <span className="title">{t.settings.language}</span>
+                                <span className="desc">Change display language</span>
+                            </div>
+                            <FiChevronRight className="chevron" />
+                        </MenuButton>
 
-                    <Button onClick={() => fileInputRef.current?.click()} style={{ background: '#10b981' }}>
-                        <FiUpload /> {t.settings.import_restore}
-                    </Button>
-                    <input
-                        type="file"
-                        ref={fileInputRef}
-                        style={{ display: 'none' }}
-                        accept=".json"
-                        onChange={handleImport}
-                    />
-                </div>
-                <p style={{ marginTop: '1rem', color: 'var(--text-secondary)', fontSize: '0.9rem', opacity: 0.8 }}>
-                    {t.settings.import_note}
-                </p>
-            </Section>
+                        <MenuButton onClick={() => setCurrentSubMenu('about')}>
+                            <div className="icon-wrapper"><FiInfo /></div>
+                            <div className="label-wrapper">
+                                <span className="title">{t.settings.help_title}</span>
+                                <span className="desc">App info and user guide</span>
+                            </div>
+                            <FiChevronRight className="chevron" />
+                        </MenuButton>
+                    </MenuList>
+                </Section>
+            )}
 
-            <Section>
-                <Title>{t.settings.language}</Title>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            {currentSubMenu === 'models' && (
+                <Section>
+                    {renderHeader(t.settings.manage_models)}
+                    <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.5rem' }}>
+                        <Input
+                            value={newModel}
+                            onChange={e => setNewModel(e.target.value)}
+                            placeholder={t.settings.add_model_placeholder}
+                            onKeyDown={(e) => e.key === 'Enter' && newModel.trim() && handleAddModel()}
+                        />
+                        <ActionButton onClick={handleAddModel} disabled={!newModel.trim()}><FiPlus /> {t.settings.add}</ActionButton>
+                    </div>
+
+                    <DragDropContext onDragEnd={onDragEnd}>
+                        <Droppable droppableId="models">
+                            {(provided) => (
+                                <ModelList {...provided.droppableProps} ref={provided.innerRef}>
+                                    {models?.map((m, index) => (
+                                        <Draggable key={m.id} draggableId={m.id!.toString()} index={index}>
+                                            {(provided, snapshot) => (
+                                                <ModelItem
+                                                    ref={provided.innerRef}
+                                                    {...provided.draggableProps}
+                                                    $isDragging={snapshot.isDragging}
+                                                >
+                                                    <DragHandle {...provided.dragHandleProps}>
+                                                        <MdDragIndicator size={20} />
+                                                    </DragHandle>
+                                                    <span style={{ flex: 1, fontWeight: 500 }}>{m.name}</span>
+                                                    <IconButton onClick={() => handleDeleteModel(m.id!)}>
+                                                        <FiTrash2 size={18} />
+                                                    </IconButton>
+                                                </ModelItem>
+                                            )}
+                                        </Draggable>
+                                    ))}
+                                    {provided.placeholder}
+                                </ModelList>
+                            )}
+                        </Droppable>
+                    </DragDropContext>
+                </Section>
+            )}
+
+            {currentSubMenu === 'data' && (
+                <Section>
+                    {renderHeader(t.settings.data_management)}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1rem' }}>
+                        <ActionButton onClick={handleExportClick}><FiDownload /> {t.settings.export_backup}</ActionButton>
+                        <ActionButton onClick={() => fileInputRef.current?.click()} $variant="success"><FiUpload /> {t.settings.import_restore}</ActionButton>
+                        <input
+                            type="file"
+                            ref={fileInputRef}
+                            style={{ display: 'none' }}
+                            accept=".json"
+                            onChange={handleImport}
+                        />
+                    </div>
+                </Section>
+            )}
+
+            {currentSubMenu === 'language' && (
+                <Section>
+                    {renderHeader(t.settings.language)}
                     <Select
                         value={language}
                         onChange={(e) => setLanguage(e.target.value as Language)}
@@ -393,36 +606,46 @@ export const SettingsPage: React.FC = () => {
                         <option value="en">{t.settings.english}</option>
                         <option value="ko">{t.settings.korean}</option>
                     </Select>
-                    <Button onClick={() => setShowHelpModal(true)} style={{ background: 'var(--surface-color)', border: '1px solid var(--border-color)', color: 'var(--text-color)' }}>
-                        <FiHelpCircle /> {t.settings.help}
-                    </Button>
-                </div>
-            </Section>
+                </Section>
+            )}
+
+            {currentSubMenu === 'about' && (
+                <Section>
+                    {renderHeader(t.settings.help_title)}
+                    <p style={{ marginBottom: '1.5rem', lineHeight: '1.6', fontSize: '1.1rem', fontWeight: 500 }}>{t.settings.help_desc}</p>
+                    <HelpList>
+                        <li>{t.settings.help_local_db}</li>
+                        <li>{t.settings.help_offline}</li>
+                        <li>{t.settings.help_sync}</li>
+                        <li>{t.settings.help_backup}</li>
+                        <li>{t.settings.help_markdown}</li>
+                        <li>{t.settings.help_models}</li>
+                        <li>{t.settings.help_tags}</li>
+                        <li>{t.settings.help_comments}</li>
+                        <li>{t.settings.help_math}</li>
+                    </HelpList>
+                    <div style={{ marginTop: '2rem', padding: '1rem', background: 'var(--surface-color)', borderRadius: '8px', fontSize: '0.85rem', color: 'var(--text-secondary)', textAlign: 'center' }}>
+                        LLMemo v1.2.0 • Local-First LLM Interaction Logger
+                    </div>
+                </Section>
+            )}
 
             {showExportModal && (
                 <ModalOverlay onClick={() => setShowExportModal(false)}>
                     <ModalContent onClick={e => e.stopPropagation()}>
                         <ModalHeader>{t.settings.export_data}</ModalHeader>
                         <ModalBody>
+                            <label style={{ display: 'block', marginBottom: '0.75rem', fontWeight: 600 }}>{t.settings.export_mode}</label>
                             <RadioLabel>
-                                <input
-                                    type="radio"
-                                    checked={exportMode === 'all'}
-                                    onChange={() => setExportMode('all')}
-                                />
+                                <input type="radio" checked={exportMode === 'all'} onChange={() => setExportMode('all')} />
                                 {t.settings.all_data}
                             </RadioLabel>
-
                             <RadioLabel>
-                                <input
-                                    type="radio"
-                                    checked={exportMode === 'selected'}
-                                    onChange={() => setExportMode('selected')}
-                                />
+                                <input type="radio" checked={exportMode === 'selected'} onChange={() => setExportMode('selected')} />
                                 {t.settings.select_logs}
                             </RadioLabel>
 
-                            <div style={{ marginTop: '1rem', marginBottom: '1rem' }}>
+                            <div style={{ marginTop: '1.5rem', marginBottom: '1.5rem' }}>
                                 <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>{t.settings.filename_optional}</label>
                                 <Input
                                     value={exportFileName}
@@ -454,38 +677,10 @@ export const SettingsPage: React.FC = () => {
                             )}
                         </ModalBody>
                         <ModalFooter>
-                            <Button onClick={() => setShowExportModal(false)} style={{ background: 'transparent', border: '1px solid var(--border-color)', color: 'inherit' }}>
-                                {t.settings.cancel}
-                            </Button>
-                            <Button onClick={confirmExport} disabled={exportMode === 'selected' && selectedLogs.size === 0}>
+                            <ActionButton onClick={() => setShowExportModal(false)} $variant="secondary">{t.settings.cancel}</ActionButton>
+                            <ActionButton onClick={confirmExport} disabled={exportMode === 'selected' && selectedLogs.size === 0}>
                                 <FiDownload /> {t.settings.export}
-                            </Button>
-                        </ModalFooter>
-                    </ModalContent>
-                </ModalOverlay>
-            )}
-            {showHelpModal && (
-                <ModalOverlay onClick={() => setShowHelpModal(false)}>
-                    <ModalContent onClick={e => e.stopPropagation()}>
-                        <ModalHeader>{t.settings.help_title}</ModalHeader>
-                        <ModalBody>
-                            <p style={{ marginBottom: '1.5rem', lineHeight: '1.5' }}>{t.settings.help_desc}</p>
-                            <ul style={{ paddingLeft: '1.2rem', lineHeight: '1.8' }}>
-                                <li>{t.settings.help_local_db}</li>
-                                <li>{t.settings.help_offline}</li>
-                                <li>{t.settings.help_sync}</li>
-                                <li>{t.settings.help_backup}</li>
-                                <li>{t.settings.help_markdown}</li>
-                                <li>{t.settings.help_models}</li>
-                                <li>{t.settings.help_tags}</li>
-                                <li>{t.settings.help_comments}</li>
-                                <li>{t.settings.help_math}</li>
-                            </ul>
-                        </ModalBody>
-                        <ModalFooter>
-                            <Button onClick={() => setShowHelpModal(false)}>
-                                {t.settings.help_close}
-                            </Button>
+                            </ActionButton>
                         </ModalFooter>
                     </ModalContent>
                 </ModalOverlay>
@@ -493,4 +688,5 @@ export const SettingsPage: React.FC = () => {
         </Container>
     );
 };
+
 
