@@ -85,17 +85,16 @@ export class SyncService {
     private _connect(targetPeerId: string) {
         if (!this.peer || this.peer.destroyed) return;
 
-        // Use 'json' serialization which is stable across platforms
-        // Chunking below will prevent the 'Message too big' error
+        // Using 'binary' serialization which is the default and most robust for PeerJS
         const conn = this.peer.connect(targetPeerId, {
-            serialization: 'json'
+            serialization: 'binary'
         });
         this.handleConnection(conn);
     }
 
     private chunkBuffer: Map<string, string[]> = new Map();
 
-    private handleConnection(conn: DataConnection) {
+    private handleConnection(conn: any) { // using any because we need to access dataChannel
         if (this.conn) {
             this.conn.close();
         }
@@ -151,7 +150,7 @@ export class SyncService {
                 return;
             }
 
-            // Handle legacy/un-chunked data (just in case)
+            // Handle legacy/un-chunked data
             if (data && data.logs && data.models) {
                 await this.processReceivedData(data);
             }
@@ -165,7 +164,7 @@ export class SyncService {
             }
         });
 
-        conn.on('error', (err) => {
+        conn.on('error', (err: any) => {
             console.error('Data Session Error:', err);
             this.options.onStatusChange('error', 'Connection failed');
         });
@@ -214,20 +213,29 @@ export class SyncService {
 
     public async syncData() {
         if (!this.conn || !this.conn.open) return;
+
+        // Cast to access internal dataChannel for flow control
+        const connWithChannel = this.conn as any;
+        const channel = connWithChannel.dataChannel;
+
         try {
             const data = await getBackupData();
             const jsonStr = JSON.stringify(data);
-            const CHUNK_SIZE = 16384; // 16KB per chunk
+            const CHUNK_SIZE = 8192; // 8KB per chunk for better reliability
             const totalChunks = Math.ceil(jsonStr.length / CHUNK_SIZE);
             const syncId = Math.random().toString(36).substring(2, 10);
 
             for (let i = 0; i < totalChunks; i++) {
+                // Flow control: Wait if buffer is getting full
+                while (channel && channel.bufferedAmount > 128 * 1024) { // 128KB threshold
+                    await new Promise(r => setTimeout(r, 50));
+                }
+
                 const start = i * CHUNK_SIZE;
                 const end = Math.min(start + CHUNK_SIZE, jsonStr.length);
                 const chunk = jsonStr.substring(start, end);
 
                 if (this.conn && this.conn.open) {
-                    // Send as an object, PeerJS will stringify it via its 'json' serializer
                     this.conn.send({
                         type: 'chunk',
                         id: syncId,
@@ -237,9 +245,9 @@ export class SyncService {
                     });
                 }
 
-                // Small sleep to prevent overwhelming the data channel buffer
-                if (i % 5 === 0) {
-                    await new Promise(r => setTimeout(r, 10));
+                // Small yield to UI thread
+                if (i % 8 === 0) {
+                    await new Promise(r => setTimeout(r, 20));
                 }
             }
         } catch (err) {
