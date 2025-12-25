@@ -49,10 +49,12 @@ export class SyncService {
                 port: 443,
                 path: '/',
                 secure: true,
-                debug: 1,
+                debug: 2,
                 config: {
                     'iceServers': [
                         { urls: 'stun:stun.l.google.com:19302' },
+                        { urls: 'stun:stun1.l.google.com:19302' },
+                        { urls: 'stun:stun2.l.google.com:19302' },
                         { urls: 'stun:global.stun.twilio.com:3478' }
                     ]
                 }
@@ -121,10 +123,12 @@ export class SyncService {
                 port: 443,
                 path: '/',
                 secure: true,
-                debug: 1,
+                debug: 2,
                 config: {
                     'iceServers': [
                         { urls: 'stun:stun.l.google.com:19302' },
+                        { urls: 'stun:stun1.l.google.com:19302' },
+                        { urls: 'stun:stun2.l.google.com:19302' },
                         { urls: 'stun:global.stun.twilio.com:3478' }
                     ]
                 }
@@ -155,7 +159,6 @@ export class SyncService {
         }
 
         const conn = this.peer.connect(targetPeerId, {
-            reliable: true,
             serialization: 'json'
         });
 
@@ -185,7 +188,8 @@ export class SyncService {
             // Sequential Sync: Initiator (Client) sends first
             if (this.isInitiator) {
                 console.log('Initiating data transfer...');
-                setTimeout(() => this.syncData(), 1000);
+                this.options.onStatusChange('syncing', 'Connected. Preparing data...');
+                setTimeout(() => this.syncData(), 1500); // Slightly longer delay for mobile stability
             }
         });
 
