@@ -52,10 +52,10 @@ export const translations = {
             help_sync: "Synchronization: Sync data between devices using WebRTC.",
             help_backup: "Import/Export: Backup your logs as JSON files anytime.",
             help_markdown: "Markdown Support: Rich logging with full Markdown support.",
-            help_models: "Models: Add custom LLM model names in Settings.",
+            help_models: "Models: Add LLM model names in Settings.",
             help_tags: "Tags: Organize logs with searchable tags.",
             help_comments: "Comments: Leave personal notes on each log.",
-            help_math: "Math: Rich formula editing support.",
+            help_math: "Math formula editing support.",
             help_close: "Close"
         },
         log_detail: {
