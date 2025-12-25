@@ -28,20 +28,43 @@ export class SyncService {
 
     public async initialize(roomId: string): Promise<string> {
         this.destroy();
+        // Give a small moment for previous peer to fully disconnect from signaling server
+        await new Promise(r => setTimeout(r, 300));
+
         this.isHost = true;
         this.isInitiator = false;
 
-        this.options.onStatusChange('connecting', 'Waiting for connection...');
+        this.options.onStatusChange('connecting', 'Registering with server...');
 
         return new Promise((resolve, reject) => {
             const cleanId = cleanRoomId(roomId);
-            // Using absolutely standard PeerJS config for maximum compatibility
+
+            // Explicit configuration with STUN servers for better NAT traversal
             this.peer = new Peer(cleanId, {
+                host: '0.peerjs.com',
+                port: 443,
+                path: '/',
+                secure: true,
                 debug: 2,
-                secure: true
+                config: {
+                    iceServers: [
+                        { urls: 'stun:stun.l.google.com:19302' },
+                        { urls: 'stun:stun1.l.google.com:19302' },
+                        { urls: 'stun:stun2.l.google.com:19302' },
+                        { urls: 'stun:global.stun.twilio.com:3478' }
+                    ]
+                }
             });
 
+            const timeout = setTimeout(() => {
+                if (this.peer && !this.peer.open) {
+                    this.options.onStatusChange('error', 'Registration timeout. Please retry.');
+                    reject(new Error('Timeout'));
+                }
+            }, 10000);
+
             this.peer.on('open', (id) => {
+                clearTimeout(timeout);
                 this.options.onStatusChange('ready', `Room ID: ${id}`);
                 resolve(id);
             });
@@ -51,6 +74,7 @@ export class SyncService {
             });
 
             this.peer.on('error', (err: any) => {
+                clearTimeout(timeout);
                 console.error('Peer Server Error:', err.type);
                 this.options.onStatusChange('error', `Server Error: ${err.type}`);
                 reject(err);
@@ -58,25 +82,46 @@ export class SyncService {
         });
     }
 
-    public connect(targetPeerId: string) {
+    public async connect(targetPeerId: string) {
         this.destroy();
+        await new Promise(r => setTimeout(r, 300));
+
         this.isHost = false;
         this.isInitiator = true;
 
         this.options.onStatusChange('connecting', 'Initializing link...');
 
         this.peer = new Peer({
+            host: '0.peerjs.com',
+            port: 443,
+            path: '/',
+            secure: true,
             debug: 2,
-            secure: true
+            config: {
+                iceServers: [
+                    { urls: 'stun:stun.l.google.com:19302' },
+                    { urls: 'stun:stun1.l.google.com:19302' },
+                    { urls: 'stun:stun2.l.google.com:19302' },
+                    { urls: 'stun:global.stun.twilio.com:3478' }
+                ]
+            }
         });
 
+        const timeout = setTimeout(() => {
+            if (this.peer && !this.peer.open) {
+                this.options.onStatusChange('error', 'Link initialization timed out.');
+            }
+        }, 10000);
+
         this.peer.on('open', (id) => {
+            clearTimeout(timeout);
             console.log('Client registered:', id);
             this.options.onStatusChange('connecting', `Dialing ${targetPeerId}...`);
             this._connect(cleanRoomId(targetPeerId));
         });
 
         this.peer.on('error', (err: any) => {
+            clearTimeout(timeout);
             console.error('Peer Client Error:', err.type);
             this.options.onStatusChange('error', `Connection Error: ${err.type}`);
         });
@@ -214,21 +259,40 @@ export class SyncService {
     public async syncData() {
         if (!this.conn || !this.conn.open) return;
 
-        // Cast to access internal dataChannel for flow control
+        // Wait up to 2s for internal dataChannel to be initialized if not already
         const connWithChannel = this.conn as any;
-        const channel = connWithChannel.dataChannel;
+        let channel = connWithChannel.dataChannel;
+        let attempts = 0;
+        while (!channel && attempts < 20) {
+            await new Promise(r => setTimeout(r, 100));
+            channel = connWithChannel.dataChannel;
+            attempts++;
+        }
+
+        if (!channel) {
+            console.error('Data channel not found after waiting');
+            this.options.onStatusChange('error', 'Channel initialization failed');
+            return;
+        }
 
         try {
+            console.log('Preparing sync packet...');
             const data = await getBackupData();
             const jsonStr = JSON.stringify(data);
             const CHUNK_SIZE = 8192; // 8KB per chunk for better reliability
             const totalChunks = Math.ceil(jsonStr.length / CHUNK_SIZE);
             const syncId = Math.random().toString(36).substring(2, 10);
 
+            console.log(`Sending ${totalChunks} chunks, total size: ${jsonStr.length} bytes`);
+
             for (let i = 0; i < totalChunks; i++) {
                 // Flow control: Wait if buffer is getting full
-                while (channel && channel.bufferedAmount > 128 * 1024) { // 128KB threshold
+                // Added safety check to prevent infinite loop
+                let waitCount = 0;
+                while (channel && channel.bufferedAmount > 128 * 1024 && waitCount < 100) {
+                    if (!this.conn || !this.conn.open) break;
                     await new Promise(r => setTimeout(r, 50));
+                    waitCount++;
                 }
 
                 const start = i * CHUNK_SIZE;
@@ -250,6 +314,7 @@ export class SyncService {
                     await new Promise(r => setTimeout(r, 20));
                 }
             }
+            console.log('All chunks sent.');
         } catch (err) {
             console.error('Sync data construction failed:', err);
             this.options.onStatusChange('error', 'Sync data failed');

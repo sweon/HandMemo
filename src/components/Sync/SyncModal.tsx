@@ -434,14 +434,18 @@ export const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose }) => {
         }
     };
 
-    const connectToPeer = (id?: string) => {
+    const connectToPeer = async (id?: string) => {
         const targetId = id || targetRoomId;
         if (!targetId.trim() || status === 'connecting' || status === 'connected' || status === 'syncing') return;
 
-        const svc = getService();
-        svc.connect(targetId);
-        if (isScanning) {
-            setIsScanning(false);
+        try {
+            const svc = getService();
+            await svc.connect(targetId);
+            if (isScanning) {
+                setIsScanning(false);
+            }
+        } catch (e) {
+            console.error('Connect error:', e);
         }
     };
 
