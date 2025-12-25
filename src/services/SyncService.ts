@@ -45,22 +45,10 @@ export class SyncService {
         return new Promise((resolve, reject) => {
             console.log(cleanId ? `Registering peer with ID: ${requestedId}` : 'Registering peer with random ID');
 
-            // Using explicit STUN servers and pool size to maximize local network P2P chances
+            // Minimalist config for better NAT compatibility on restricted WiFis
             const peerConfig = {
-                debug: 3,
-                secure: true,
-                config: {
-                    iceServers: [
-                        { urls: 'stun:stun.l.google.com:19302' },
-                        { urls: 'stun:stun1.l.google.com:19302' },
-                        { urls: 'stun:stun2.l.google.com:19302' },
-                        { urls: 'stun:stun3.l.google.com:19302' },
-                        { urls: 'stun:stun4.l.google.com:19302' },
-                        { urls: 'stun:stun.services.mozilla.com' },
-                        { urls: 'stun:global.stun.twilio.com:3478' }
-                    ],
-                    iceCandidatePoolSize: 10
-                }
+                debug: 2,
+                secure: true
             };
 
             this.peer = cleanId ? new Peer(cleanId, peerConfig) : new Peer(peerConfig);
@@ -150,10 +138,10 @@ export class SyncService {
             return;
         }
 
-        console.log(`Connecting to ${targetPeerId} using binary serialization...`);
-        // Using 'binary' and 'reliable: true' for stable data transfer on local networks
+        console.log(`Connecting to ${targetPeerId} using JSON serialization...`);
+        // Reverting to JSON for maximum compatibility with strict router inspections
         const conn = this.peer.connect(targetPeerId, {
-            serialization: 'binary',
+            serialization: 'json',
             reliable: true
         });
 
@@ -162,6 +150,9 @@ export class SyncService {
         if (pc) {
             pc.oniceconnectionstatechange = () => {
                 console.log('ICE State:', pc.iceConnectionState);
+                if (pc.iceConnectionState === 'failed') {
+                    this.options.onStatusChange('error', 'WiFi P2P blocked. Try mobile data.');
+                }
             };
             pc.onconnectionstatechange = () => {
                 console.log('Connection State:', pc.connectionState);
@@ -313,7 +304,7 @@ export class SyncService {
             console.log('Preparing sync packet...');
             const data = await getBackupData();
             const jsonStr = JSON.stringify(data);
-            const CHUNK_SIZE = 8192; // 8KB per chunk for better reliability
+            const CHUNK_SIZE = 4096; // 4KB for better reliability on strict networks
             const totalChunks = Math.ceil(jsonStr.length / CHUNK_SIZE);
             const syncId = Math.random().toString(36).substring(2, 10);
 
