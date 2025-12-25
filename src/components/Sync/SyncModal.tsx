@@ -127,12 +127,24 @@ const Label = styled.label`
     font-weight: 500;
     text-transform: uppercase;
     letter-spacing: 0.05em;
+
+    @media (max-width: 480px) {
+        max-width: 320px;
+        margin-left: auto;
+        margin-right: auto;
+    }
 `;
 
 const InputGroup = styled.div`
     display: flex;
     gap: 8px;
     margin-bottom: 20px;
+    
+    @media (max-width: 480px) {
+        max-width: 320px;
+        margin-left: auto;
+        margin-right: auto;
+    }
 `;
 
 const Input = styled.input`
@@ -218,6 +230,14 @@ const ActionButton = styled.button<{ $variant?: 'primary' | 'secondary' | 'dange
         opacity: 0.5;
         cursor: not-allowed;
     }
+
+    ${props => props.$fullWidth && `
+        @media (max-width: 480px) {
+            max-width: 320px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+    `}
 `;
 
 const StatusBox = styled.div<{ $status: SyncStatus }>`
@@ -248,6 +268,12 @@ const StatusBox = styled.div<{ $status: SyncStatus }>`
         if (props.$status === 'connecting') return '#f59e0b40';
         return props.theme.colors.border;
     }};
+
+    @media (max-width: 480px) {
+        max-width: 320px;
+        margin-left: auto;
+        margin-right: auto;
+    }
 `;
 
 const QRWrapper = styled.div`
