@@ -11,9 +11,9 @@ import { useLanguage } from '../contexts/LanguageContext';
 import type { Language } from '../translations';
 
 const Container = styled.div`
-  padding: 1.5rem;
-  max-width: 600px;
-  margin: 0 auto;
+  padding: 2rem;
+  max-width: 800px;
+  margin: 0;
   height: 100%;
   overflow-y: auto;
   
@@ -209,9 +209,9 @@ const ActionButton = styled.button<{ $variant?: 'primary' | 'success' | 'seconda
   gap: 0.6rem;
   padding: 0.75rem 1.25rem;
   background: ${({ theme, $variant }) =>
-        $variant === 'success' ? '#10b981' :
-            $variant === 'secondary' ? 'transparent' :
-                theme.colors.primary};
+    $variant === 'success' ? '#10b981' :
+      $variant === 'secondary' ? 'transparent' :
+        theme.colors.primary};
   color: ${({ $variant }) => $variant === 'secondary' ? 'inherit' : 'white'};
   border: ${({ $variant, theme }) => $variant === 'secondary' ? `1px solid ${theme.colors.border}` : 'none'};
   border-radius: 8px;
@@ -374,319 +374,319 @@ const HelpList = styled.ul`
 type SubMenu = 'main' | 'models' | 'data' | 'language' | 'about';
 
 export const SettingsPage: React.FC = () => {
-    const { t, language, setLanguage } = useLanguage();
-    const [currentSubMenu, setCurrentSubMenu] = useState<SubMenu>('main');
-    const models = useLiveQuery(() => db.models.orderBy('order').toArray());
+  const { t, language, setLanguage } = useLanguage();
+  const [currentSubMenu, setCurrentSubMenu] = useState<SubMenu>('main');
+  const models = useLiveQuery(() => db.models.orderBy('order').toArray());
 
-    useEffect(() => {
-        const initializeOrder = async () => {
-            const allModels = await db.models.toArray();
-            if (allModels.length > 0 && allModels.some(m => m.order === undefined)) {
-                await db.transaction('rw', db.models, async () => {
-                    for (let i = 0; i < allModels.length; i++) {
-                        if (allModels[i].order === undefined) {
-                            await db.models.update(allModels[i].id!, { order: i });
-                        }
-                    }
-                });
-            }
-        };
-        initializeOrder();
-    }, []);
-
-    const [newModel, setNewModel] = useState('');
-    const fileInputRef = useRef<HTMLInputElement>(null);
-
-    const [showExportModal, setShowExportModal] = useState(false);
-    const [exportMode, setExportMode] = useState<'all' | 'selected'>('all');
-    const [selectedLogs, setSelectedLogs] = useState<Set<number>>(new Set());
-    const [exportFileName, setExportFileName] = useState('');
-    const allLogs = useLiveQuery(() => db.logs.orderBy('createdAt').reverse().toArray());
-
-    const handleExportClick = () => {
-        setShowExportModal(true);
-        setExportMode('all');
-        setSelectedLogs(new Set());
-        setExportFileName(`llmemo-backup-${new Date().toISOString().slice(0, 10)}`);
-    };
-
-    const confirmExport = async () => {
-        if (exportMode === 'all') {
-            await exportData(undefined, exportFileName);
-        } else {
-            await exportData(Array.from(selectedLogs), exportFileName);
-        }
-        setShowExportModal(false);
-    };
-
-    const toggleLogSelection = (id: number) => {
-        const next = new Set(selectedLogs);
-        if (next.has(id)) next.delete(id);
-        else next.add(id);
-        setSelectedLogs(next);
-    };
-
-    const handleAddModel = async () => {
-        if (newModel.trim()) {
-            await db.transaction('rw', db.models, async () => {
-                const allModels = await db.models.orderBy('order').toArray();
-                for (const m of allModels) {
-                    if (m.id !== undefined) {
-                        await db.models.update(m.id, { order: (m.order ?? 0) + 1 });
-                    }
-                }
-                await db.models.add({
-                    name: newModel.trim(),
-                    order: 0
-                });
-            });
-            setNewModel('');
-        }
-    };
-
-    const handleDeleteModel = async (id: number) => {
-        if (confirm(t.settings.delete_confirm)) {
-            await db.models.delete(id);
-        }
-    };
-
-    const onDragEnd = async (result: DropResult) => {
-        if (!result.destination || !models) return;
-        const sourceIndex = result.source.index;
-        const destIndex = result.destination.index;
-        if (sourceIndex === destIndex) return;
-        const newModels = Array.from(models);
-        const [removed] = newModels.splice(sourceIndex, 1);
-        newModels.splice(destIndex, 0, removed);
+  useEffect(() => {
+    const initializeOrder = async () => {
+      const allModels = await db.models.toArray();
+      if (allModels.length > 0 && allModels.some(m => m.order === undefined)) {
         await db.transaction('rw', db.models, async () => {
-            for (let i = 0; i < newModels.length; i++) {
-                if (newModels[i].id !== undefined) {
-                    await db.models.update(newModels[i].id!, { order: i });
-                }
+          for (let i = 0; i < allModels.length; i++) {
+            if (allModels[i].order === undefined) {
+              await db.models.update(allModels[i].id!, { order: i });
             }
+          }
         });
+      }
     };
+    initializeOrder();
+  }, []);
 
-    const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (file) {
-            if (confirm(t.settings.import_confirm)) {
-                try {
-                    await importData(file);
-                    alert(t.settings.import_success);
-                } catch (err) {
-                    alert(t.settings.import_failed + err);
-                }
-            }
+  const [newModel, setNewModel] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [exportMode, setExportMode] = useState<'all' | 'selected'>('all');
+  const [selectedLogs, setSelectedLogs] = useState<Set<number>>(new Set());
+  const [exportFileName, setExportFileName] = useState('');
+  const allLogs = useLiveQuery(() => db.logs.orderBy('createdAt').reverse().toArray());
+
+  const handleExportClick = () => {
+    setShowExportModal(true);
+    setExportMode('all');
+    setSelectedLogs(new Set());
+    setExportFileName(`llmemo-backup-${new Date().toISOString().slice(0, 10)}`);
+  };
+
+  const confirmExport = async () => {
+    if (exportMode === 'all') {
+      await exportData(undefined, exportFileName);
+    } else {
+      await exportData(Array.from(selectedLogs), exportFileName);
+    }
+    setShowExportModal(false);
+  };
+
+  const toggleLogSelection = (id: number) => {
+    const next = new Set(selectedLogs);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    setSelectedLogs(next);
+  };
+
+  const handleAddModel = async () => {
+    if (newModel.trim()) {
+      await db.transaction('rw', db.models, async () => {
+        const allModels = await db.models.orderBy('order').toArray();
+        for (const m of allModels) {
+          if (m.id !== undefined) {
+            await db.models.update(m.id, { order: (m.order ?? 0) + 1 });
+          }
         }
-    };
+        await db.models.add({
+          name: newModel.trim(),
+          order: 0
+        });
+      });
+      setNewModel('');
+    }
+  };
 
-    const renderHeader = (title: string) => (
-        <Header>
-            <BackButton onClick={() => setCurrentSubMenu('main')}>
-                <FiArrowLeft size={20} />
-            </BackButton>
-            <Title>{title}</Title>
-        </Header>
-    );
+  const handleDeleteModel = async (id: number) => {
+    if (confirm(t.settings.delete_confirm)) {
+      await db.models.delete(id);
+    }
+  };
 
-    return (
-        <Container>
-            {currentSubMenu === 'main' && (
-                <Section>
-                    <Title style={{ marginBottom: '1.5rem' }}>{t.settings.title}</Title>
-                    <MenuList>
-                        <MenuButton onClick={() => setCurrentSubMenu('models')}>
-                            <div className="icon-wrapper"><FiCpu /></div>
-                            <div className="label-wrapper">
-                                <span className="title">{t.settings.manage_models}</span>
-                                <span className="desc">Reorder or add LLM services</span>
-                            </div>
-                            <FiChevronRight className="chevron" />
-                        </MenuButton>
+  const onDragEnd = async (result: DropResult) => {
+    if (!result.destination || !models) return;
+    const sourceIndex = result.source.index;
+    const destIndex = result.destination.index;
+    if (sourceIndex === destIndex) return;
+    const newModels = Array.from(models);
+    const [removed] = newModels.splice(sourceIndex, 1);
+    newModels.splice(destIndex, 0, removed);
+    await db.transaction('rw', db.models, async () => {
+      for (let i = 0; i < newModels.length; i++) {
+        if (newModels[i].id !== undefined) {
+          await db.models.update(newModels[i].id!, { order: i });
+        }
+      }
+    });
+  };
 
-                        <MenuButton onClick={() => setCurrentSubMenu('data')}>
-                            <div className="icon-wrapper"><FiDatabase /></div>
-                            <div className="label-wrapper">
-                                <span className="title">{t.settings.data_management}</span>
-                                <span className="desc">Export, import or backup data</span>
-                            </div>
-                            <FiChevronRight className="chevron" />
-                        </MenuButton>
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (confirm(t.settings.import_confirm)) {
+        try {
+          await importData(file);
+          alert(t.settings.import_success);
+        } catch (err) {
+          alert(t.settings.import_failed + err);
+        }
+      }
+    }
+  };
 
-                        <MenuButton onClick={() => setCurrentSubMenu('language')}>
-                            <div className="icon-wrapper"><FiGlobe /></div>
-                            <div className="label-wrapper">
-                                <span className="title">{t.settings.language}</span>
-                                <span className="desc">Change display language</span>
-                            </div>
-                            <FiChevronRight className="chevron" />
-                        </MenuButton>
+  const renderHeader = (title: string) => (
+    <Header>
+      <BackButton onClick={() => setCurrentSubMenu('main')}>
+        <FiArrowLeft size={20} />
+      </BackButton>
+      <Title>{title}</Title>
+    </Header>
+  );
 
-                        <MenuButton onClick={() => setCurrentSubMenu('about')}>
-                            <div className="icon-wrapper"><FiInfo /></div>
-                            <div className="label-wrapper">
-                                <span className="title">{t.settings.help_title}</span>
-                                <span className="desc">App info and user guide</span>
-                            </div>
-                            <FiChevronRight className="chevron" />
-                        </MenuButton>
-                    </MenuList>
-                </Section>
-            )}
+  return (
+    <Container>
+      {currentSubMenu === 'main' && (
+        <Section>
+          <Title style={{ marginBottom: '1.5rem' }}>{t.settings.title}</Title>
+          <MenuList>
+            <MenuButton onClick={() => setCurrentSubMenu('models')}>
+              <div className="icon-wrapper"><FiCpu /></div>
+              <div className="label-wrapper">
+                <span className="title">{t.settings.manage_models}</span>
+                <span className="desc">Reorder or add LLM services</span>
+              </div>
+              <FiChevronRight className="chevron" />
+            </MenuButton>
 
-            {currentSubMenu === 'models' && (
-                <Section>
-                    {renderHeader(t.settings.manage_models)}
-                    <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.5rem' }}>
-                        <Input
-                            value={newModel}
-                            onChange={e => setNewModel(e.target.value)}
-                            placeholder={t.settings.add_model_placeholder}
-                            onKeyDown={(e) => e.key === 'Enter' && newModel.trim() && handleAddModel()}
-                        />
-                        <ActionButton onClick={handleAddModel} disabled={!newModel.trim()}><FiPlus /> {t.settings.add}</ActionButton>
-                    </div>
+            <MenuButton onClick={() => setCurrentSubMenu('data')}>
+              <div className="icon-wrapper"><FiDatabase /></div>
+              <div className="label-wrapper">
+                <span className="title">{t.settings.data_management}</span>
+                <span className="desc">Export, import or backup data</span>
+              </div>
+              <FiChevronRight className="chevron" />
+            </MenuButton>
 
-                    <DragDropContext onDragEnd={onDragEnd}>
-                        <Droppable droppableId="models">
-                            {(provided) => (
-                                <ModelList {...provided.droppableProps} ref={provided.innerRef}>
-                                    {models?.map((m, index) => (
-                                        <Draggable key={m.id} draggableId={m.id!.toString()} index={index}>
-                                            {(provided, snapshot) => (
-                                                <ModelItem
-                                                    ref={provided.innerRef}
-                                                    {...provided.draggableProps}
-                                                    $isDragging={snapshot.isDragging}
-                                                >
-                                                    <DragHandle {...provided.dragHandleProps}>
-                                                        <MdDragIndicator size={20} />
-                                                    </DragHandle>
-                                                    <span style={{ flex: 1, fontWeight: 500 }}>{m.name}</span>
-                                                    <IconButton onClick={() => handleDeleteModel(m.id!)}>
-                                                        <FiTrash2 size={18} />
-                                                    </IconButton>
-                                                </ModelItem>
-                                            )}
-                                        </Draggable>
-                                    ))}
-                                    {provided.placeholder}
-                                </ModelList>
-                            )}
-                        </Droppable>
-                    </DragDropContext>
-                </Section>
-            )}
+            <MenuButton onClick={() => setCurrentSubMenu('language')}>
+              <div className="icon-wrapper"><FiGlobe /></div>
+              <div className="label-wrapper">
+                <span className="title">{t.settings.language}</span>
+                <span className="desc">Change display language</span>
+              </div>
+              <FiChevronRight className="chevron" />
+            </MenuButton>
 
-            {currentSubMenu === 'data' && (
-                <Section>
-                    {renderHeader(t.settings.data_management)}
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1rem' }}>
-                        <ActionButton onClick={handleExportClick}><FiDownload /> {t.settings.export_backup}</ActionButton>
-                        <ActionButton onClick={() => fileInputRef.current?.click()} $variant="success"><FiUpload /> {t.settings.import_restore}</ActionButton>
+            <MenuButton onClick={() => setCurrentSubMenu('about')}>
+              <div className="icon-wrapper"><FiInfo /></div>
+              <div className="label-wrapper">
+                <span className="title">{t.settings.help_title}</span>
+                <span className="desc">App info and user guide</span>
+              </div>
+              <FiChevronRight className="chevron" />
+            </MenuButton>
+          </MenuList>
+        </Section>
+      )}
+
+      {currentSubMenu === 'models' && (
+        <Section>
+          {renderHeader(t.settings.manage_models)}
+          <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.5rem' }}>
+            <Input
+              value={newModel}
+              onChange={e => setNewModel(e.target.value)}
+              placeholder={t.settings.add_model_placeholder}
+              onKeyDown={(e) => e.key === 'Enter' && newModel.trim() && handleAddModel()}
+            />
+            <ActionButton onClick={handleAddModel} disabled={!newModel.trim()}><FiPlus /> {t.settings.add}</ActionButton>
+          </div>
+
+          <DragDropContext onDragEnd={onDragEnd}>
+            <Droppable droppableId="models">
+              {(provided) => (
+                <ModelList {...provided.droppableProps} ref={provided.innerRef}>
+                  {models?.map((m, index) => (
+                    <Draggable key={m.id} draggableId={m.id!.toString()} index={index}>
+                      {(provided, snapshot) => (
+                        <ModelItem
+                          ref={provided.innerRef}
+                          {...provided.draggableProps}
+                          $isDragging={snapshot.isDragging}
+                        >
+                          <DragHandle {...provided.dragHandleProps}>
+                            <MdDragIndicator size={20} />
+                          </DragHandle>
+                          <span style={{ flex: 1, fontWeight: 500 }}>{m.name}</span>
+                          <IconButton onClick={() => handleDeleteModel(m.id!)}>
+                            <FiTrash2 size={18} />
+                          </IconButton>
+                        </ModelItem>
+                      )}
+                    </Draggable>
+                  ))}
+                  {provided.placeholder}
+                </ModelList>
+              )}
+            </Droppable>
+          </DragDropContext>
+        </Section>
+      )}
+
+      {currentSubMenu === 'data' && (
+        <Section>
+          {renderHeader(t.settings.data_management)}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1rem' }}>
+            <ActionButton onClick={handleExportClick}><FiDownload /> {t.settings.export_backup}</ActionButton>
+            <ActionButton onClick={() => fileInputRef.current?.click()} $variant="success"><FiUpload /> {t.settings.import_restore}</ActionButton>
+            <input
+              type="file"
+              ref={fileInputRef}
+              style={{ display: 'none' }}
+              accept=".json"
+              onChange={handleImport}
+            />
+          </div>
+        </Section>
+      )}
+
+      {currentSubMenu === 'language' && (
+        <Section>
+          {renderHeader(t.settings.language)}
+          <Select
+            value={language}
+            onChange={(e) => setLanguage(e.target.value as Language)}
+          >
+            <option value="en">{t.settings.english}</option>
+            <option value="ko">{t.settings.korean}</option>
+          </Select>
+        </Section>
+      )}
+
+      {currentSubMenu === 'about' && (
+        <Section>
+          {renderHeader(t.settings.help_title)}
+          <p style={{ marginBottom: '1.5rem', lineHeight: '1.6', fontSize: '1.1rem', fontWeight: 500 }}>{t.settings.help_desc}</p>
+          <HelpList>
+            <li>{t.settings.help_local_db}</li>
+            <li>{t.settings.help_offline}</li>
+            <li>{t.settings.help_sync}</li>
+            <li>{t.settings.help_backup}</li>
+            <li>{t.settings.help_markdown}</li>
+            <li>{t.settings.help_models}</li>
+            <li>{t.settings.help_tags}</li>
+            <li>{t.settings.help_comments}</li>
+            <li>{t.settings.help_math}</li>
+          </HelpList>
+          <div style={{ marginTop: '2rem', padding: '1rem', background: 'var(--surface-color)', borderRadius: '8px', fontSize: '0.85rem', color: 'var(--text-secondary)', textAlign: 'center' }}>
+            LLMemo v1.2.0 • Local-First LLM Interaction Logger
+          </div>
+        </Section>
+      )}
+
+      {showExportModal && (
+        <ModalOverlay onClick={() => setShowExportModal(false)}>
+          <ModalContent onClick={e => e.stopPropagation()}>
+            <ModalHeader>{t.settings.export_data}</ModalHeader>
+            <ModalBody>
+              <label style={{ display: 'block', marginBottom: '0.75rem', fontWeight: 600 }}>{t.settings.export_mode}</label>
+              <RadioLabel>
+                <input type="radio" checked={exportMode === 'all'} onChange={() => setExportMode('all')} />
+                {t.settings.all_data}
+              </RadioLabel>
+              <RadioLabel>
+                <input type="radio" checked={exportMode === 'selected'} onChange={() => setExportMode('selected')} />
+                {t.settings.select_logs}
+              </RadioLabel>
+
+              <div style={{ marginTop: '1.5rem', marginBottom: '1.5rem' }}>
+                <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>{t.settings.filename_optional}</label>
+                <Input
+                  value={exportFileName}
+                  onChange={e => setExportFileName(e.target.value)}
+                  placeholder={t.settings.enter_filename}
+                  style={{ width: '100%' }}
+                />
+              </div>
+
+              {exportMode === 'selected' && (
+                <ScrollableList>
+                  {allLogs?.length === 0 ? (
+                    <div style={{ padding: '0.5rem', opacity: 0.6 }}>{t.settings.no_logs_found}</div>
+                  ) : (
+                    allLogs?.map(log => (
+                      <CheckboxLabel key={log.id}>
                         <input
-                            type="file"
-                            ref={fileInputRef}
-                            style={{ display: 'none' }}
-                            accept=".json"
-                            onChange={handleImport}
+                          type="checkbox"
+                          checked={selectedLogs.has(log.id!)}
+                          onChange={() => toggleLogSelection(log.id!)}
                         />
-                    </div>
-                </Section>
-            )}
-
-            {currentSubMenu === 'language' && (
-                <Section>
-                    {renderHeader(t.settings.language)}
-                    <Select
-                        value={language}
-                        onChange={(e) => setLanguage(e.target.value as Language)}
-                    >
-                        <option value="en">{t.settings.english}</option>
-                        <option value="ko">{t.settings.korean}</option>
-                    </Select>
-                </Section>
-            )}
-
-            {currentSubMenu === 'about' && (
-                <Section>
-                    {renderHeader(t.settings.help_title)}
-                    <p style={{ marginBottom: '1.5rem', lineHeight: '1.6', fontSize: '1.1rem', fontWeight: 500 }}>{t.settings.help_desc}</p>
-                    <HelpList>
-                        <li>{t.settings.help_local_db}</li>
-                        <li>{t.settings.help_offline}</li>
-                        <li>{t.settings.help_sync}</li>
-                        <li>{t.settings.help_backup}</li>
-                        <li>{t.settings.help_markdown}</li>
-                        <li>{t.settings.help_models}</li>
-                        <li>{t.settings.help_tags}</li>
-                        <li>{t.settings.help_comments}</li>
-                        <li>{t.settings.help_math}</li>
-                    </HelpList>
-                    <div style={{ marginTop: '2rem', padding: '1rem', background: 'var(--surface-color)', borderRadius: '8px', fontSize: '0.85rem', color: 'var(--text-secondary)', textAlign: 'center' }}>
-                        LLMemo v1.2.0 • Local-First LLM Interaction Logger
-                    </div>
-                </Section>
-            )}
-
-            {showExportModal && (
-                <ModalOverlay onClick={() => setShowExportModal(false)}>
-                    <ModalContent onClick={e => e.stopPropagation()}>
-                        <ModalHeader>{t.settings.export_data}</ModalHeader>
-                        <ModalBody>
-                            <label style={{ display: 'block', marginBottom: '0.75rem', fontWeight: 600 }}>{t.settings.export_mode}</label>
-                            <RadioLabel>
-                                <input type="radio" checked={exportMode === 'all'} onChange={() => setExportMode('all')} />
-                                {t.settings.all_data}
-                            </RadioLabel>
-                            <RadioLabel>
-                                <input type="radio" checked={exportMode === 'selected'} onChange={() => setExportMode('selected')} />
-                                {t.settings.select_logs}
-                            </RadioLabel>
-
-                            <div style={{ marginTop: '1.5rem', marginBottom: '1.5rem' }}>
-                                <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>{t.settings.filename_optional}</label>
-                                <Input
-                                    value={exportFileName}
-                                    onChange={e => setExportFileName(e.target.value)}
-                                    placeholder={t.settings.enter_filename}
-                                    style={{ width: '100%' }}
-                                />
-                            </div>
-
-                            {exportMode === 'selected' && (
-                                <ScrollableList>
-                                    {allLogs?.length === 0 ? (
-                                        <div style={{ padding: '0.5rem', opacity: 0.6 }}>{t.settings.no_logs_found}</div>
-                                    ) : (
-                                        allLogs?.map(log => (
-                                            <CheckboxLabel key={log.id}>
-                                                <input
-                                                    type="checkbox"
-                                                    checked={selectedLogs.has(log.id!)}
-                                                    onChange={() => toggleLogSelection(log.id!)}
-                                                />
-                                                <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                                    {log.title || t.sidebar.untitled}
-                                                </span>
-                                            </CheckboxLabel>
-                                        ))
-                                    )}
-                                </ScrollableList>
-                            )}
-                        </ModalBody>
-                        <ModalFooter>
-                            <ActionButton onClick={() => setShowExportModal(false)} $variant="secondary">{t.settings.cancel}</ActionButton>
-                            <ActionButton onClick={confirmExport} disabled={exportMode === 'selected' && selectedLogs.size === 0}>
-                                <FiDownload /> {t.settings.export}
-                            </ActionButton>
-                        </ModalFooter>
-                    </ModalContent>
-                </ModalOverlay>
-            )}
-        </Container>
-    );
+                        <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {log.title || t.sidebar.untitled}
+                        </span>
+                      </CheckboxLabel>
+                    ))
+                  )}
+                </ScrollableList>
+              )}
+            </ModalBody>
+            <ModalFooter>
+              <ActionButton onClick={() => setShowExportModal(false)} $variant="secondary">{t.settings.cancel}</ActionButton>
+              <ActionButton onClick={confirmExport} disabled={exportMode === 'selected' && selectedLogs.size === 0}>
+                <FiDownload /> {t.settings.export}
+              </ActionButton>
+            </ModalFooter>
+          </ModalContent>
+        </ModalOverlay>
+      )}
+    </Container>
+  );
 };
 
 
