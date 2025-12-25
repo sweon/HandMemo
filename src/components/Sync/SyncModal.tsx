@@ -100,6 +100,17 @@ const Content = styled.div`
     flex: 1;
 `;
 
+const FormWrapper = styled.div`
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+
+    @media (max-width: 480px) {
+        max-width: 320px;
+        margin: 0 auto;
+    }
+`;
+
 const CloseButton = styled.button`
     background: none;
     border: none;
@@ -127,24 +138,12 @@ const Label = styled.label`
     font-weight: 500;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-
-    @media (max-width: 480px) {
-        max-width: 320px;
-        margin-left: auto;
-        margin-right: auto;
-    }
 `;
 
 const InputGroup = styled.div`
     display: flex;
     gap: 8px;
     margin-bottom: 20px;
-    
-    @media (max-width: 480px) {
-        max-width: 320px;
-        margin-left: auto;
-        margin-right: auto;
-    }
 `;
 
 const Input = styled.input`
@@ -230,14 +229,6 @@ const ActionButton = styled.button<{ $variant?: 'primary' | 'secondary' | 'dange
         opacity: 0.5;
         cursor: not-allowed;
     }
-
-    ${props => props.$fullWidth && `
-        @media (max-width: 480px) {
-            max-width: 320px;
-            margin-left: auto;
-            margin-right: auto;
-        }
-    `}
 `;
 
 const StatusBox = styled.div<{ $status: SyncStatus }>`
@@ -268,12 +259,6 @@ const StatusBox = styled.div<{ $status: SyncStatus }>`
         if (props.$status === 'connecting') return '#f59e0b40';
         return props.theme.colors.border;
     }};
-
-    @media (max-width: 480px) {
-        max-width: 320px;
-        margin-left: auto;
-        margin-right: auto;
-    }
 `;
 
 const QRWrapper = styled.div`
@@ -501,96 +486,98 @@ export const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose }) => {
                 </TabContainer>
 
                 <Content>
-                    {activeTab === 'host' ? (
-                        <>
-                            <Label>{t.sync.your_room_id}</Label>
-                            <InputGroup>
-                                <Input
-                                    value={roomId}
-                                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setRoomId(e.target.value)}
-                                    disabled={status === 'connected' || status === 'connecting' || status === 'syncing'}
-                                    placeholder={t.sync.enter_custom_id}
-                                />
-                                <IconButton onClick={copyToClipboard} title={copied ? t.sync.copied : t.sync.copy_id}>
-                                    {copied ? <FaCheck style={{ color: theme.colors.success }} /> : <FaRegCopy />}
-                                </IconButton>
-                                <IconButton onClick={regenerateId} disabled={status === 'syncing' || status === 'connected'} title={t.sync.regenerate_id}>
-                                    <FaRedo />
-                                </IconButton>
-                            </InputGroup>
+                    <FormWrapper>
+                        {activeTab === 'host' ? (
+                            <>
+                                <Label>{t.sync.your_room_id}</Label>
+                                <InputGroup>
+                                    <Input
+                                        value={roomId}
+                                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setRoomId(e.target.value)}
+                                        disabled={status === 'connected' || status === 'connecting' || status === 'syncing'}
+                                        placeholder={t.sync.enter_custom_id}
+                                    />
+                                    <IconButton onClick={copyToClipboard} title={copied ? t.sync.copied : t.sync.copy_id}>
+                                        {copied ? <FaCheck style={{ color: theme.colors.success }} /> : <FaRegCopy />}
+                                    </IconButton>
+                                    <IconButton onClick={regenerateId} disabled={status === 'syncing' || status === 'connected'} title={t.sync.regenerate_id}>
+                                        <FaRedo />
+                                    </IconButton>
+                                </InputGroup>
 
-                            <ActionButton
-                                $fullWidth
-                                onClick={() => startHosting()}
-                                disabled={status === 'syncing' || status === 'connected' || status === 'connecting'}
-                            >
-                                {status === 'connecting' ? t.sync.connecting : (status === 'ready' ? t.sync.restart_hosting : t.sync.start_host)}
-                            </ActionButton>
+                                <ActionButton
+                                    $fullWidth
+                                    onClick={() => startHosting()}
+                                    disabled={status === 'syncing' || status === 'connected' || status === 'connecting'}
+                                >
+                                    {status === 'connecting' ? t.sync.connecting : (status === 'ready' ? t.sync.restart_hosting : t.sync.start_host)}
+                                </ActionButton>
 
-                            <QRWrapper>
-                                <QRCodeSVG value={cleanRoomId(roomId)} size={180} level="H" />
-                            </QRWrapper>
-                            <p style={{ fontSize: '0.85rem', color: theme.colors.textSecondary, textAlign: 'center', marginTop: -8 }}>
-                                {status === 'connected' || status === 'syncing'
-                                    ? t.sync.connected_to_peer
-                                    : t.sync.scan_hint}
-                            </p>
-                        </>
-                    ) : (
-                        <>
-                            {isScanning ? (
-                                <>
-                                    <ScannerContainer>
-                                        <div id="reader"></div>
-                                    </ScannerContainer>
-                                    <ActionButton
-                                        $fullWidth
-                                        $variant="secondary"
-                                        onClick={() => setIsScanning(false)}
-                                    >
-                                        <FaStop /> {t.sync.stop_scanning}
-                                    </ActionButton>
-                                </>
-                            ) : (
-                                <>
-                                    <ActionButton
-                                        $fullWidth
-                                        onClick={() => setIsScanning(true)}
-                                        disabled={status === 'connected'}
-                                        style={{ marginBottom: 12, marginTop: 8 }}
-                                    >
-                                        <FaCamera /> {t.sync.scan_qr}
-                                    </ActionButton>
-
-                                    <Divider>{t.sync.or}</Divider>
-
-                                    <Label>{t.sync.manual_entry}</Label>
-                                    <InputGroup>
-                                        <Input
-                                            placeholder={t.sync.enter_room_id}
-                                            value={targetRoomId}
-                                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setTargetRoomId(e.target.value)}
-                                            disabled={status === 'connected'}
-                                        />
-                                        <IconButton
-                                            onClick={() => connectToPeer()}
-                                            disabled={!targetRoomId || status === 'connected' || status === 'syncing'}
-                                            title={t.sync.connect}
+                                <QRWrapper>
+                                    <QRCodeSVG value={cleanRoomId(roomId)} size={180} level="H" />
+                                </QRWrapper>
+                                <p style={{ fontSize: '0.85rem', color: theme.colors.textSecondary, textAlign: 'center', marginTop: -8 }}>
+                                    {status === 'connected' || status === 'syncing'
+                                        ? t.sync.connected_to_peer
+                                        : t.sync.scan_hint}
+                                </p>
+                            </>
+                        ) : (
+                            <>
+                                {isScanning ? (
+                                    <>
+                                        <ScannerContainer>
+                                            <div id="reader"></div>
+                                        </ScannerContainer>
+                                        <ActionButton
+                                            $fullWidth
+                                            $variant="secondary"
+                                            onClick={() => setIsScanning(false)}
                                         >
-                                            {status === 'connected' ? <FaCheck style={{ color: theme.colors.success }} /> : <FaLink />}
-                                        </IconButton>
-                                    </InputGroup>
-                                </>
-                            )}
-                        </>
-                    )}
+                                            <FaStop /> {t.sync.stop_scanning}
+                                        </ActionButton>
+                                    </>
+                                ) : (
+                                    <>
+                                        <ActionButton
+                                            $fullWidth
+                                            onClick={() => setIsScanning(true)}
+                                            disabled={status === 'connected'}
+                                            style={{ marginBottom: 12, marginTop: 8 }}
+                                        >
+                                            <FaCamera /> {t.sync.scan_qr}
+                                        </ActionButton>
 
-                    {(statusMessage || status !== 'disconnected') && (
-                        <StatusBox $status={status}>
-                            {status === 'connecting' && <FaSync className="fa-spin" />}
-                            {statusMessage || (status === 'ready' ? t.sync.ready_to_share : status === 'connected' ? t.sync.connected : '')}
-                        </StatusBox>
-                    )}
+                                        <Divider>{t.sync.or}</Divider>
+
+                                        <Label>{t.sync.manual_entry}</Label>
+                                        <InputGroup>
+                                            <Input
+                                                placeholder={t.sync.enter_room_id}
+                                                value={targetRoomId}
+                                                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setTargetRoomId(e.target.value)}
+                                                disabled={status === 'connected'}
+                                            />
+                                            <IconButton
+                                                onClick={() => connectToPeer()}
+                                                disabled={!targetRoomId || status === 'connected' || status === 'syncing'}
+                                                title={t.sync.connect}
+                                            >
+                                                {status === 'connected' ? <FaCheck style={{ color: theme.colors.success }} /> : <FaLink />}
+                                            </IconButton>
+                                        </InputGroup>
+                                    </>
+                                )}
+                            </>
+                        )}
+
+                        {(statusMessage || status !== 'disconnected') && (
+                            <StatusBox $status={status}>
+                                {status === 'connecting' && <FaSync className="fa-spin" />}
+                                {statusMessage || (status === 'ready' ? t.sync.ready_to_share : status === 'connected' ? t.sync.connected : '')}
+                            </StatusBox>
+                        )}
+                    </FormWrapper>
                 </Content>
             </ModalContainer>
         </Overlay>
