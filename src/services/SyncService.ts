@@ -20,6 +20,7 @@ export class SyncService {
     private lastPong: number = 0;
     private isHost: boolean = false;
     private isInitiator: boolean = false;
+    private connectionTimeout: any = null;
 
     constructor(options: SyncServiceOptions) {
         this.options = options;
@@ -28,24 +29,30 @@ export class SyncService {
 
     private getPeerConfig() {
         return {
-            debug: 2,
+            host: '0.peerjs.com',
+            port: 443,
+            path: '/',
             secure: true,
+            debug: 2,
             config: {
                 'iceServers': [
                     { urls: 'stun:stun.l.google.com:19302' },
                     { urls: 'stun:stun1.l.google.com:19302' },
+                    { urls: 'stun:stun2.l.google.com:19302' },
+                    { urls: 'stun:stun3.l.google.com:19302' },
                     { urls: 'stun:global.stun.twilio.com:3478' }
-                ]
+                ],
+                iceCandidatePoolSize: 10
             }
         };
     }
 
     public async initialize(roomId: string): Promise<string> {
-        this.destroy(); // Always cleanup before new session
+        this.destroy();
         this.isHost = true;
         this.isInitiator = false;
 
-        this.options.onStatusChange('connecting', 'Waiting for connection...');
+        this.options.onStatusChange('connecting', 'Preparing host...');
 
         return new Promise((resolve, reject) => {
             const cleanId = cleanRoomId(roomId);
@@ -57,12 +64,13 @@ export class SyncService {
             });
 
             this.peer.on('connection', (conn) => {
+                console.log('Incoming connection from:', conn.peer);
                 this.handleConnection(conn);
             });
 
             this.peer.on('error', (err: any) => {
-                console.error('Host Peer Error:', err.type);
-                this.options.onStatusChange('error', `Link Error: ${err.type}`);
+                console.error('Host Error:', err.type);
+                this.options.onStatusChange('error', `Server Error: ${err.type}`);
                 reject(err);
             });
         });
@@ -73,27 +81,37 @@ export class SyncService {
         this.isHost = false;
         this.isInitiator = true;
 
-        this.options.onStatusChange('connecting', 'Initializing link...');
+        this.options.onStatusChange('connecting', 'Starting client...');
 
         this.peer = new Peer(this.getPeerConfig());
 
         this.peer.on('open', (id) => {
-            console.log('Client identity established:', id);
+            console.log('Client established with ID:', id);
             this.options.onStatusChange('connecting', `Dialing ${targetPeerId}...`);
             this._connect(cleanRoomId(targetPeerId));
         });
 
         this.peer.on('error', (err: any) => {
-            console.error('Client Peer Error:', err.type);
-            this.options.onStatusChange('error', `Setup Error: ${err.type}`);
+            console.error('Client Error:', err.type);
+            this.options.onStatusChange('error', `Initialization fail: ${err.type}`);
         });
     }
 
     private _connect(targetPeerId: string) {
         if (!this.peer) return;
+
+        // Add a timeout for the dialing state
+        if (this.connectionTimeout) clearTimeout(this.connectionTimeout);
+        this.connectionTimeout = setTimeout(() => {
+            if (this.conn && !this.conn.open) {
+                this.options.onStatusChange('error', 'Connection timeout. Please try again.');
+                this.destroy();
+            }
+        }, 15000);
+
         const conn = this.peer.connect(targetPeerId, {
-            reliable: true,
-            serialization: 'binary' // Binary is more stable for large data on mobile
+            reliable: true
+            // Removing explicit serialization to let PeerJS auto-negotiate
         });
         this.handleConnection(conn);
     }
@@ -105,15 +123,19 @@ export class SyncService {
         this.conn = conn;
 
         conn.on('open', () => {
-            console.log('Connection open with:', conn.peer);
-            this.options.onStatusChange('connected', 'Peers Linked.');
+            if (this.connectionTimeout) {
+                clearTimeout(this.connectionTimeout);
+                this.connectionTimeout = null;
+            }
+
+            console.log('Channel open with:', conn.peer);
+            this.options.onStatusChange('connected', 'Linked!');
             this.lastPong = Date.now();
             this.startHeartbeat();
 
-            // SEQUENTIAL SYNC: Initiator (Client) sends first
             if (this.isInitiator) {
                 this.options.onStatusChange('syncing', 'Uploading data...');
-                setTimeout(() => this.syncData(), 1000);
+                setTimeout(() => this.syncData(), 1200);
             }
         });
 
@@ -129,37 +151,37 @@ export class SyncService {
 
             if (data && data.logs && data.models) {
                 const logCount = data.logs.length;
-                this.options.onStatusChange('syncing', `Merging ${logCount} logs...`);
+                this.options.onStatusChange('syncing', `Syncing ${logCount} items...`);
 
                 try {
                     await mergeBackupData(data);
 
                     if (this.isHost) {
-                        // Host: Data merged, now send back current state to client
-                        this.options.onStatusChange('syncing', 'Bilateral update in progress...');
-                        setTimeout(() => this.syncData(), 500);
+                        this.options.onStatusChange('syncing', 'Sending back updates...');
+                        setTimeout(() => this.syncData(), 600);
                     } else {
-                        // Client: Sync complete
                         this.options.onStatusChange('completed', 'Sync Successful!');
                         this.options.onDataReceived();
                     }
                 } catch (err: any) {
-                    this.options.onStatusChange('error', `Sync Failed: ${err.message}`);
+                    this.options.onStatusChange('error', `Merge error: ${err.message}`);
                 }
             }
         });
 
         conn.on('close', () => {
             this.stopHeartbeat();
+            if (this.connectionTimeout) clearTimeout(this.connectionTimeout);
             if (this.conn === conn) {
-                this.options.onStatusChange('disconnected', 'Link Closed');
+                this.options.onStatusChange('disconnected', 'Disconnected');
                 this.conn = null;
             }
         });
 
         conn.on('error', (err) => {
-            console.error('Conn Error:', err);
-            this.options.onStatusChange('error', 'Socket Error');
+            console.error('Connection Error:', err);
+            if (this.connectionTimeout) clearTimeout(this.connectionTimeout);
+            this.options.onStatusChange('error', 'Link error occurred');
         });
     }
 
@@ -167,7 +189,7 @@ export class SyncService {
         this.stopHeartbeat();
         this.heartbeatInterval = setInterval(() => {
             if (this.conn && this.conn.open) {
-                if (Date.now() - this.lastPong > 30000) {
+                if (Date.now() - this.lastPong > 35000) {
                     this.conn.close();
                     return;
                 }
@@ -191,12 +213,16 @@ export class SyncService {
                 this.conn.send(data);
             }
         } catch (err) {
-            this.options.onStatusChange('error', 'Data prep failed');
+            this.options.onStatusChange('error', 'Export failed');
         }
     }
 
     public destroy() {
         this.stopHeartbeat();
+        if (this.connectionTimeout) {
+            clearTimeout(this.connectionTimeout);
+            this.connectionTimeout = null;
+        }
         if (this.conn) {
             this.conn.close();
             this.conn = null;
