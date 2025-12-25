@@ -93,6 +93,8 @@ export class SyncService {
         this.handleConnection(conn);
     }
 
+    private chunkBuffer: Map<string, string[]> = new Map();
+
     private handleConnection(conn: DataConnection) {
         if (this.conn) {
             this.conn.close();
@@ -121,23 +123,37 @@ export class SyncService {
                 return;
             }
 
-            if (data && data.logs && data.models) {
-                const count = data.logs.length;
-                this.options.onStatusChange('syncing', `Merging ${count} logs...`);
+            // Handle chunked data
+            if (data && typeof data === 'object' && data.type === 'chunk') {
+                const { id, index, total, data: chunkData } = data;
 
-                try {
-                    await mergeBackupData(data);
-
-                    if (this.isHost) {
-                        this.options.onStatusChange('syncing', 'Updating peer...');
-                        setTimeout(() => this.syncData(), 500);
-                    } else {
-                        this.options.onStatusChange('completed', 'Sync Completed!');
-                        this.options.onDataReceived();
-                    }
-                } catch (err: any) {
-                    this.options.onStatusChange('error', `Merge error: ${err.message}`);
+                if (!this.chunkBuffer.has(id)) {
+                    this.chunkBuffer.set(id, new Array(total).fill(null));
                 }
+
+                const buffer = this.chunkBuffer.get(id)!;
+                buffer[index] = chunkData;
+
+                const receivedCount = buffer.filter(c => c !== null).length;
+                const progress = Math.round((receivedCount / total) * 100);
+                this.options.onStatusChange('syncing', `Receiving: ${progress}%`);
+
+                if (receivedCount === total) {
+                    const fullDataStr = buffer.join('');
+                    this.chunkBuffer.delete(id);
+                    try {
+                        const parsedData = JSON.parse(fullDataStr);
+                        await this.processReceivedData(parsedData);
+                    } catch (err: any) {
+                        this.options.onStatusChange('error', `Parse error: ${err.message}`);
+                    }
+                }
+                return;
+            }
+
+            // Handle legacy/un-chunked data (just in case)
+            if (data && data.logs && data.models) {
+                await this.processReceivedData(data);
             }
         });
 
@@ -153,6 +169,27 @@ export class SyncService {
             console.error('Data Session Error:', err);
             this.options.onStatusChange('error', 'Connection failed');
         });
+    }
+
+    private async processReceivedData(data: any) {
+        if (data && data.logs && data.models) {
+            const count = data.logs.length;
+            this.options.onStatusChange('syncing', `Merging ${count} logs...`);
+
+            try {
+                await mergeBackupData(data);
+
+                if (this.isHost) {
+                    this.options.onStatusChange('syncing', 'Updating peer...');
+                    setTimeout(() => this.syncData(), 500);
+                } else {
+                    this.options.onStatusChange('completed', 'Sync Completed!');
+                    this.options.onDataReceived();
+                }
+            } catch (err: any) {
+                this.options.onStatusChange('error', `Merge error: ${err.message}`);
+            }
+        }
     }
 
     private startHeartbeat() {
@@ -179,10 +216,33 @@ export class SyncService {
         if (!this.conn || !this.conn.open) return;
         try {
             const data = await getBackupData();
-            if (this.conn && this.conn.open) {
-                this.conn.send(data);
+            const jsonStr = JSON.stringify(data);
+            const CHUNK_SIZE = 16384; // 16KB per chunk
+            const totalChunks = Math.ceil(jsonStr.length / CHUNK_SIZE);
+            const syncId = Math.random().toString(36).substring(2, 10);
+
+            for (let i = 0; i < totalChunks; i++) {
+                const start = i * CHUNK_SIZE;
+                const end = Math.min(start + CHUNK_SIZE, jsonStr.length);
+                const chunk = jsonStr.substring(start, end);
+
+                if (this.conn && this.conn.open) {
+                    this.conn.send({
+                        type: 'chunk',
+                        id: syncId,
+                        index: i,
+                        total: totalChunks,
+                        data: chunk
+                    });
+                }
+
+                // Small sleep to prevent overwhelming the data channel buffer
+                if (i % 5 === 0) {
+                    await new Promise(r => setTimeout(r, 10));
+                }
             }
         } catch (err) {
+            console.error('Sync data construction failed:', err);
             this.options.onStatusChange('error', 'Sync data failed');
         }
     }
