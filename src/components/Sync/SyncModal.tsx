@@ -104,10 +104,10 @@ const FormWrapper = styled.div`
     display: flex;
     flex-direction: column;
     width: 100%;
+    margin: 0 auto;
 
     @media (max-width: 480px) {
-        max-width: 320px;
-        margin: 0 auto;
+        max-width: 300px;
     }
 `;
 
@@ -144,6 +144,7 @@ const InputGroup = styled.div`
     display: flex;
     gap: 8px;
     margin-bottom: 20px;
+    width: 100%;
 `;
 
 const Input = styled.input`
@@ -243,6 +244,7 @@ const StatusBox = styled.div<{ $status: SyncStatus }>`
     justify-content: center;
     gap: 10px;
     font-size: 0.9rem;
+    width: 100%;
     
     color: ${props => {
         if (props.$status === 'error') return props.theme.colors.danger;
@@ -283,7 +285,7 @@ const ScannerContainer = styled.div`
     border: 2px solid ${({ theme }) => theme.colors.border};
     background: #000;
     position: relative;
-    
+
     #reader {
         width: 100% !important;
         border: none !important;
@@ -583,4 +585,3 @@ export const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose }) => {
         </Overlay>
     );
 };
-
