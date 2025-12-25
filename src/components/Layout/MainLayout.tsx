@@ -1,25 +1,33 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import styled from 'styled-components';
 import { Sidebar } from '../Sidebar/Sidebar';
 import { Outlet } from 'react-router-dom';
 import { FiMenu } from 'react-icons/fi';
 
-const Container = styled.div`
+const Container = styled.div<{ $isResizing: boolean }>`
   display: flex;
   height: 100vh;
   width: 100vw;
   overflow: hidden;
+  ${({ $isResizing }) => $isResizing && `
+    cursor: col-resize;
+    user-select: none;
+  `}
 `;
 
-const SidebarWrapper = styled.div<{ $isOpen: boolean }>`
-  width: 300px;
+const SidebarWrapper = styled.div<{ $isOpen: boolean; $width: number }>`
+  width: ${({ $width }) => $width}px;
+  min-width: ${({ $width }) => $width}px;
   border-right: 1px solid ${({ theme }) => theme.colors.border};
   background: ${({ theme }) => theme.colors.surface};
   display: flex;
   flex-direction: column;
   transition: transform 0.3s ease;
+  position: relative;
 
   @media (max-width: 768px) {
+    width: 300px !important;
+    min-width: 300px !important;
     position: absolute;
     z-index: 10;
     height: 100%;
@@ -34,6 +42,25 @@ const ContentWrapper = styled.div`
   height: 100%;
   overflow: hidden;
   position: relative;
+`;
+
+const ResizeHandle = styled.div<{ $isResizing: boolean }>`
+  width: 4px;
+  cursor: col-resize;
+  background: ${({ $isResizing, theme }) => $isResizing ? theme.colors.primary : 'transparent'};
+  transition: background 0.2s;
+  z-index: 5;
+  margin-left: -2px;
+  position: relative;
+
+  &:hover {
+    background: ${({ theme }) => theme.colors.primary};
+    opacity: 0.5;
+  }
+
+  @media (max-width: 768px) {
+    display: none;
+  }
 `;
 
 const MobileHeader = styled.div`
@@ -63,15 +90,60 @@ const Overlay = styled.div<{ $isOpen: boolean }>`
   }
 `;
 
+const STORAGE_KEY = 'llmemo-sidebar-width';
+const DEFAULT_WIDTH = 300;
+const MIN_WIDTH = 200;
+const MAX_WIDTH = 600;
+
 export const MainLayout: React.FC = () => {
   const [isSidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarWidth, setSidebarWidth] = useState(() => {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    return saved ? parseInt(saved, 10) : DEFAULT_WIDTH;
+  });
+  const [isResizing, setIsResizing] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const startResizing = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsResizing(true);
+  }, []);
+
+  const stopResizing = useCallback(() => {
+    setIsResizing(false);
+    localStorage.setItem(STORAGE_KEY, sidebarWidth.toString());
+  }, [sidebarWidth]);
+
+  const resize = useCallback((e: MouseEvent) => {
+    if (isResizing) {
+      const newWidth = e.clientX;
+      if (newWidth >= MIN_WIDTH && newWidth <= MAX_WIDTH) {
+        setSidebarWidth(newWidth);
+      }
+    }
+  }, [isResizing]);
+
+  useEffect(() => {
+    if (isResizing) {
+      window.addEventListener('mousemove', resize);
+      window.addEventListener('mouseup', stopResizing);
+    } else {
+      window.removeEventListener('mousemove', resize);
+      window.removeEventListener('mouseup', stopResizing);
+    }
+    return () => {
+      window.removeEventListener('mousemove', resize);
+      window.removeEventListener('mouseup', stopResizing);
+    };
+  }, [isResizing, resize, stopResizing]);
 
   return (
-    <Container>
+    <Container ref={containerRef} $isResizing={isResizing}>
       <Overlay $isOpen={isSidebarOpen} onClick={() => setSidebarOpen(false)} />
-      <SidebarWrapper $isOpen={isSidebarOpen}>
+      <SidebarWrapper $isOpen={isSidebarOpen} $width={sidebarWidth}>
         <Sidebar onCloseMobile={() => setSidebarOpen(false)} />
       </SidebarWrapper>
+      <ResizeHandle $isResizing={isResizing} onMouseDown={startResizing} />
       <ContentWrapper>
         <MobileHeader>
           <FiMenu size={24} onClick={() => setSidebarOpen(true)} />
