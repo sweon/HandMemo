@@ -476,6 +476,10 @@ export const SettingsPage: React.FC = () => {
                                 <li>{t.settings.help_sync}</li>
                                 <li>{t.settings.help_backup}</li>
                                 <li>{t.settings.help_markdown}</li>
+                                <li>{t.settings.help_models}</li>
+                                <li>{t.settings.help_tags}</li>
+                                <li>{t.settings.help_comments}</li>
+                                <li>{t.settings.help_math}</li>
                             </ul>
                         </ModalBody>
                         <ModalFooter>
