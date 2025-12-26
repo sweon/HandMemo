@@ -242,8 +242,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
   const models = useLiveQuery(() => db.models.orderBy('order').toArray());
 
   const logs = useLiveQuery(async () => {
-    let collection = db.logs.toArray();
-    let result = await collection;
+    const [allLogs, allModels] = await Promise.all([
+      db.logs.toArray(),
+      db.models.toArray()
+    ]);
+    let result = allLogs;
 
     // Filter
     if (searchQuery) {
@@ -252,7 +255,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
         if (query) {
           result = result.filter(log => {
             const hasTag = log.tags?.some(t => t.toLowerCase().includes(query));
-            const modelName = models?.find(m => m.id === log.modelId)?.name.toLowerCase() || '';
+            const modelName = allModels.find(m => m.id === log.modelId)?.name.toLowerCase() || '';
             const hasModel = modelName.includes(query);
             return hasTag || hasModel;
           });
@@ -264,11 +267,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
     }
 
     // Sort
-    // We need models for model sorting
     const modelMap = new Map<number, string>();
-    if (models) {
-      models.forEach(m => modelMap.set(m.id!, m.name));
-    }
+    allModels.forEach(m => modelMap.set(m.id!, m.name));
 
     return result.sort((a, b) => {
       if (sortBy === 'date-desc') {
@@ -276,14 +276,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
       } else if (sortBy === 'date-asc') {
         return a.createdAt.getTime() - b.createdAt.getTime();
       } else if (sortBy === 'model') {
-        const nameA = (a.modelId && modelMap.get(a.modelId)) || 'zzzz'; // Unknown/No model at end
+        const nameA = (a.modelId && modelMap.get(a.modelId)) || 'zzzz';
         const nameB = (b.modelId && modelMap.get(b.modelId)) || 'zzzz';
         return nameA.localeCompare(nameB);
       }
       return 0;
     });
 
-  }, [searchQuery, sortBy, models]);
+  }, [searchQuery, sortBy]);
 
   return (
     <SidebarContainer>
