@@ -172,7 +172,7 @@ interface SidebarProps {
 export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
   const { searchQuery, setSearchQuery } = useSearch();
   const { t } = useLanguage();
-  const [sortBy, setSortBy] = useState<'date-desc' | 'date-asc' | 'model-desc' | 'model-asc'>('date-desc');
+  const [sortBy, setSortBy] = useState<'date-desc' | 'date-asc' | 'model-desc' | 'model-asc' | 'comment-desc'>('date-desc');
   const { mode, toggleTheme, increaseFontSize, decreaseFontSize } = useTheme();
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
@@ -242,6 +242,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
   // Fetch raw data reactively
   const allLogs = useLiveQuery(() => db.logs.toArray());
   const allModels = useLiveQuery(() => db.models.toArray());
+  const allComments = useLiveQuery(() => db.comments.toArray());
 
   // Filter and sort synchronously for instant UI updates
   const logs = React.useMemo(() => {
@@ -287,6 +288,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
       }
     });
 
+    const commentActivity = new Map<number, number>();
+    if (sortBy === 'comment-desc' && allComments) {
+      allComments.forEach(c => {
+        const time = new Date(c.createdAt).getTime();
+        const current = commentActivity.get(c.logId) || 0;
+        if (time > current) commentActivity.set(c.logId, time);
+      });
+    }
+
     return result.sort((a, b) => {
       if (sortBy === 'date-desc') {
         return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
@@ -308,10 +318,16 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
         const timeA = new Date(a.createdAt).getTime();
         const timeB = new Date(b.createdAt).getTime();
         return sortBy === 'model-desc' ? timeB - timeA : timeA - timeB;
+      } else if (sortBy === 'comment-desc') {
+        const timeA = commentActivity.get(a.id!) || 0;
+        const timeB = commentActivity.get(b.id!) || 0;
+        if (timeA !== timeB) return timeB - timeA;
+        // Fallback to latest log first
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
       }
       return 0;
     });
-  }, [allLogs, allModels, searchQuery, sortBy]);
+  }, [allLogs, allModels, allComments, searchQuery, sortBy]);
 
   return (
     <SidebarContainer>
@@ -406,6 +422,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
             <option value="date-asc">{t.sidebar.oldest}</option>
             <option value="model-desc">{t.sidebar.model_newest}</option>
             <option value="model-asc">{t.sidebar.model_oldest}</option>
+            <option value="comment-desc">{t.sidebar.last_commented}</option>
           </select>
         </div>
       </Header>
