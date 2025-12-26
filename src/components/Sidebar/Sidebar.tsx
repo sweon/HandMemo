@@ -272,20 +272,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
     }
 
     // Sort
-    const modelMap = new Map<number, string>();
-    allModels.forEach(m => modelMap.set(m.id!, m.name));
-
-    const modelActivity = new Map<number | string, number>();
-    allLogs.forEach(log => {
-      const modelId = log.modelId || 'none';
-      const time = new Date(log.createdAt).getTime();
-      const current = modelActivity.get(modelId) || (sortBy === 'model-desc' ? 0 : Infinity);
-
-      if (sortBy === 'model-desc') {
-        if (time > current) modelActivity.set(modelId, time);
-      } else {
-        if (time < current) modelActivity.set(modelId, time);
-      }
+    const modelOrderMap = new Map<number, number>();
+    allModels.forEach(m => {
+      modelOrderMap.set(m.id!, m.order ?? 999);
     });
 
     const commentActivity = new Map<number, number>();
@@ -303,18 +292,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
       } else if (sortBy === 'date-asc') {
         return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
       } else if (sortBy === 'model-desc' || sortBy === 'model-asc') {
-        const modelA = a.modelId || 'none';
-        const modelB = b.modelId || 'none';
+        const orderA = a.modelId ? (modelOrderMap.get(a.modelId) ?? 999) : 1000;
+        const orderB = b.modelId ? (modelOrderMap.get(b.modelId) ?? 999) : 1000;
 
-        // Primary sort: Group by model's activity date
-        const activityA = modelActivity.get(modelA) || 0;
-        const activityB = modelActivity.get(modelB) || 0;
-
-        if (activityA !== activityB) {
-          return sortBy === 'model-desc' ? activityB - activityA : activityA - activityB;
+        // Primary sort: Manual Order from settings
+        if (orderA !== orderB) {
+          return orderA - orderB;
         }
 
-        // Secondary sort: If activity date same (same model), sort by date
+        // Secondary sort: By date
         const timeA = new Date(a.createdAt).getTime();
         const timeB = new Date(b.createdAt).getTime();
         return sortBy === 'model-desc' ? timeB - timeA : timeA - timeB;
