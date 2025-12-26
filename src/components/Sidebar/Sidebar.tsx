@@ -297,7 +297,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
 
         // Primary sort: Manual Order from settings
         if (orderA !== orderB) {
-          return orderA - orderB;
+          return sortBy === 'model-desc' ? orderA - orderB : orderB - orderA;
         }
 
         // Secondary sort: By date
