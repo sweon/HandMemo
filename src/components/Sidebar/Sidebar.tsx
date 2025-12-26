@@ -178,6 +178,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
   const { id } = useParams<{ id: string }>();
   const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
   const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
+  const [updateCheckedManually, setUpdateCheckedManually] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const needRefreshRef = useRef(false);
 
@@ -199,35 +200,46 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
   }, [needRefresh]);
 
   const handleUpdateCheck = async () => {
+    // First click or explicit check: reveal the status
+    if (!updateCheckedManually) {
+      setUpdateCheckedManually(true);
+      setIsCheckingUpdate(true);
+
+      // If we already know there's a refresh needed, just show the indicator and toast
+      if (needRefresh) {
+        setIsCheckingUpdate(false);
+        setToastMessage(t.sidebar.update_found);
+        return;
+      }
+    }
+
+    // If update is available and user already checked, install it
     if (needRefresh) {
       setToastMessage(t.sidebar.install_update);
-      // Ensure the UI has a moment to show the message before reload
       setTimeout(() => {
         updateServiceWorker(true);
-        // Fallback reload if SW doesn't trigger it within 3s
         setTimeout(() => window.location.reload(), 3000);
       }, 500);
       return;
     }
 
-    if (isCheckingUpdate) return;
+    if (isCheckingUpdate && updateCheckedManually) return;
 
     setIsCheckingUpdate(true);
     if ('serviceWorker' in navigator) {
       try {
         const registration = await navigator.serviceWorker.ready;
-        // Check for updates on the server
         await registration.update();
 
-        // Wait for the state to propagate
         setTimeout(() => {
           setIsCheckingUpdate(false);
+          setUpdateCheckedManually(true); // Ensure manual check is makred
           if (needRefreshRef.current) {
             setToastMessage(t.sidebar.update_found);
           } else {
             setToastMessage(t.sidebar.up_to_date);
           }
-        }, 2000);
+        }, 1500);
       } catch (error) {
         console.error('Error checking for updates:', error);
         setIsCheckingUpdate(false);
@@ -315,6 +327,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
     });
   }, [allLogs, allModels, allComments, searchQuery, sortBy]);
 
+  const showUpdateIndicator = needRefresh && updateCheckedManually;
+
   return (
     <SidebarContainer>
       <Header>
@@ -343,13 +357,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
               </IconButton>
             </Tooltip>
 
-            <Tooltip content={needRefresh ? t.sidebar.install_update : t.sidebar.check_updates}>
+            <Tooltip content={showUpdateIndicator ? t.sidebar.install_update : t.sidebar.check_updates}>
               <IconButton
                 onClick={handleUpdateCheck}
                 style={{ position: 'relative' }}
               >
                 <FiArrowUpCircle size={18} className={isCheckingUpdate ? 'spin' : ''} />
-                {needRefresh && (
+                {showUpdateIndicator && (
                   <span style={{
                     position: 'absolute',
                     top: '4px',
