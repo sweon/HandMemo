@@ -22,6 +22,7 @@ export class SyncService {
     private isHost: boolean = false;
     private lastMessageId: string | null = null;
     private isSyncing: boolean = false;
+    private instanceId: string = Math.random().toString(36).substring(2, 10);
 
     constructor(options: SyncServiceOptions) {
         this.options = options;
@@ -96,7 +97,8 @@ export class SyncService {
 
     private async handleRelayMessage(msg: any) {
         if (msg.attachment) {
-            if (this.isSyncing) {
+            // Check if this is an attachment we sent ourselves
+            if (msg.tags && msg.tags.includes(`inst_${this.instanceId}`)) {
                 console.log('Ignoring own attachment');
                 return;
             }
@@ -144,6 +146,7 @@ export class SyncService {
         if (!this.roomId) return;
 
         try {
+            const tags = [this.isHost ? 'host' : 'client', `inst_${this.instanceId}`];
             if (isData) {
                 // For data, we send it as an attachment
                 await fetch(`${RELAY_BASE}/${this.roomId}`, {
@@ -151,15 +154,20 @@ export class SyncService {
                     body: payload,
                     headers: {
                         'Filename': 'sync.enc',
-                        'Title': 'LLMemo Sync Data'
+                        'Title': 'LLMemo Sync Data',
+                        'Tags': tags.join(',')
                     }
                 });
             } else {
                 // For regular signaling
                 payload.sender = this.isHost ? 'host' : 'client';
+                payload.instanceId = this.instanceId;
                 await fetch(`${RELAY_BASE}/${this.roomId}`, {
                     method: 'POST',
-                    body: JSON.stringify(payload)
+                    body: JSON.stringify(payload),
+                    headers: {
+                        'Tags': tags.join(',')
+                    }
                 });
             }
         } catch (e) {
