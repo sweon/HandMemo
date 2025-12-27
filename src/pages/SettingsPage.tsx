@@ -3,7 +3,7 @@ import styled from 'styled-components';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
 import { exportData, importData } from '../utils/backup';
-import { FiTrash2, FiPlus, FiDownload, FiUpload, FiChevronRight, FiArrowLeft, FiDatabase, FiCpu, FiGlobe, FiInfo, FiShare2 } from 'react-icons/fi';
+import { FiTrash2, FiPlus, FiDownload, FiUpload, FiChevronRight, FiArrowLeft, FiDatabase, FiCpu, FiGlobe, FiInfo, FiShare2, FiAlertTriangle } from 'react-icons/fi';
 import { MdDragIndicator } from 'react-icons/md';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import type { DropResult } from '@hello-pangea/dnd';
@@ -500,6 +500,23 @@ export const SettingsPage: React.FC = () => {
     }
   };
 
+  const handleFactoryReset = async () => {
+    if (confirm(t.settings.reset_confirm)) {
+      try {
+        // Clear IndexedDB
+        await db.delete();
+        // Clear LocalStorage (including theme, sidebar width, etc)
+        localStorage.clear();
+
+        alert(t.settings.reset_success);
+        window.location.reload();
+      } catch (e) {
+        console.error("Reset failed:", e);
+        alert("Reset failed: " + e);
+      }
+    }
+  };
+
   const renderHeader = (title: string) => (
     <Header>
       <BackButton onClick={() => setCurrentSubMenu('main')}>
@@ -611,6 +628,25 @@ export const SettingsPage: React.FC = () => {
               accept=".json"
               onChange={handleImport}
             />
+
+            <div style={{ margin: '1rem 0', borderBottom: '1px solid var(--border-color)' }}></div>
+
+            <div style={{
+              padding: '1rem',
+              background: 'rgba(239, 68, 68, 0.1)',
+              borderRadius: '8px',
+              border: '1px solid rgba(239, 68, 68, 0.2)'
+            }}>
+              <h4 style={{ margin: '0 0 0.5rem 0', color: 'var(--danger-color)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <FiAlertTriangle /> {t.settings.factory_reset}
+              </h4>
+              <p style={{ margin: '0 0 1rem 0', fontSize: '0.9rem', opacity: 0.8 }}>
+                {t.settings.reset_confirm}
+              </p>
+              <ActionButton onClick={handleFactoryReset} $variant="secondary" style={{ color: 'var(--danger-color)', borderColor: 'var(--danger-color)', width: '100%' }}>
+                <FiTrash2 /> {t.settings.factory_reset}
+              </ActionButton>
+            </div>
           </div>
         </Section>
       )}

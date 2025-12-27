@@ -64,7 +64,10 @@ export const translations = {
             share_desc: "Love LLMemo? Share it with your friends!",
             share_success: "Link copied to clipboard!",
             disclaimer_title: "Legal Disclaimer",
-            disclaimer_text: "LLMemo is provided 'as is' without warranty. Data is stored locally on your device; you are responsible for maintaining your own backups. The developers are not liable for any data loss."
+            disclaimer_text: "LLMemo is provided 'as is' without warranty. Data is stored locally on your device; you are responsible for maintaining your own backups. The developers are not liable for any data loss.",
+            factory_reset: "Factory Reset",
+            reset_confirm: "Are you sure? This will delete ALL data including logs, settings, and models. This action CANNOT be undone.",
+            reset_success: "All data has been reset."
         },
         log_detail: {
             loading: "Loading...",
@@ -186,7 +189,10 @@ export const translations = {
             share_desc: "LLMemo가 마음에 드셨나요? 친구들에게도 알려주세요!",
             share_success: "링크가 클립보드에 복사되었습니다!",
             disclaimer_title: "법적 고지",
-            disclaimer_text: "LLMemo는 보증 없이 '있는 그대로' 제공됩니다. 모든 데이터는 사용자 기기에 로컬로 저장되며, 데이터의 백업 및 관리에 대한 책임은 사용자에게 있습니다. 개발자는 데이터 손실이나 오류에 대해 책임을 지지 않습니다."
+            disclaimer_text: "LLMemo는 보증 없이 '있는 그대로' 제공됩니다. 모든 데이터는 사용자 기기에 로컬로 저장되며, 데이터의 백업 및 관리에 대한 책임은 사용자에게 있습니다. 개발자는 데이터 손실이나 오류에 대해 책임을 지지 않습니다.",
+            factory_reset: "전체 데이터 초기화",
+            reset_confirm: "정말로 모든 데이터를 삭제하시겠습니까? 로그, 설정, 모델 등 모든 정보가 영구적으로 삭제됩니다. 이 작업은 되돌릴 수 없습니다.",
+            reset_success: "모든 데이터가 초기화되었습니다."
         },
         log_detail: {
             loading: "로딩 중...",
