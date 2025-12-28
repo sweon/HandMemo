@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../../db';
 import { useSearch } from '../../contexts/SearchContext';
@@ -105,6 +105,7 @@ const ModelSelect = styled.select`
 export const LogDetail: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
     const { setSearchQuery } = useSearch();
     const { t } = useLanguage();
     const isNew = id === undefined;
@@ -129,7 +130,14 @@ export const LogDetail: React.FC = () => {
             setContent(log.content);
             setTags(log.tags.join(', '));
             setModelId(log.modelId);
-            setIsEditing(false); // Reset to view mode when ID changes
+            setModelId(log.modelId);
+
+            // Check for edit mode query param
+            if (searchParams.get('edit') === 'true') {
+                setIsEditing(true);
+            } else {
+                setIsEditing(false); // Reset to view mode when ID changes
+            }
         } else if (isNew) {
             setTitle('');
             setContent('');
@@ -215,7 +223,7 @@ export const LogDetail: React.FC = () => {
                 threadOrder
             });
 
-            navigate(`/log/${newLogId}`);
+            navigate(`/log/${newLogId}?edit=true`);
         } catch (error) {
             console.error("Failed to add thread:", error);
             alert("Failed to add thread. Please try again.");
