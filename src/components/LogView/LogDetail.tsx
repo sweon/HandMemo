@@ -166,6 +166,12 @@ export const LogDetail: React.FC = () => {
                 modelId: modelId ? Number(modelId) : undefined,
                 updatedAt: now
             });
+
+            // Clear edit param if present to prevent re-entering edit mode
+            if (searchParams.get('edit')) {
+                navigate(`/log/${id}`, { replace: true });
+            }
+
             setIsEditing(false);
         } else {
             const newId = await db.logs.add({
@@ -297,7 +303,12 @@ export const LogDetail: React.FC = () => {
                                 <FiSave /> {t.log_detail.save}
                             </ActionButton>
                             {!isNew && (
-                                <ActionButton onClick={() => setIsEditing(false)}>
+                                <ActionButton onClick={() => {
+                                    if (searchParams.get('edit')) {
+                                        navigate(`/log/${id}`, { replace: true });
+                                    }
+                                    setIsEditing(false);
+                                }}>
                                     <FiX /> {t.log_detail.cancel}
                                 </ActionButton>
                             )}
