@@ -411,7 +411,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
       const filteredLogs = currentLogs.filter(l => l.id !== logId);
 
       const newLogIds = filteredLogs.map(l => l.id!);
-      newLogIds.splice(destination.index, 0, logId);
+      newLogIds.splice(destination.index + 1, 0, logId);
 
       await updateThreadOrder(targetThreadId, newLogIds);
       return;

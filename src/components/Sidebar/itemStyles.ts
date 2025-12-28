@@ -68,3 +68,24 @@ export const ThreadHeader = styled.div`
         color: ${({ theme }) => theme.colors.text};
     }
 `;
+
+export const ThreadToggleBtn = styled.button`
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.25rem 0.5rem 0.25rem 0.25rem;
+    margin-left: 0.5rem;
+    margin-top: -0.25rem;
+    margin-bottom: 0.25rem;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: ${({ theme }) => theme.colors.textSecondary};
+    font-size: 0.8rem;
+    border-radius: 4px;
+    
+    &:hover {
+        color: ${({ theme }) => theme.colors.text};
+        background: ${({ theme }) => theme.colors.surface};
+    }
+`;
