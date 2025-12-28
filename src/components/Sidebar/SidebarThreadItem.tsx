@@ -1,6 +1,6 @@
 import React from 'react';
 import { Draggable, Droppable } from '@hello-pangea/dnd';
-import { Log } from '../../db';
+import type { Log } from '../../db';
 import { SidebarLogItem } from './SidebarLogItem';
 import { ThreadContainer, ThreadHeader } from './itemStyles';
 import { FiChevronRight, FiChevronDown, FiLayers } from 'react-icons/fi';

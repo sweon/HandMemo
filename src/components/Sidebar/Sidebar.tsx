@@ -2,12 +2,12 @@ import React, { useState, useEffect, useRef } from 'react';
 import styled from 'styled-components';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../../db';
-import { Link, useNavigate, useParams } from 'react-router-dom'; // Ensure react-router-dom is installed
+import { useNavigate, useParams } from 'react-router-dom'; // Ensure react-router-dom is installed
 import { FiPlus, FiMinus, FiSettings, FiSun, FiMoon, FiSearch, FiX, FiRefreshCw, FiArrowUpCircle } from 'react-icons/fi';
 import { useRegisterSW } from 'virtual:pwa-register/react';
 import { Tooltip } from '../UI/Tooltip';
 import { SyncModal } from '../Sync/SyncModal';
-import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
+import { DragDropContext, Droppable } from '@hello-pangea/dnd';
 import type { DropResult } from '@hello-pangea/dnd';
 import { Toast } from '../UI/Toast';
 import { useTheme } from '../../contexts/ThemeContext';

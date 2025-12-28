@@ -1,6 +1,6 @@
 import React from 'react';
 import { Draggable } from '@hello-pangea/dnd';
-import { Log } from '../../db';
+import type { Log } from '../../db';
 import { LogItemLink, LogTitle, LogDate } from './itemStyles';
 
 interface Props {
