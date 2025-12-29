@@ -327,6 +327,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
     return flat;
   }, [allLogs, allModels, allComments, searchQuery, sortBy, collapsedThreads]);
 
+  const [displayItems, setDisplayItems] = useState<FlatItem[]>([]);
+
+  useEffect(() => {
+    setDisplayItems(flatItems);
+  }, [flatItems]);
+
 
   const onDragUpdate = (update: DragUpdate) => {
     if (update.combine) {
@@ -340,25 +346,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
     setCombineTargetId(null);
     const { source, destination, combine, draggableId } = result;
 
-    const forceReflow = () => {
-      // 1px scroll hack for mobile repaint issues
-      const list = document.querySelector('[data-rfd-droppable-id="root"]');
-      if (list) {
-        const currentScroll = list.scrollTop;
-        list.scrollTop += 1;
-        requestAnimationFrame(() => {
-          list.scrollTop = currentScroll;
-        });
-      }
-    };
-
     const updateThreadOrder = async (threadId: string, logIds: number[]) => {
       await db.transaction('rw', db.logs, async () => {
         for (let i = 0; i < logIds.length; i++) {
           await db.logs.update(logIds[i], { threadId, threadOrder: i });
         }
       });
-      forceReflow();
     };
 
     const parseLogId = (dId: string) => {
@@ -370,11 +363,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
     if (combine) {
       const sourceId = parseLogId(draggableId);
       const targetId = parseLogId(combine.draggableId);
-
       if (sourceId === targetId) return;
 
       const targetLog = await db.logs.get(targetId);
       if (!targetLog) return;
+
+      // Optimistic: Remove source from list, it will reappear inside the thread via flatItems
+      setDisplayItems(prev => prev.filter(item => item.log.id !== sourceId));
 
       if (targetLog.threadId) {
         const tid = targetLog.threadId;
@@ -393,50 +388,50 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
     if (source.index === destination.index) return;
 
     // Movement logic for flat list: Determine thread membership by neighbors
-    const movedFlatItem = flatItems[source.index];
-    if (movedFlatItem.type === 'thread-header') return; // Headers are moved as groups if drag-disabled is off, but here we only allow individuals
+    const movedFlatItem = displayItems[source.index];
+    if (movedFlatItem.type === 'thread-header') return;
 
     const logId = movedFlatItem.log.id!;
 
-    // Simulate list after move to see neighbors
-    const newFlatList = [...flatItems];
-    const [removed] = newFlatList.splice(source.index, 1);
-    newFlatList.splice(destination.index, 0, removed);
+    // Optimistic Update: Update local state immediately
+    const nextList = [...displayItems];
+    const [removed] = nextList.splice(source.index, 1);
+    nextList.splice(destination.index, 0, removed);
 
-    const prevItem = newFlatList[destination.index - 1];
-    const nextItem = newFlatList[destination.index + 1];
+    // Determine new neighbors to decide thread membership
+    const prevItem = nextList[destination.index - 1];
+    const nextItem = nextList[destination.index + 1];
 
     let newThreadId: string | undefined = undefined;
-
-    // Logic: Join thread if dropped after a header or between children
-    if (prevItem) {
-      if (prevItem.type === 'thread-header' || prevItem.type === 'thread-child') {
-        newThreadId = prevItem.threadId;
-      }
-    } else if (nextItem) {
-      // If at the very top, check if it was dropped before a child (it shouldn't really happen with headers)
-      if (nextItem.type === 'thread-child') {
-        newThreadId = nextItem.threadId;
-      }
+    if (prevItem && (prevItem.type === 'thread-header' || prevItem.type === 'thread-child')) {
+      newThreadId = prevItem.threadId;
+    } else if (nextItem && nextItem.type === 'thread-child') {
+      newThreadId = nextItem.threadId;
     }
 
+    // Apply thread property change to the moved item in our optimistic list
     if (newThreadId) {
-      // Join or stay in thread
-      await db.logs.update(logId, { threadId: newThreadId });
+      (nextList[destination.index] as any).type = 'thread-child';
+      (nextList[destination.index] as any).threadId = newThreadId;
+    } else {
+      (nextList[destination.index] as any).type = 'single';
+      delete (nextList[destination.index] as any).threadId;
+    }
 
-      // Recalcalculate order for the target thread
-      const members = newFlatList.filter(item =>
+    setDisplayItems(nextList);
+
+    // Database Update (Background)
+    if (newThreadId) {
+      await db.logs.update(logId, { threadId: newThreadId });
+      const members = nextList.filter(item =>
         (item.type === 'thread-header' || item.type === 'thread-child') &&
         ('threadId' in item && item.threadId === newThreadId)
       );
       const ids = members.map(m => m.log.id!);
       await updateThreadOrder(newThreadId, ids);
     } else {
-      // Become single log
       await db.logs.update(logId, { threadId: undefined, threadOrder: undefined });
     }
-
-    forceReflow();
   };
 
 
@@ -544,7 +539,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
         <Droppable droppableId="root" isCombineEnabled type="LOG_LIST">
           {(provided) => (
             <LogList ref={provided.innerRef} {...provided.droppableProps}>
-              {flatItems.map((item, index) => {
+              {displayItems.map((item, index) => {
                 if (item.type === 'single') {
                   const logId = item.log.id!;
                   return (
