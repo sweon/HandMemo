@@ -169,15 +169,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
   const { t } = useLanguage();
   const [sortBy, setSortBy] = useState<'date-desc' | 'date-asc' | 'model-desc' | 'model-asc' | 'comment-desc'>('date-desc');
 
-  // Collapse state
-  const [collapsedThreads, setCollapsedThreads] = useState<Set<string>>(new Set());
+  // Expansion state (now collapsed by default)
+  const [expandedThreads, setExpandedThreads] = useState<Set<string>>(new Set());
   const [combineTargetId, setCombineTargetId] = useState<string | null>(null);
 
   const toggleThread = (threadId: string) => {
-    const newSet = new Set(collapsedThreads);
+    const newSet = new Set(expandedThreads);
     if (newSet.has(threadId)) newSet.delete(threadId);
     else newSet.add(threadId);
-    setCollapsedThreads(newSet);
+    setExpandedThreads(newSet);
   };
   const { mode, toggleTheme, increaseFontSize, decreaseFontSize } = useTheme();
   const navigate = useNavigate();
@@ -333,7 +333,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
       } else {
         const header = g.logs[0];
         flat.push({ type: 'thread-header', log: header, threadId: g.threadId, threadLogs: g.logs });
-        if (!collapsedThreads.has(g.threadId)) {
+        if (expandedThreads.has(g.threadId)) {
           g.logs.slice(1).forEach(child => {
             flat.push({ type: 'thread-child', log: child, threadId: g.threadId });
           });
@@ -342,7 +342,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
     });
 
     return flat;
-  }, [allLogs, allModels, allComments, searchQuery, sortBy, collapsedThreads]);
+  }, [allLogs, allModels, allComments, searchQuery, sortBy, expandedThreads]);
 
   const onDragUpdate = (update: DragUpdate) => {
     if (update.combine) {
@@ -553,7 +553,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
                       threadId={item.threadId}
                       logs={item.threadLogs}
                       index={index}
-                      collapsed={collapsedThreads.has(item.threadId)}
+                      collapsed={!expandedThreads.has(item.threadId)}
                       onToggle={toggleThread}
                       activeLogId={Number(id)}
                       modelMap={modelNameMap}
