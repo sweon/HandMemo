@@ -281,10 +281,21 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
     // Filter
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
-      filtered = filtered.filter(l =>
-        l.title.toLowerCase().includes(q) ||
-        l.tags.some(t => t.toLowerCase().includes(q))
-      );
+
+      // Check if searching for a tag or model
+      if (q.startsWith('tag:')) {
+        const tagQuery = q.substring(4).trim();
+        filtered = filtered.filter(l =>
+          l.tags.some(t => t.toLowerCase().includes(tagQuery)) ||
+          (l.modelId && allModels.find(m => m.id === l.modelId)?.name.toLowerCase().includes(tagQuery))
+        );
+      } else {
+        // Regular search in title and tags
+        filtered = filtered.filter(l =>
+          l.title.toLowerCase().includes(q) ||
+          l.tags.some(t => t.toLowerCase().includes(q))
+        );
+      }
     }
 
     // Sort models
