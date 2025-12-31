@@ -414,8 +414,18 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
         return;
       }
 
-      const targetLog = await db.logs.get(targetId);
-      if (!targetLog) {
+      const [sourceLog, targetLog] = await Promise.all([
+        db.logs.get(sourceId),
+        db.logs.get(targetId)
+      ]);
+
+      if (!sourceLog || !targetLog) {
+        return;
+      }
+
+      // If dropped on its own thread member (header or child), treat as extraction
+      if (sourceLog.threadId && sourceLog.threadId === targetLog.threadId) {
+        await db.logs.update(sourceId, { threadId: undefined, threadOrder: undefined });
         return;
       }
 
@@ -440,7 +450,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
     }
 
     const movedFlatItem = flatItems[source.index];
-    if (!movedFlatItem || movedFlatItem.type === 'thread-header') {
+    if (!movedFlatItem) {
       return;
     }
 
@@ -454,15 +464,22 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
     // Determine if the dropped position should join a thread
     let targetThreadId: string | undefined = undefined;
 
-    // Case 1: Dropped directly after a thread header
-    if (prevItem && prevItem.type === 'thread-header') {
-      targetThreadId = prevItem.threadId;
+    // SMART JOIN LOGIC:
+    // 1. If dropped after a thread header: 
+    //    - If we are a single log or a child from another thread, join this thread.
+    //    - If we are already a header, we stay standalone (don't merge via reorder).
+    // 2. If dropped after a thread child: 
+    //    - Only join if we were ALREADY in that thread (reordering within thread).
+    //    - If we move a child to another thread's children, it extracts.
+    // This makes extraction much easier: just drag a child log away from its thread items.
+    if (prevItem && (prevItem.type === 'thread-header' || prevItem.type === 'thread-child')) {
+      const isSameThread = movedFlatItem.log.threadId === prevItem.threadId;
+
+      if (isSameThread) {
+        targetThreadId = prevItem.threadId;
+      }
     }
-    // Case 2: Dropped after a thread child
-    else if (prevItem && prevItem.type === 'thread-child') {
-      targetThreadId = prevItem.threadId;
-    }
-    // Otherwise: targetThreadId remains undefined → extract from thread
+    // Otherwise: targetThreadId remains undefined → extract from thread (or stay standalone)
 
     if (targetThreadId) {
       // Update the log to join the thread
@@ -623,7 +640,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
                   const logId = item.log.id!;
                   return (
                     <SidebarThreadItem
-                      key={`header - ${item.threadId} `}
+                      key={`header-${item.threadId}`}
                       threadId={item.threadId}
                       logs={item.threadLogs}
                       index={index}
@@ -634,7 +651,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
                       formatDate={(d: Date) => format(d, 'yy.MM.dd HH:mm')}
                       untitledText={t.sidebar.untitled}
                       onLogClick={onCloseMobile}
-                      isCombineTarget={combineTargetId === `thread - header - ${logId} `}
+                      isCombineTarget={combineTargetId === `thread-header-${logId}`}
                       t={t}
                     />
                   );
@@ -651,7 +668,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
                       formatDate={(d: Date) => format(d, 'yy.MM.dd HH:mm')}
                       untitledText={t.sidebar.untitled}
                       inThread={true}
-                      isCombineTarget={combineTargetId === `thread - child - ${logId} `}
+                      isCombineTarget={combineTargetId === `thread-child-${logId}`}
                     />
                   );
                 }

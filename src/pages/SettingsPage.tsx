@@ -5,10 +5,11 @@ import { db } from '../db';
 import { exportData, importData } from '../utils/backup';
 import { FiTrash2, FiPlus, FiDownload, FiUpload, FiChevronRight, FiArrowLeft, FiDatabase, FiCpu, FiGlobe, FiInfo, FiShare2, FiAlertTriangle } from 'react-icons/fi';
 import { MdDragIndicator } from 'react-icons/md';
-import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
+import { DragDropContext, Droppable } from '@hello-pangea/dnd';
 import type { DropResult } from '@hello-pangea/dnd';
 import { useLanguage } from '../contexts/LanguageContext';
-import type { Language } from '../translations';
+import { type Language } from '../translations';
+import { TouchDelayDraggable } from '../components/Sidebar/TouchDelayDraggable';
 
 const Container = styled.div`
   padding: 24px 32px;
@@ -589,7 +590,7 @@ export const SettingsPage: React.FC = () => {
               {(provided) => (
                 <ModelList {...provided.droppableProps} ref={provided.innerRef}>
                   {models?.map((m, index) => (
-                    <Draggable key={m.id} draggableId={m.id!.toString()} index={index}>
+                    <TouchDelayDraggable key={m.id} draggableId={m.id!.toString()} index={index}>
                       {(provided, snapshot) => (
                         <ModelItem
                           ref={provided.innerRef}
@@ -605,7 +606,7 @@ export const SettingsPage: React.FC = () => {
                           </IconButton>
                         </ModelItem>
                       )}
-                    </Draggable>
+                    </TouchDelayDraggable>
                   ))}
                   {provided.placeholder}
                 </ModelList>
