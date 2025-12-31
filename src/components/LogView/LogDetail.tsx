@@ -108,7 +108,7 @@ export const LogDetail: React.FC = () => {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const { setSearchQuery } = useSearch();
-    const { t } = useLanguage();
+    const { t, language } = useLanguage();
     const isNew = id === undefined;
 
     const [isEditing, setIsEditing] = useState(isNew);
@@ -334,7 +334,7 @@ export const LogDetail: React.FC = () => {
                         <>
                             <span>{currentModelName}</span>
                             <span>•</span>
-                            <span>{log && format(log.createdAt, 'MMM d, yyyy')}</span>
+                            <span>{log && format(log.createdAt, language === 'ko' ? 'yyyy년 M월 d일' : 'MMM d, yyyy')}</span>
                             {log?.tags.map(t => (
                                 <span
                                     key={t}
@@ -378,7 +378,7 @@ export const LogDetail: React.FC = () => {
                                 <FiEdit2 /> {t.log_detail.edit}
                             </ActionButton>
                             <ActionButton onClick={handleAddThread}>
-                                <FiGitMerge /> Add Thread
+                                <FiGitMerge /> {t.log_detail.add_thread}
                             </ActionButton>
                             <ActionButton $variant="danger" onClick={handleDelete}>
                                 <FiTrash2 /> {t.log_detail.delete}

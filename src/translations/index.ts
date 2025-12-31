@@ -86,6 +86,7 @@ export const translations = {
             delete_thread_entire: "Delete Entire Thread",
             delete_log_only: "Delete Only This Log",
             delete_thread_confirm: "This log is part of a thread. What would you like to delete?",
+            add_thread: "Add Thread",
             untitled: "Untitled",
             unknown_model: "Unknown",
             share_log: "Share"
@@ -220,6 +221,7 @@ export const translations = {
             delete_thread_entire: "전체 스레드 삭제",
             delete_log_only: "이 로그만 삭제",
             delete_thread_confirm: "이 로그는 스레드의 일부입니다. 어떻게 삭제하시겠습니까?",
+            add_thread: "이어서 추가",
             untitled: "제목 없음",
             unknown_model: "알 수 없음",
             share_log: "공유"
