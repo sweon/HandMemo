@@ -14,7 +14,7 @@ interface TouchDelayDraggableProps extends DraggableProps {
  */
 export const TouchDelayDraggable: React.FC<TouchDelayDraggableProps> = ({
     children,
-    touchDelay = 300,
+    touchDelay = 500, // Increased from 300ms to 500ms for less sensitive drag on Android
     ...draggableProps
 }) => {
     const touchTimerRef = useRef<number | null>(null);
