@@ -440,12 +440,26 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
     const prevItem = nextList[destination.index - 1];
     const nextItem = nextList[destination.index + 1];
 
+    // Determine if the dropped position should join a thread
     let targetThreadId: string | undefined = undefined;
-    if (prevItem && (prevItem.type === 'thread-header' || prevItem.type === 'thread-child')) {
+
+    // Case 1: Dropped directly after a thread header AND before that thread's child
+    if (
+      prevItem && prevItem.type === 'thread-header' &&
+      nextItem && nextItem.type === 'thread-child' &&
+      nextItem.threadId === prevItem.threadId
+    ) {
       targetThreadId = prevItem.threadId;
-    } else if (nextItem && nextItem.type === 'thread-child') {
-      targetThreadId = nextItem.threadId;
     }
+    // Case 2: Dropped between two children of the same thread
+    else if (
+      prevItem && prevItem.type === 'thread-child' &&
+      nextItem && nextItem.type === 'thread-child' &&
+      prevItem.threadId === nextItem.threadId
+    ) {
+      targetThreadId = prevItem.threadId;
+    }
+    // Otherwise: targetThreadId remains undefined → extract from thread
 
     if (targetThreadId) {
       await db.logs.update(logId, { threadId: targetThreadId });
