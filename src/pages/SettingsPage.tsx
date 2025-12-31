@@ -673,13 +673,13 @@ export const SettingsPage: React.FC = () => {
             <li>{t.settings.help_local_db}</li>
             <li>{t.settings.help_offline}</li>
             <li>{t.settings.help_sync}</li>
+            <li>{t.settings.help_threads}</li>
             <li>{t.settings.help_share_log}</li>
             <li>{t.settings.help_backup}</li>
             <li>{t.settings.help_markdown}</li>
             <li>{t.settings.help_models}</li>
             <li>{t.settings.help_tags}</li>
             <li>{t.settings.help_comments}</li>
-            <li>{t.settings.help_threads}</li>
             <li>{t.settings.help_math}</li>
           </HelpList>
 
