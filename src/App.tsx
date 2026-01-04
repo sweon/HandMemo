@@ -3,15 +3,15 @@ import { ThemeProvider } from './contexts/ThemeContext';
 import { SearchProvider } from './contexts/SearchContext';
 import { LanguageProvider } from './contexts/LanguageContext'; // Added this import
 import { MainLayout } from './components/Layout/MainLayout';
-import { LogDetail } from './components/LogView/LogDetail';
+import { BookDetail } from './components/BookView/BookDetail';
+import { MemoDetail } from './components/LogView/MemoDetail';
 import { EmptyState } from './components/LogView/EmptyState';
 import { SettingsPage } from './pages/SettingsPage';
-
 import { AndroidExitHandler } from './components/AndroidExitHandler';
 
 function App() {
   return (
-    <LanguageProvider> {/* Added LanguageProvider wrapper */}
+    <LanguageProvider>
       <ThemeProvider>
         <SearchProvider>
           <HashRouter>
@@ -19,8 +19,9 @@ function App() {
             <Routes>
               <Route path="/" element={<MainLayout />}>
                 <Route index element={<EmptyState />} />
-                <Route path="new" element={<LogDetail />} />
-                <Route path="log/:id" element={<LogDetail />} />
+                <Route path="book/:id" element={<BookDetail />} />
+                <Route path="book/:bookId/new" element={<MemoDetail />} />
+                <Route path="memo/:id" element={<MemoDetail />} />
                 <Route path="settings" element={<SettingsPage />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Route>

@@ -12,7 +12,7 @@ const LanguageContext = createContext<LanguageContextType | undefined>(undefined
 
 export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [language, setLanguageState] = useState<Language>(() => {
-        const saved = localStorage.getItem('llmemo-language');
+        const saved = localStorage.getItem('bookmemo-language');
         if (saved === 'en' || saved === 'ko') return saved;
         const browserLang = navigator.language.toLowerCase();
         return browserLang.startsWith('ko') ? 'ko' : 'en';
@@ -20,7 +20,7 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
     const setLanguage = (lang: Language) => {
         setLanguageState(lang);
-        localStorage.setItem('llmemo-language', lang);
+        localStorage.setItem('bookmemo-language', lang);
     };
 
     const t = translations[language];

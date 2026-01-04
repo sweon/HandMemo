@@ -2,21 +2,17 @@ import React, { useState, useEffect, useRef } from 'react';
 import styled from 'styled-components';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../../db';
-import type { Log } from '../../db';
-import { useNavigate, useParams } from 'react-router-dom'; // Ensure react-router-dom is installed
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { FiPlus, FiMinus, FiSettings, FiSun, FiMoon, FiSearch, FiX, FiRefreshCw, FiArrowUpCircle } from 'react-icons/fi';
 import { useRegisterSW } from 'virtual:pwa-register/react';
 import { Tooltip } from '../UI/Tooltip';
 import { SyncModal } from '../Sync/SyncModal';
-import { DragDropContext, Droppable } from '@hello-pangea/dnd';
-import type { DropResult, DragUpdate } from '@hello-pangea/dnd';
 import { Toast } from '../UI/Toast';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useSearch } from '../../contexts/SearchContext';
 import { useLanguage } from '../../contexts/LanguageContext';
-import { format } from 'date-fns';
-import { SidebarLogItem } from './SidebarLogItem';
-import { SidebarThreadItem } from './SidebarThreadItem';
+import { SidebarBookItem } from './SidebarBookItem';
+import { AddBookModal } from '../BookView/AddBookModal';
 
 const SidebarContainer = styled.div`
   display: flex;
@@ -90,7 +86,6 @@ const ClearButton = styled.button`
   }
 `;
 
-
 const Button = styled.button`
   display: flex;
   align-items: center;
@@ -118,7 +113,7 @@ const TopActions = styled.div`
   margin-bottom: 0.5rem;
 `;
 
-const LogList = styled.div`
+const BookList = styled.div`
   flex: 1;
   overflow-y: auto;
   padding: 0.5rem;
@@ -140,12 +135,7 @@ const LogList = styled.div`
     background: ${({ theme }) => theme.colors.border};
     border-radius: 10px;
   }
-
-  /* Standard DND area */
-  min-height: 200px;
 `;
-
-
 
 const IconButton = styled.button`
   background: transparent;
@@ -171,21 +161,14 @@ interface SidebarProps {
 export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
   const { searchQuery, setSearchQuery } = useSearch();
   const { t } = useLanguage();
-  const [sortBy, setSortBy] = useState<'date-desc' | 'date-asc' | 'model-desc' | 'model-asc' | 'comment-desc'>('date-desc');
+  const [sortBy, setSortBy] = useState<'date-desc' | 'date-asc' | 'title-asc'>('date-desc');
+  const [isAddBookModalOpen, setIsAddBookModalOpen] = useState(false);
 
-  // Expansion state (now collapsed by default)
-  const [expandedThreads, setExpandedThreads] = useState<Set<string>>(new Set());
-  const [combineTargetId, setCombineTargetId] = useState<string | null>(null);
-
-  const toggleThread = (threadId: string) => {
-    const newSet = new Set(expandedThreads);
-    if (newSet.has(threadId)) newSet.delete(threadId);
-    else newSet.add(threadId);
-    setExpandedThreads(newSet);
-  };
   const { mode, toggleTheme, increaseFontSize, decreaseFontSize } = useTheme();
   const navigate = useNavigate();
+  const location = useLocation();
   const { id } = useParams<{ id: string }>();
+
   const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
   const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
   const [updateCheckedManually, setUpdateCheckedManually] = useState(false);
@@ -204,18 +187,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
     },
   });
 
-  // Keep ref in sync for use in async handlers
   useEffect(() => {
     needRefreshRef.current = needRefresh;
   }, [needRefresh]);
 
   const handleUpdateCheck = async () => {
-    // First click or explicit check: reveal the status
     if (!updateCheckedManually) {
       setUpdateCheckedManually(true);
       setIsCheckingUpdate(true);
-
-      // If we already know there's a refresh needed, just show the indicator and toast
       if (needRefresh) {
         setIsCheckingUpdate(false);
         setToastMessage(t.sidebar.update_found);
@@ -223,7 +202,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
       }
     }
 
-    // If update is available and user already checked, install it
     if (needRefresh) {
       setToastMessage(t.sidebar.install_update);
       setTimeout(() => {
@@ -243,7 +221,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
 
         setTimeout(() => {
           setIsCheckingUpdate(false);
-          setUpdateCheckedManually(true); // Ensure manual check is makred
+          setUpdateCheckedManually(true);
           if (needRefreshRef.current) {
             setToastMessage(t.sidebar.update_found);
           } else {
@@ -261,269 +239,37 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
     }
   };
 
-  // Fetch raw data reactively
-  const allLogs = useLiveQuery(() => db.logs.toArray());
-  const allModels = useLiveQuery(() => db.models.toArray());
-  const allComments = useLiveQuery(() => db.comments.toArray());
+  const allBooks = useLiveQuery(() => db.books.toArray());
 
-  const modelNameMap = React.useMemo(() => {
-    const map = new Map<number, string>();
-    allModels?.forEach(m => map.set(m.id!, m.name));
-    return map;
-  }, [allModels]);
+  const sortedBooks = React.useMemo(() => {
+    if (!allBooks) return [];
+    let books = [...allBooks];
 
-  type FlatItem =
-    | { type: 'single', log: Log }
-    | { type: 'thread-header', log: Log, threadId: string, threadLogs: Log[] }
-    | { type: 'thread-child', log: Log, threadId: string };
-
-  const flatItems: FlatItem[] = React.useMemo(() => {
-    if (!allLogs || !allModels) return [];
-
-    let filtered = [...allLogs];
-
-    // Filter
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
-
-      // Check if searching for a tag or model
-      if (q.startsWith('tag:')) {
-        const tagQuery = q.substring(4).trim();
-        filtered = filtered.filter(l =>
-          l.tags.some(t => t.toLowerCase().includes(tagQuery)) ||
-          (l.modelId && allModels.find(m => m.id === l.modelId)?.name.toLowerCase().includes(tagQuery))
-        );
-      } else {
-        // Regular search in title and tags
-        filtered = filtered.filter(l =>
-          l.title.toLowerCase().includes(q) ||
-          l.tags.some(t => t.toLowerCase().includes(q))
-        );
-      }
+      books = books.filter(b => b.title.toLowerCase().includes(q) || b.author?.toLowerCase().includes(q));
     }
 
-    // Sort models
-    const modelOrderMap = new Map<number, number>();
-    allModels.forEach(m => modelOrderMap.set(m.id!, m.order ?? 999));
-
-    // Grouping
-    const groups = new Map<string, Log[]>();
-    const singles: Log[] = [];
-
-    filtered.forEach(l => {
-      if (l.threadId) {
-        if (!groups.has(l.threadId)) groups.set(l.threadId, []);
-        groups.get(l.threadId)!.push(l);
-      } else {
-        singles.push(l);
-      }
-    });
-
-    groups.forEach(g => g.sort((a, b) => (a.threadOrder ?? 0) - (b.threadOrder ?? 0)));
-
-    type SortableGroup = {
-      type: 'single', log: Log, lastDate: Date
-    } | {
-      type: 'thread', logs: Log[], threadId: string, lastDate: Date
-    };
-
-    const sortableGroups: SortableGroup[] = [
-      ...singles.map(l => ({ type: 'single' as const, log: l, lastDate: l.createdAt })),
-      ...Array.from(groups.entries()).map(([tid, g]) => {
-        const latest = g.reduce((p, c) => (new Date(p.createdAt) > new Date(c.createdAt) ? p : c), g[0]);
-        return { type: 'thread' as const, logs: g, threadId: tid, lastDate: latest.createdAt };
-      })
-    ];
-
-    sortableGroups.sort((a, b) => {
-      if (sortBy === 'date-desc') return new Date(b.lastDate).getTime() - new Date(a.lastDate).getTime();
-      if (sortBy === 'date-asc') return new Date(a.lastDate).getTime() - new Date(b.lastDate).getTime();
-
-      if (sortBy === 'model-desc' || sortBy === 'model-asc') {
-        const aLog = a.type === 'single' ? a.log : a.logs[0];
-        const bLog = b.type === 'single' ? b.log : b.logs[0];
-        const aModelOrder = aLog.modelId ? (modelOrderMap.get(aLog.modelId) ?? 999) : 999;
-        const bModelOrder = bLog.modelId ? (modelOrderMap.get(bLog.modelId) ?? 999) : 999;
-
-        if (sortBy === 'model-desc') {
-          // Lower order number = higher priority = show first
-          if (aModelOrder !== bModelOrder) return aModelOrder - bModelOrder;
-          // Same model order: sort by date (newest first)
-          return new Date(b.lastDate).getTime() - new Date(a.lastDate).getTime();
-        } else {
-          // model-asc: Higher order = show first
-          if (aModelOrder !== bModelOrder) return bModelOrder - aModelOrder;
-          // Same model order: sort by date (newest first)
-          return new Date(b.lastDate).getTime() - new Date(a.lastDate).getTime();
-        }
-      }
-
+    return books.sort((a, b) => {
+      if (sortBy === 'date-desc') return b.updatedAt.getTime() - a.updatedAt.getTime();
+      if (sortBy === 'date-asc') return a.updatedAt.getTime() - b.updatedAt.getTime();
+      if (sortBy === 'title-asc') return a.title.localeCompare(b.title);
       return 0;
     });
-
-    const flat: FlatItem[] = [];
-    sortableGroups.forEach(g => {
-      if (g.type === 'single') {
-        flat.push({ type: 'single', log: g.log });
-      } else {
-        const header = g.logs[0];
-        flat.push({ type: 'thread-header', log: header, threadId: g.threadId, threadLogs: g.logs });
-        if (expandedThreads.has(g.threadId)) {
-          g.logs.slice(1).forEach(child => {
-            flat.push({ type: 'thread-child', log: child, threadId: g.threadId });
-          });
-        }
-      }
-    });
-
-    return flat;
-  }, [allLogs, allModels, allComments, searchQuery, sortBy, expandedThreads]);
-
-  const onDragUpdate = (update: DragUpdate) => {
-    if (update.combine) {
-      setCombineTargetId(update.combine.draggableId);
-    } else {
-      setCombineTargetId(null);
-    }
-  };
-
-  const onDragEnd = async (result: DropResult) => {
-    // Always cleanup drag state, even if drag was cancelled
-    setCombineTargetId(null);
-
-    const { source, destination, combine, draggableId } = result;
-
-    const parseLogId = (dId: string) => {
-      if (dId.startsWith('thread-header-')) return Number(dId.replace('thread-header-', ''));
-      if (dId.startsWith('thread-child-')) return Number(dId.replace('thread-child-', ''));
-      return Number(dId);
-    };
-
-    const updateThreadOrder = async (threadId: string, logIds: number[]) => {
-      await db.transaction('rw', db.logs, async () => {
-        for (let i = 0; i < logIds.length; i++) {
-          await db.logs.update(logIds[i], { threadId, threadOrder: i });
-        }
-      });
-    };
-
-    if (combine) {
-      const sourceId = parseLogId(draggableId);
-      const targetId = parseLogId(combine.draggableId);
-      if (sourceId === targetId) {
-        return;
-      }
-
-      const [sourceLog, targetLog] = await Promise.all([
-        db.logs.get(sourceId),
-        db.logs.get(targetId)
-      ]);
-
-      if (!sourceLog || !targetLog) {
-        return;
-      }
-
-      // If dropped on its own thread member (header or child), treat as extraction
-      if (sourceLog.threadId && sourceLog.threadId === targetLog.threadId) {
-        await db.logs.update(sourceId, { threadId: undefined, threadOrder: undefined });
-        return;
-      }
-
-      if (targetLog.threadId) {
-        const tid = targetLog.threadId;
-        const members = await db.logs.where('threadId').equals(tid).sortBy('threadOrder');
-        const newIds = members.filter(m => m.id !== sourceId).map(m => m.id!);
-        newIds.push(sourceId);
-        await updateThreadOrder(tid, newIds);
-      } else {
-        const newThreadId = crypto.randomUUID();
-        await updateThreadOrder(newThreadId, [targetId, sourceId]);
-      }
-      return;
-    }
-
-    if (!destination) {
-      return;
-    }
-    if (source.index === destination.index) {
-      return;
-    }
-
-    const movedFlatItem = flatItems[source.index];
-    if (!movedFlatItem) {
-      return;
-    }
-
-    const logId = movedFlatItem.log.id!;
-    const nextList = [...flatItems];
-    const [removed] = nextList.splice(source.index, 1);
-    nextList.splice(destination.index, 0, removed);
-
-    const prevItem = nextList[destination.index - 1];
-
-    // Determine if the dropped position should join a thread
-    let targetThreadId: string | undefined = undefined;
-
-    // SMART JOIN LOGIC:
-    // 1. If dropped after a thread header: 
-    //    - If we are a single log or a child from another thread, join this thread.
-    //    - If we are already a header, we stay standalone (don't merge via reorder).
-    // 2. If dropped after a thread child: 
-    //    - Only join if we were ALREADY in that thread (reordering within thread).
-    //    - If we move a child to another thread's children, it extracts.
-    // This makes extraction much easier: just drag a child log away from its thread items.
-    if (prevItem && (prevItem.type === 'thread-header' || prevItem.type === 'thread-child')) {
-      const isSameThread = movedFlatItem.log.threadId === prevItem.threadId;
-
-      if (isSameThread) {
-        targetThreadId = prevItem.threadId;
-      }
-    }
-    // Otherwise: targetThreadId remains undefined → extract from thread (or stay standalone)
-
-    if (targetThreadId) {
-      // Update the log to join the thread
-      await db.logs.update(logId, { threadId: targetThreadId });
-
-      // Get all thread members from the simulated nextList in their new order
-      // Filter by log ID instead of type/threadId to catch the dragged item
-      const threadLogIds = new Set<number>();
-
-      // First, get all existing thread members
-      const existingMembers = await db.logs.where('threadId').equals(targetThreadId).toArray();
-      existingMembers.forEach(log => threadLogIds.add(log.id!));
-
-      // Add the dragged item
-      threadLogIds.add(logId);
-
-      // Now extract IDs in the order they appear in nextList
-      const ids: number[] = [];
-      nextList.forEach(item => {
-        if (item.type !== 'single' && item.type !== 'thread-header' && item.type !== 'thread-child') return;
-        const itemLogId = item.log.id!;
-        if (threadLogIds.has(itemLogId) && !ids.includes(itemLogId)) {
-          ids.push(itemLogId);
-        }
-      });
-
-      // Update all thread members with their new order
-      await updateThreadOrder(targetThreadId, ids);
-    } else {
-      await db.logs.update(logId, { threadId: undefined, threadOrder: undefined });
-    }
-  };
+  }, [allBooks, searchQuery, sortBy]);
 
   const showUpdateIndicator = needRefresh && updateCheckedManually;
+
+  // Determine active book based on route
+  const isBookRoute = location.pathname.startsWith('/book/');
+  const activeBookId = isBookRoute && id ? Number(id) : undefined;
 
   return (
     <SidebarContainer>
       <Header>
         <TopActions>
-          <Button onClick={() => {
-            navigate('/new');
-            onCloseMobile();
-          }}>
-            <FiPlus /> {t.sidebar.new}
+          <Button onClick={() => setIsAddBookModalOpen(true)}>
+            <FiPlus /> {t.sidebar.add_book || "New Book"}
           </Button>
           <div style={{ display: 'flex', gap: '0rem', alignItems: 'center' }}>
             <Tooltip content={t.sidebar.decrease_font}>
@@ -599,86 +345,28 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
               flex: 1,
               padding: '0.5rem',
               borderRadius: '6px',
-              border: '1px solid #e5e7eb', // theme.colors.border hardcoded for now or use styled comp
+              border: '1px solid #e5e7eb',
               background: mode === 'dark' ? '#1e293b' : '#fff',
               color: mode === 'dark' ? '#f8fafc' : '#111827'
             }}
           >
             <option value="date-desc">{t.sidebar.newest}</option>
             <option value="date-asc">{t.sidebar.oldest}</option>
-            <option value="model-desc">{t.sidebar.model_newest}</option>
-            <option value="model-asc">{t.sidebar.model_oldest}</option>
-            <option value="comment-desc">{t.sidebar.last_commented}</option>
+            <option value="title-asc">Title (A-Z)</option>
           </select>
         </div>
       </Header>
 
-      <DragDropContext
-        onDragEnd={onDragEnd}
-        onDragUpdate={onDragUpdate}
-      >
-        <Droppable droppableId="root" isCombineEnabled type="LOG_LIST">
-          {(provided) => (
-            <LogList ref={provided.innerRef} {...provided.droppableProps}>
-              {flatItems.map((item, index) => {
-                if (item.type === 'single') {
-                  const logId = item.log.id!;
-                  return (
-                    <SidebarLogItem
-                      key={logId}
-                      log={item.log}
-                      index={index}
-                      isActive={Number(id) === logId}
-                      onClick={onCloseMobile}
-                      modelName={modelNameMap.get(item.log.modelId!)}
-                      formatDate={(d: Date) => format(d, 'yy.MM.dd HH:mm')}
-                      untitledText={t.sidebar.untitled}
-                      isCombineTarget={combineTargetId === String(logId)}
-                    />
-                  );
-                } else if (item.type === 'thread-header') {
-                  const logId = item.log.id!;
-                  return (
-                    <SidebarThreadItem
-                      key={`header-${item.threadId}`}
-                      threadId={item.threadId}
-                      logs={item.threadLogs}
-                      index={index}
-                      collapsed={!expandedThreads.has(item.threadId)}
-                      onToggle={toggleThread}
-                      activeLogId={Number(id)}
-                      modelMap={modelNameMap}
-                      formatDate={(d: Date) => format(d, 'yy.MM.dd HH:mm')}
-                      untitledText={t.sidebar.untitled}
-                      onLogClick={onCloseMobile}
-                      isCombineTarget={combineTargetId === `thread-header-${logId}`}
-                      t={t}
-                    />
-                  );
-                } else if (item.type === 'thread-child') {
-                  const logId = item.log.id!;
-                  return (
-                    <SidebarLogItem
-                      key={logId}
-                      log={item.log}
-                      index={index}
-                      isActive={Number(id) === logId}
-                      onClick={onCloseMobile}
-                      modelName={modelNameMap.get(item.log.modelId!)}
-                      formatDate={(d: Date) => format(d, 'yy.MM.dd HH:mm')}
-                      untitledText={t.sidebar.untitled}
-                      inThread={true}
-                      isCombineTarget={combineTargetId === `thread-child-${logId}`}
-                    />
-                  );
-                }
-                return null;
-              })}
-              {provided.placeholder}
-            </LogList>
-          )}
-        </Droppable>
-      </DragDropContext>
+      <BookList>
+        {sortedBooks?.map(book => (
+          <SidebarBookItem
+            key={book.id}
+            book={book}
+            onClick={onCloseMobile}
+          // We could pass isActive if we have logic for it
+          />
+        ))}
+      </BookList>
 
       <SyncModal isOpen={isSyncModalOpen} onClose={() => setIsSyncModalOpen(false)} />
       {
@@ -686,6 +374,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
           <Toast message={toastMessage} onClose={() => setToastMessage(null)} />
         )
       }
+      {isAddBookModalOpen && (
+        <AddBookModal onClose={() => setIsAddBookModalOpen(false)} />
+      )}
     </SidebarContainer >
   );
 };

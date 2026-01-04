@@ -1,10 +1,10 @@
 import React from 'react';
-import type { Log } from '../../db';
-import { LogItemLink, LogTitle, LogDate } from './itemStyles';
+import type { Memo } from '../../db';
+import { MemoItemLink, MemoTitle, MemoDate } from './itemStyles';
 import { TouchDelayDraggable } from './TouchDelayDraggable';
 
 interface Props {
-    log: Log;
+    memo: Memo;
     index: number;
     isActive: boolean;
     onClick?: () => void;
@@ -15,8 +15,8 @@ interface Props {
     isCombineTarget?: boolean;
 }
 
-export const SidebarLogItem: React.FC<Props> = ({
-    log,
+export const SidebarMemoItem: React.FC<Props> = ({
+    memo,
     index,
     isActive,
     onClick,
@@ -26,7 +26,7 @@ export const SidebarLogItem: React.FC<Props> = ({
     untitledText,
     isCombineTarget
 }) => {
-    const draggableId = inThread ? `thread-child-${log.id}` : String(log.id);
+    const draggableId = inThread ? `thread-child-${memo.id}` : String(memo.id);
 
     return (
         <TouchDelayDraggable draggableId={draggableId} index={index}>
@@ -45,26 +45,27 @@ export const SidebarLogItem: React.FC<Props> = ({
                         backgroundColor: isCombineTarget ? 'rgba(59, 130, 246, 0.05)' : 'transparent',
                     }}
                 >
-                    <LogItemLink
-                        to={`/log/${log.id}`}
+                    <MemoItemLink
+                        to={`/memo/${memo.id}`}
                         $isActive={isActive}
                         $inThread={inThread}
                         onClick={onClick}
                     >
-                        <LogTitle title={log.title || untitledText}>
-                            {log.title || untitledText}
-                        </LogTitle>
-                        <LogDate>
-                            {formatDate(log.createdAt)}
+                        <MemoTitle title={memo.title || untitledText}>
+                            {memo.title || untitledText}
+                        </MemoTitle>
+                        <MemoDate>
+                            {formatDate(memo.createdAt)}
                             {modelName && (
                                 <span style={{ marginLeft: '0.5rem', opacity: 0.7 }}>
                                     • {modelName}
                                 </span>
                             )}
-                        </LogDate>
-                    </LogItemLink>
+                        </MemoDate>
+                    </MemoItemLink>
                 </div>
             )}
         </TouchDelayDraggable>
     );
 };
+

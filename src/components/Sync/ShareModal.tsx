@@ -12,8 +12,8 @@ const generateShortId = () => {
 interface ShareModalProps {
     isOpen: boolean;
     onClose: () => void;
-    logId: number;
-    logTitle: string;
+    memoId: number;
+    memoTitle: string;
 }
 
 const Overlay = styled.div`
@@ -212,7 +212,7 @@ const QRWrapper = styled.div`
     box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
 `;
 
-export const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, logId, logTitle }) => {
+export const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, memoId, memoTitle }) => {
     const [roomId, setRoomId] = useState('');
     const [status, setStatus] = useState<SyncStatus>('disconnected');
     const [statusMessage, setStatusMessage] = useState('');
@@ -258,7 +258,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, logId, 
                     // This is usually for receiver, but sender might get "completed" too
                     console.log("Data transfer completed");
                 },
-                initialDataLogId: logId
+                initialDataMemoId: memoId
             });
         }
         return syncService.current;
@@ -309,14 +309,14 @@ export const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, logId, 
         <Overlay onClick={handleClose}>
             <ModalContainer onClick={(e: React.MouseEvent) => e.stopPropagation()}>
                 <Header>
-                    <h2><FaShareAlt /> {t.log_detail.share_log} <FaLock style={{ fontSize: '0.9rem', opacity: 0.6 }} title="End-to-End Encrypted" /></h2>
+                    <h2><FaShareAlt /> {t.memo_detail.share_memo} <FaLock style={{ fontSize: '0.9rem', opacity: 0.6 }} title="End-to-End Encrypted" /></h2>
                     <CloseButton onClick={handleClose}><FaTimes /></CloseButton>
                 </Header>
 
                 <Content>
                     <FormWrapper>
                         <p style={{ fontSize: '0.9rem', color: theme.colors.textSecondary, marginBottom: '20px' }}>
-                            Sharing: <strong>{logTitle}</strong>
+                            Sharing: <strong>{memoTitle}</strong>
                         </p>
 
                         <Label>{t.sync.your_room_id}</Label>

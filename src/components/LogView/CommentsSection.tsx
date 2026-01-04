@@ -160,12 +160,12 @@ const AddButton = styled.button`
   }
 `;
 
-export const CommentsSection: React.FC<{ logId: number }> = ({ logId }) => {
+export const CommentsSection: React.FC<{ memoId: number }> = ({ memoId }) => {
     const { theme } = useTheme();
     const { t } = useLanguage();
     const comments = useLiveQuery(
-        () => db.comments.where('logId').equals(logId).sortBy('createdAt'),
-        [logId]
+        () => db.comments.where('memoId').equals(memoId).sortBy('createdAt'),
+        [memoId]
     );
 
     const [isAdding, setIsAdding] = useState(false);
@@ -177,7 +177,7 @@ export const CommentsSection: React.FC<{ logId: number }> = ({ logId }) => {
     const handleAdd = async () => {
         if (!newContent.trim()) return;
         await db.comments.add({
-            logId,
+            memoId,
             content: newContent,
             createdAt: new Date(),
             updatedAt: new Date(),
@@ -234,10 +234,10 @@ export const CommentsSection: React.FC<{ logId: number }> = ({ logId }) => {
                                     </>
                                 ) : (
                                     <>
-                                        <ActionIcon onClick={() => startEdit(c)} title={t.log_detail.edit}>
+                                        <ActionIcon onClick={() => startEdit(c)} title={t.memo_detail.edit}>
                                             <FiEdit2 />
                                         </ActionIcon>
-                                        <ActionIcon onClick={() => handleDelete(c.id!)} $variant="danger" title={t.log_detail.delete}>
+                                        <ActionIcon onClick={() => handleDelete(c.id!)} $variant="danger" title={t.memo_detail.delete}>
                                             <FiTrash2 />
                                         </ActionIcon>
                                     </>

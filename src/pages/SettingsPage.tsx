@@ -400,31 +400,31 @@ export const SettingsPage: React.FC = () => {
 
   const [showExportModal, setShowExportModal] = useState(false);
   const [exportMode, setExportMode] = useState<'all' | 'selected'>('all');
-  const [selectedLogs, setSelectedLogs] = useState<Set<number>>(new Set());
+  const [selectedMemos, setSelectedMemos] = useState<Set<number>>(new Set());
   const [exportFileName, setExportFileName] = useState('');
-  const allLogs = useLiveQuery(() => db.logs.orderBy('createdAt').reverse().toArray());
+  const allMemos = useLiveQuery(() => db.memos.orderBy('createdAt').reverse().toArray());
 
   const handleExportClick = () => {
     setShowExportModal(true);
     setExportMode('all');
-    setSelectedLogs(new Set());
-    setExportFileName(`llmemo-backup-${new Date().toISOString().slice(0, 10)}`);
+    setSelectedMemos(new Set());
+    setExportFileName(`bookmemo-backup-${new Date().toISOString().slice(0, 10)}`);
   };
 
   const confirmExport = async () => {
     if (exportMode === 'all') {
       await exportData(undefined, exportFileName);
     } else {
-      await exportData(Array.from(selectedLogs), exportFileName);
+      await exportData(Array.from(selectedMemos), exportFileName);
     }
     setShowExportModal(false);
   };
 
-  const toggleLogSelection = (id: number) => {
-    const next = new Set(selectedLogs);
+  const toggleMemoSelection = (id: number) => {
+    const next = new Set(selectedMemos);
     if (next.has(id)) next.delete(id);
     else next.add(id);
-    setSelectedLogs(next);
+    setSelectedMemos(next);
   };
 
   const handleAddModel = async () => {
@@ -484,7 +484,7 @@ export const SettingsPage: React.FC = () => {
 
   const handleShare = async () => {
     const shareData = {
-      title: 'LLMemo',
+      title: 'BookMemo',
       text: t.settings.help_desc,
       url: window.location.origin + window.location.pathname
     };
@@ -674,7 +674,7 @@ export const SettingsPage: React.FC = () => {
             <li>{t.settings.help_offline}</li>
             <li>{t.settings.help_sync}</li>
             <li>{t.settings.help_threads}</li>
-            <li>{t.settings.help_share_log}</li>
+            <li>{t.settings.help_share_memo}</li>
             <li>{t.settings.help_backup}</li>
             <li>{t.settings.help_markdown}</li>
             <li>{t.settings.help_models}</li>
@@ -697,7 +697,7 @@ export const SettingsPage: React.FC = () => {
           </div>
 
           <div style={{ marginTop: '2rem', padding: '1rem', background: 'var(--surface-color)', borderRadius: '8px', fontSize: '0.85rem', color: 'var(--text-secondary)', textAlign: 'center' }}>
-            LLMemo v1.2.0 • Local-First LLM Interaction Logger
+            BookMemo v1.2.0 • Local-First Reading Tracker & Memo
           </div>
         </Section>
       )}
@@ -714,7 +714,7 @@ export const SettingsPage: React.FC = () => {
               </RadioLabel>
               <RadioLabel>
                 <input type="radio" checked={exportMode === 'selected'} onChange={() => setExportMode('selected')} />
-                {t.settings.select_logs}
+                {t.settings.select_memos}
               </RadioLabel>
 
               <div style={{ marginTop: '1.5rem', marginBottom: '1.5rem' }}>
@@ -729,18 +729,18 @@ export const SettingsPage: React.FC = () => {
 
               {exportMode === 'selected' && (
                 <ScrollableList>
-                  {allLogs?.length === 0 ? (
-                    <div style={{ padding: '0.5rem', opacity: 0.6 }}>{t.settings.no_logs_found}</div>
+                  {allMemos?.length === 0 ? (
+                    <div style={{ padding: '0.5rem', opacity: 0.6 }}>{t.settings.no_memos_found}</div>
                   ) : (
-                    allLogs?.map(log => (
-                      <CheckboxLabel key={log.id}>
+                    allMemos?.map(memo => (
+                      <CheckboxLabel key={memo.id}>
                         <input
                           type="checkbox"
-                          checked={selectedLogs.has(log.id!)}
-                          onChange={() => toggleLogSelection(log.id!)}
+                          checked={selectedMemos.has(memo.id!)}
+                          onChange={() => toggleMemoSelection(memo.id!)}
                         />
                         <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {log.title || t.sidebar.untitled}
+                          {memo.title || t.sidebar.untitled}
                         </span>
                       </CheckboxLabel>
                     ))
@@ -750,7 +750,7 @@ export const SettingsPage: React.FC = () => {
             </ModalBody>
             <ModalFooter>
               <ActionButton onClick={() => setShowExportModal(false)} $variant="secondary">{t.settings.cancel}</ActionButton>
-              <ActionButton onClick={confirmExport} disabled={exportMode === 'selected' && selectedLogs.size === 0}>
+              <ActionButton onClick={confirmExport} disabled={exportMode === 'selected' && selectedMemos.size === 0}>
                 <FiDownload /> {t.settings.export}
               </ActionButton>
             </ModalFooter>
@@ -760,5 +760,3 @@ export const SettingsPage: React.FC = () => {
     </Container>
   );
 };
-
-

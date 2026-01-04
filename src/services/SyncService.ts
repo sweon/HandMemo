@@ -15,7 +15,7 @@ export interface SyncServiceOptions {
     onStatusChange: (status: SyncStatus, message?: string) => void;
     onDataReceived: () => void;
     onSyncInfo?: (info: SyncInfo) => void;
-    initialDataLogId?: number; // If set, only this log is synced initially
+    initialDataMemoId?: number; // If set, only this memo is synced initially
 }
 
 export const cleanRoomId = (roomId: string): string => {
@@ -55,18 +55,18 @@ export class SyncService {
         if (!this.options.onSyncInfo) return;
 
         try {
-            if (this.options.initialDataLogId) {
-                const log = await db.logs.get(this.options.initialDataLogId);
-                if (log) {
-                    if (log.threadId) {
-                        const threadLogs = await db.logs.where('threadId').equals(log.threadId).count();
-                        const isHead = (await db.logs.where('threadId').equals(log.threadId).sortBy('threadOrder'))[0]?.id === log.id;
+            if (this.options.initialDataMemoId) {
+                const memo = await db.memos.get(this.options.initialDataMemoId);
+                if (memo) {
+                    if (memo.threadId) {
+                        const threadMemos = await db.memos.where('threadId').equals(memo.threadId).count();
+                        const isHead = (await db.memos.where('threadId').equals(memo.threadId).sortBy('threadOrder'))[0]?.id === memo.id;
 
-                        if (isHead && threadLogs > 1) {
+                        if (isHead && threadMemos > 1) {
                             this.options.onSyncInfo({
                                 type: 'thread',
-                                count: threadLogs,
-                                label: log.title
+                                count: threadMemos,
+                                label: memo.title
                             });
                             return;
                         }
@@ -74,16 +74,16 @@ export class SyncService {
                     this.options.onSyncInfo({
                         type: 'single',
                         count: 1,
-                        label: log.title
+                        label: memo.title
                     });
                     return;
                 }
             }
 
-            const totalLogs = await db.logs.count();
+            const totalMemos = await db.memos.count();
             this.options.onSyncInfo({
                 type: 'full',
-                count: totalLogs,
+                count: totalMemos,
                 label: 'All Data'
             });
         } catch (e) {
@@ -204,32 +204,32 @@ export class SyncService {
             this.isSyncing = true;
             this.options.onStatusChange('syncing', 'Preparing data...');
 
-            let targetLogIds: number[] | undefined;
+            let targetMemoIds: number[] | undefined;
 
-            if (this.options.initialDataLogId) {
-                const log = await db.logs.get(this.options.initialDataLogId);
-                if (log && log.threadId) {
-                    const threadLogs = await db.logs.where('threadId').equals(log.threadId).sortBy('threadOrder');
-                    // Check if current log is the first one (Head)
-                    if (threadLogs.length > 0 && threadLogs[0].id === log.id) {
+            if (this.options.initialDataMemoId) {
+                const memo = await db.memos.get(this.options.initialDataMemoId);
+                if (memo && memo.threadId) {
+                    const threadMemos = await db.memos.where('threadId').equals(memo.threadId).sortBy('threadOrder');
+                    // Check if current memo is the first one (Head)
+                    if (threadMemos.length > 0 && threadMemos[0].id === memo.id) {
                         // Is Head -> Share ALL
-                        targetLogIds = threadLogs.map(l => l.id!);
+                        targetMemoIds = threadMemos.map(l => l.id!);
                     } else {
                         // Is Body or otherwise -> Share SINGLE
-                        targetLogIds = [this.options.initialDataLogId];
+                        targetMemoIds = [this.options.initialDataMemoId];
                     }
                 } else {
-                    targetLogIds = [this.options.initialDataLogId];
+                    targetMemoIds = [this.options.initialDataMemoId];
                 }
             }
 
-            // Allow syncing only specific log if requested
-            const data = await getBackupData(targetLogIds);
+            // Allow syncing only specific memo if requested
+            const data = await getBackupData(targetMemoIds);
             const jsonStr = JSON.stringify(data);
 
             this.options.onStatusChange('syncing', 'Encrypting...');
             const encrypted = await encryptData(jsonStr, this.roomId);
-            const finalData = (targetLogIds ? "PARTIAL:" : "FULL:") + encrypted;
+            const finalData = (targetMemoIds ? "PARTIAL:" : "FULL:") + encrypted;
 
             if (finalData.length > 2000) {
                 this.options.onStatusChange('syncing', 'Uploading attachment...');
@@ -242,7 +242,7 @@ export class SyncService {
                 });
             }
             console.log('Data sent to relay');
-            if (this.options.initialDataLogId) {
+            if (this.options.initialDataMemoId) {
                 this.options.onStatusChange('completed', 'Data sent successfully!');
             } else {
                 this.options.onStatusChange('connected', 'Data sent!');
@@ -264,7 +264,7 @@ export class SyncService {
             body: encryptedData,
             headers: {
                 'Filename': 'sync.enc',
-                'Title': 'LLMemo Sync Data',
+                'Title': 'BookMemo Sync Data',
                 'Tags': tags.join(',')
             }
         });
@@ -340,24 +340,27 @@ export class SyncService {
             data = JSON.parse(decrypted);
 
             // Analyze received data for visual indicator on receiver side
-            if (this.options.onSyncInfo && data.logs) {
+            // Check memos (or legacy logs)
+            const backupMemos = data.memos || data.logs;
+
+            if (this.options.onSyncInfo && backupMemos) {
                 if (!isPartial) {
                     this.options.onSyncInfo({
                         type: 'full',
-                        count: data.logs.length,
+                        count: backupMemos.length,
                         label: 'Full Backup'
                     });
-                } else if (data.logs.length > 1) {
+                } else if (backupMemos.length > 1) {
                     this.options.onSyncInfo({
                         type: 'thread',
-                        count: data.logs.length,
-                        label: data.logs[0]?.title || 'Combined Logs'
+                        count: backupMemos.length,
+                        label: backupMemos[0]?.title || 'Combined Memos'
                     });
                 } else {
                     this.options.onSyncInfo({
                         type: 'single',
                         count: 1,
-                        label: data.logs[0]?.title || 'Log'
+                        label: backupMemos[0]?.title || 'Memo'
                     });
                 }
             }
@@ -369,10 +372,10 @@ export class SyncService {
         }
 
         try {
-            // If we are in single-log sharing mode (Sender), we usually don't want to merge the Receiver's full backup.
-            if (this.options.initialDataLogId && this.isHost) {
-                console.log("In single log share mode, skipping merge of incoming data.");
-                this.options.onStatusChange('completed', 'Log shared successfully!');
+            // If we are in single-memo sharing mode (Sender), we usually don't want to merge the Receiver's full backup.
+            if (this.options.initialDataMemoId && this.isHost) {
+                console.log("In single memo share mode, skipping merge of incoming data.");
+                this.options.onStatusChange('completed', 'Memo shared successfully!');
                 return;
             }
 

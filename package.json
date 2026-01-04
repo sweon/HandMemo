@@ -1,5 +1,9 @@
 {
-  "name": "llmemo",
+  "name": "bookmemo",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sweon/BookMemo.git"
+  },
   "private": true,
   "version": "0.0.0",
   "type": "module",

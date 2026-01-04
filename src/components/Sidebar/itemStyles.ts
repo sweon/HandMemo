@@ -1,7 +1,7 @@
 import styled from 'styled-components';
 import { Link } from 'react-router-dom';
 
-export const LogItemLink = styled(Link) <{ $isActive: boolean; $inThread?: boolean; $isThreadStart?: boolean; $isThreadEnd?: boolean }>`
+export const MemoItemLink = styled(Link) <{ $isActive: boolean; $inThread?: boolean; $isThreadStart?: boolean; $isThreadEnd?: boolean }>`
   display: block;
   padding: 0.5rem 0.75rem;
   padding-left: ${({ $inThread }) => ($inThread ? '1.5rem' : '0.75rem')};
@@ -12,7 +12,7 @@ export const LogItemLink = styled(Link) <{ $isActive: boolean; $inThread?: boole
   color: ${({ theme }) => theme.colors.text};
   position: relative;
   
-  /* Connector for child logs */
+  /* Connector for child memos */
   ${({ $inThread, theme }) => $inThread && `
     &::before {
       content: '';
@@ -31,7 +31,7 @@ export const LogItemLink = styled(Link) <{ $isActive: boolean; $inThread?: boole
   }
 `;
 
-export const LogTitle = styled.div`
+export const MemoTitle = styled.div`
   font-weight: 500;
   white-space: nowrap;
   overflow: hidden;
@@ -39,7 +39,7 @@ export const LogTitle = styled.div`
   font-size: 0.95rem;
 `;
 
-export const LogDate = styled.div`
+export const MemoDate = styled.div`
   font-size: 0.75rem;
   color: ${({ theme }) => theme.colors.textSecondary};
   margin-top: 0.1rem;

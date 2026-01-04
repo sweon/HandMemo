@@ -105,7 +105,7 @@ const Overlay = styled.div<{ $isOpen: boolean }>`
   }
 `;
 
-const STORAGE_KEY = 'llmemo-sidebar-width';
+const STORAGE_KEY = 'bookmemo-sidebar-width';
 const DEFAULT_WIDTH = 300;
 const MIN_WIDTH = 280;
 const MAX_WIDTH = 600;
@@ -201,7 +201,7 @@ export const MainLayout: React.FC = () => {
       <ContentWrapper>
         <MobileHeader>
           <FiMenu size={24} onClick={() => setSidebarOpen(true)} />
-          <h3>LLMemo</h3>
+          <h3>BookMemo</h3>
         </MobileHeader>
         <Outlet />
       </ContentWrapper>

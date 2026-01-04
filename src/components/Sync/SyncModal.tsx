@@ -632,7 +632,7 @@ export const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose }) => {
                                         </div>
                                         <div className="content">
                                             <h4>{syncInfo.type === 'thread' ? 'Sharing Thread' :
-                                                syncInfo.type === 'full' ? 'Full Backup' : 'Sharing Log'}</h4>
+                                                syncInfo.type === 'full' ? 'Full Backup' : 'Sharing Memo'}</h4>
                                             <p>{syncInfo.label}</p>
                                             <div className="sub">{syncInfo.count} items</div>
                                         </div>
@@ -687,7 +687,7 @@ export const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose }) => {
                                                 </div>
                                                 <div className="content">
                                                     <h4>{syncInfo.type === 'thread' ? 'Received Thread' :
-                                                        syncInfo.type === 'full' ? 'Receiving Backup' : 'Received Log'}</h4>
+                                                        syncInfo.type === 'full' ? 'Receiving Backup' : 'Received Memo'}</h4>
                                                     <p>{syncInfo.label}</p>
                                                     <div className="sub">{syncInfo.count} items</div>
                                                 </div>
@@ -723,7 +723,7 @@ export const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose }) => {
                                                 </div>
                                                 <div className="content">
                                                     <h4>{syncInfo.type === 'thread' ? 'Received Thread' :
-                                                        syncInfo.type === 'full' ? 'Receiving Backup' : 'Received Log'}</h4>
+                                                        syncInfo.type === 'full' ? 'Receiving Backup' : 'Received Memo'}</h4>
                                                     <p>{syncInfo.label}</p>
                                                     <div className="sub">{syncInfo.count} items</div>
                                                 </div>

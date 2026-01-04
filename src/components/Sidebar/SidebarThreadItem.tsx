@@ -1,35 +1,35 @@
 import React from 'react';
-import type { Log } from '../../db';
-import { LogItemLink, LogTitle, LogDate, ThreadToggleBtn } from './itemStyles';
+import type { Memo } from '../../db';
+import { MemoItemLink, MemoTitle, MemoDate, ThreadToggleBtn } from './itemStyles';
 import { FiCornerDownRight } from 'react-icons/fi';
 import { TouchDelayDraggable } from './TouchDelayDraggable';
 import type { TranslationKeys } from '../../translations';
 
 interface Props {
     threadId: string;
-    logs: Log[];
+    memos: Memo[];
     index: number;
     collapsed: boolean;
     onToggle: (id: string) => void;
-    activeLogId?: number;
+    activeMemoId?: number;
     modelMap: Map<number, string>;
     formatDate: (d: Date) => string;
     untitledText: string;
-    onLogClick?: () => void;
+    onMemoClick?: () => void;
     isCombineTarget?: boolean;
     t: TranslationKeys;
 }
 
 export const SidebarThreadItem: React.FC<Props> = ({
-    threadId, logs, index, collapsed, onToggle,
-    activeLogId, modelMap, formatDate, untitledText, onLogClick,
+    threadId, memos, index, collapsed, onToggle,
+    activeMemoId, modelMap, formatDate, untitledText, onMemoClick,
     isCombineTarget, t
 }) => {
-    const headLog = logs[0];
-    const bodyLogs = logs.slice(1);
+    const headMemo = memos[0];
+    const bodyMemos = memos.slice(1);
 
     return (
-        <TouchDelayDraggable draggableId={`thread-header-${headLog.id}`} index={index}>
+        <TouchDelayDraggable draggableId={`thread-header-${headMemo.id}`} index={index}>
             {(provided: any, snapshot: any) => (
                 <div
                     ref={provided.innerRef}
@@ -44,33 +44,33 @@ export const SidebarThreadItem: React.FC<Props> = ({
                         backgroundColor: isCombineTarget ? 'rgba(59, 130, 246, 0.05)' : 'transparent',
                     }}
                 >
-                    {/* Head Log - Acts as drag handle for the group */}
+                    {/* Head Memo - Acts as drag handle for the group */}
                     <div {...provided.dragHandleProps} style={{ position: 'relative' }}>
-                        <LogItemLink
-                            to={`/log/${headLog.id}`}
-                            $isActive={activeLogId === headLog.id}
+                        <MemoItemLink
+                            to={`/memo/${headMemo.id}`}
+                            $isActive={activeMemoId === headMemo.id}
                             $inThread={false}
-                            onClick={onLogClick}
+                            onClick={onMemoClick}
                         >
-                            <LogTitle title={headLog.title || untitledText}>
-                                {headLog.title || untitledText}
-                            </LogTitle>
-                            <LogDate>
-                                {formatDate(headLog.createdAt)}
-                                {headLog.modelId && (
+                            <MemoTitle title={headMemo.title || untitledText}>
+                                {headMemo.title || untitledText}
+                            </MemoTitle>
+                            <MemoDate>
+                                {formatDate(headMemo.createdAt)}
+                                {headMemo.modelId && (
                                     <span style={{ marginLeft: '0.5rem', opacity: 0.7 }}>
-                                        • {modelMap.get(headLog.modelId)}
+                                        • {modelMap.get(headMemo.modelId)}
                                     </span>
                                 )}
-                            </LogDate>
-                        </LogItemLink>
+                            </MemoDate>
+                        </MemoItemLink>
 
                         {/* Integrated Toggle Button */}
-                        {bodyLogs.length > 0 && (
+                        {bodyMemos.length > 0 && (
                             <div style={{ paddingLeft: '0.5rem' }}>
                                 <ThreadToggleBtn onClick={() => onToggle(threadId)}>
                                     <FiCornerDownRight />
-                                    {collapsed ? t.sidebar.more_logs.replace('{count}', String(bodyLogs.length)) : t.sidebar.collapse}
+                                    {collapsed ? t.sidebar.more_memos.replace('{count}', String(bodyMemos.length)) : t.sidebar.collapse}
                                 </ThreadToggleBtn>
                             </div>
                         )}
