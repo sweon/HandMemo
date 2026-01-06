@@ -188,7 +188,7 @@ const AppVersion = styled.span`
 export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
   const { searchQuery, setSearchQuery } = useSearch();
   const { t } = useLanguage();
-  const [sortBy, setSortBy] = useState<'date-desc' | 'date-asc' | 'title-asc'>('date-desc');
+  const [sortBy, setSortBy] = useState<'date-desc' | 'date-asc' | 'title-asc' | 'last-memo-desc' | 'last-comment-desc'>('date-desc');
   const [isAddBookModalOpen, setIsAddBookModalOpen] = useState(false);
 
   const { mode, toggleTheme, increaseFontSize, decreaseFontSize } = useTheme();
@@ -266,6 +266,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
 
   const allBooks = useLiveQuery(() => db.books.toArray());
   const allMemos = useLiveQuery(() => db.memos.toArray());
+  const allComments = useLiveQuery(() => db.comments.toArray());
 
   const sortedBooks = React.useMemo(() => {
     if (!allBooks) return [];
@@ -287,13 +288,44 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
       });
     }
 
+    if (sortBy === 'last-memo-desc') {
+      const lastMemoMap = new Map<number, number>();
+      allMemos?.forEach(m => {
+        if (m.bookId === undefined) return;
+        const current = lastMemoMap.get(m.bookId) || 0;
+        const mTime = new Date(m.updatedAt).getTime();
+        if (mTime > current) lastMemoMap.set(m.bookId, mTime);
+      });
+      return books.sort((a, b) => (lastMemoMap.get(b.id!) || 0) - (lastMemoMap.get(a.id!) || 0));
+    }
+
+    if (sortBy === 'last-comment-desc') {
+      const memoToBookMap = new Map<number, number>();
+      allMemos?.forEach(m => {
+        if (m.id !== undefined && m.bookId !== undefined) {
+          memoToBookMap.set(m.id, m.bookId);
+        }
+      });
+
+      const lastCommentMap = new Map<number, number>();
+      allComments?.forEach(c => {
+        const bookId = memoToBookMap.get(c.memoId);
+        if (bookId !== undefined) {
+          const current = lastCommentMap.get(bookId) || 0;
+          const cTime = new Date(c.updatedAt).getTime();
+          if (cTime > current) lastCommentMap.set(bookId, cTime);
+        }
+      });
+      return books.sort((a, b) => (lastCommentMap.get(b.id!) || 0) - (lastCommentMap.get(a.id!) || 0));
+    }
+
     return books.sort((a, b) => {
       if (sortBy === 'date-desc') return b.updatedAt.getTime() - a.updatedAt.getTime();
       if (sortBy === 'date-asc') return a.updatedAt.getTime() - b.updatedAt.getTime();
       if (sortBy === 'title-asc') return a.title.localeCompare(b.title);
       return 0;
     });
-  }, [allBooks, allMemos, searchQuery, sortBy]);
+  }, [allBooks, allMemos, allComments, searchQuery, sortBy]);
 
   const showUpdateIndicator = needRefresh && updateCheckedManually;
 
@@ -389,6 +421,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
           >
             <option value="date-desc">{t.sidebar.newest}</option>
             <option value="date-asc">{t.sidebar.oldest}</option>
+            <option value="last-memo-desc">{t.sidebar.last_memoed}</option>
+            <option value="last-comment-desc">{t.sidebar.last_commented}</option>
             <option value="title-asc">Title (A-Z)</option>
           </select>
         </div>
