@@ -11,9 +11,9 @@ export default defineConfig({
       registerType: 'prompt',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
       manifest: {
-        name: 'LLMemo',
-        short_name: 'LLMemo',
-        description: 'Offline-capable LLM interaction logger',
+        name: 'BookMemo',
+        short_name: 'BookMemo',
+        description: 'Local-first Reading Tracker & Memo',
         theme_color: '#ffffff',
         icons: [
           {
@@ -27,6 +27,9 @@ export default defineConfig({
             type: 'image/png'
           }
         ]
+      },
+      workbox: {
+        maximumFileSizeToCacheInBytes: 5000000 // 5MB
       }
     })
   ],

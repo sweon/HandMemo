@@ -107,7 +107,7 @@ const Overlay = styled.div<{ $isOpen: boolean }>`
 
 const STORAGE_KEY = 'bookmemo-sidebar-width';
 const DEFAULT_WIDTH = 300;
-const MIN_WIDTH = 280;
+const MIN_WIDTH = 340;
 const MAX_WIDTH = 600;
 
 export const MainLayout: React.FC = () => {

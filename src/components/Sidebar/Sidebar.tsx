@@ -265,6 +265,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
   };
 
   const allBooks = useLiveQuery(() => db.books.toArray());
+  const allMemos = useLiveQuery(() => db.memos.toArray());
 
   const sortedBooks = React.useMemo(() => {
     if (!allBooks) return [];
@@ -272,7 +273,18 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
 
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
-      books = books.filter(b => b.title.toLowerCase().includes(q) || b.author?.toLowerCase().includes(q));
+      books = books.filter(b => {
+        const bookMatches = b.title.toLowerCase().includes(q) || b.author?.toLowerCase().includes(q);
+        if (bookMatches) return true;
+
+        // Check if any memo of this book matches
+        const memos = allMemos?.filter(m => m.bookId === b.id) || [];
+        return memos.some(m =>
+          m.title.toLowerCase().includes(q) ||
+          m.content.toLowerCase().includes(q) ||
+          m.tags.some(t => t.toLowerCase().includes(q))
+        );
+      });
     }
 
     return books.sort((a, b) => {
@@ -281,7 +293,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
       if (sortBy === 'title-asc') return a.title.localeCompare(b.title);
       return 0;
     });
-  }, [allBooks, searchQuery, sortBy]);
+  }, [allBooks, allMemos, searchQuery, sortBy]);
 
   const showUpdateIndicator = needRefresh && updateCheckedManually;
 
@@ -387,8 +399,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
           <SidebarBookItem
             key={book.id}
             book={book}
+            memos={allMemos?.filter(m => m.bookId === book.id) || []}
             onClick={onCloseMobile}
-          // We could pass isActive if we have logic for it
           />
         ))}
       </BookList>

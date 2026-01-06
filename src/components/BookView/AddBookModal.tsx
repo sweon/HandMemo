@@ -106,32 +106,42 @@ const Button = styled.button`
 
 interface AddBookModalProps {
   onClose: () => void;
+  editTarget?: any;
 }
 
-export const AddBookModal: React.FC<AddBookModalProps> = ({ onClose }) => {
+export const AddBookModal: React.FC<AddBookModalProps> = ({ onClose, editTarget }) => {
   // const { t } = useLanguage();
-  const [title, setTitle] = useState('');
-  const [author, setAuthor] = useState('');
-  const [totalPages, setTotalPages] = useState('');
+  const [title, setTitle] = useState(editTarget?.title || '');
+  const [author, setAuthor] = useState(editTarget?.author || '');
+  const [totalPages, setTotalPages] = useState(editTarget?.totalPages?.toString() || '');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim() || !totalPages) return;
 
     try {
-      await db.books.add({
-        title: title.trim(),
-        author: author.trim(),
-        totalPages: parseInt(totalPages, 10),
-        status: 'reading',
-        startDate: new Date(),
-        createdAt: new Date(),
-        updatedAt: new Date()
-      });
+      if (editTarget) {
+        await db.books.update(editTarget.id, {
+          title: title.trim(),
+          author: author.trim(),
+          totalPages: parseInt(totalPages, 10),
+          updatedAt: new Date()
+        });
+      } else {
+        await db.books.add({
+          title: title.trim(),
+          author: author.trim(),
+          totalPages: parseInt(totalPages, 10),
+          status: 'reading',
+          startDate: new Date(),
+          createdAt: new Date(),
+          updatedAt: new Date()
+        });
+      }
       onClose();
     } catch (error) {
-      console.error('Failed to add book:', error);
-      alert('Failed to add book');
+      console.error('Failed to save book:', error);
+      alert('Failed to save book');
     }
   };
 
@@ -139,7 +149,7 @@ export const AddBookModal: React.FC<AddBookModalProps> = ({ onClose }) => {
     <Overlay onClick={onClose}>
       <Modal onClick={e => e.stopPropagation()}>
         <Header>
-          <h3>Add New Book</h3>
+          <h3>{editTarget ? 'Edit Book' : 'Add New Book'}</h3>
           <CloseButton onClick={onClose}><FiX size={20} /></CloseButton>
         </Header>
         <Form onSubmit={handleSubmit}>
@@ -173,7 +183,7 @@ export const AddBookModal: React.FC<AddBookModalProps> = ({ onClose }) => {
             />
           </FormGroup>
           <Button type="submit">
-            <FiCheck /> Register Book
+            <FiCheck /> {editTarget ? 'Save Changes' : 'Register Book'}
           </Button>
         </Form>
       </Modal>

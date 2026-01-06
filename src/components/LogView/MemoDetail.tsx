@@ -178,11 +178,19 @@ export const MemoDetail: React.FC = () => {
             setTitle('');
             setContent('');
             setTags('');
-            setPageNumber('');
+            const p = searchParams.get('page');
+            setPageNumber(p || '');
             setQuote('');
             setIsEditing(true);
         }
     }, [memo, isNew, searchParams]);
+
+    // Auto-fill page number from book progress for new memos
+    useEffect(() => {
+        if (isNew && book?.currentPage && !searchParams.get('page')) {
+            setPageNumber(prev => (prev === '' ? book.currentPage!.toString() : prev));
+        }
+    }, [isNew, book?.currentPage, searchParams]);
 
     const handleSave = async () => {
         const tagArray = tags.split(',').map(t => t.trim()).filter(Boolean);
@@ -190,6 +198,45 @@ export const MemoDetail: React.FC = () => {
         const pNum = pageNumber ? parseInt(pageNumber, 10) : undefined;
         const targetBookId = bookId ? Number(bookId) : memo?.bookId;
 
+        // Check if it's a "progress only" update (no title, content, or quote, but has page number)
+        const isProgressOnly = !title.trim() && !content.trim() && !quote.trim() && (pNum !== undefined);
+
+        if (isProgressOnly && targetBookId && pNum) {
+            const b = await db.books.get(targetBookId);
+            if (b) {
+                const updates: any = {};
+                if ((b.currentPage || 0) < pNum) {
+                    updates.currentPage = pNum;
+                }
+
+                if (pNum >= b.totalPages && b.status !== 'completed') {
+                    updates.status = 'completed';
+                    updates.completedDate = now;
+                }
+
+                if (Object.keys(updates).length > 0) {
+                    await db.books.update(targetBookId, updates);
+                }
+
+                // Create progress record even if fields are empty
+                await db.memos.add({
+                    bookId: targetBookId,
+                    title: '',
+                    content: '',
+                    tags: [],
+                    pageNumber: pNum,
+                    quote: '',
+                    createdAt: now,
+                    updatedAt: now,
+                    type: 'progress'
+                });
+
+                navigate(`/book/${targetBookId}`);
+                return;
+            }
+        }
+
+        // Standard Memo Save Logic
         if (id) {
             await db.memos.update(Number(id), {
                 title,
@@ -197,13 +244,15 @@ export const MemoDetail: React.FC = () => {
                 tags: tagArray,
                 pageNumber: pNum,
                 quote,
-                updatedAt: now
+                updatedAt: now,
+                type: 'normal'
             });
             if (searchParams.get('edit')) {
                 navigate(`/memo/${id}`, { replace: true });
             }
             setIsEditing(false);
         } else {
+            // Create New Memo
             const newId = await db.memos.add({
                 bookId: targetBookId,
                 title: title || t.memo_detail.untitled,
@@ -212,9 +261,11 @@ export const MemoDetail: React.FC = () => {
                 pageNumber: pNum,
                 quote,
                 createdAt: now,
-                updatedAt: now
+                updatedAt: now,
+                type: 'normal'
             });
 
+            // Update Book Progress logic for new memo
             if (targetBookId && pNum) {
                 const b = await db.books.get(targetBookId);
                 if (b) {
@@ -291,7 +342,18 @@ export const MemoDetail: React.FC = () => {
                                 <MetaInput
                                     type="number"
                                     value={pageNumber}
-                                    onChange={e => setPageNumber(e.target.value)}
+                                    onChange={e => {
+                                        const val = e.target.value;
+                                        if (val === '') {
+                                            setPageNumber(val);
+                                            return;
+                                        }
+                                        const num = parseInt(val, 10);
+                                        if (book && book.totalPages && num > book.totalPages) {
+                                            return;
+                                        }
+                                        setPageNumber(val);
+                                    }}
                                     placeholder="Page No."
                                 />
                             </div>

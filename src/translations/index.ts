@@ -95,14 +95,17 @@ export const translations = {
         },
         book_detail: {
             progress: "Progress",
-            write_memo: "Write Memo",
-            delete_book: "Delete Book",
+            write_memo: "Memo",
+            edit_book: "Edit",
+            delete_book: "Delete",
             confirm_delete: "Are you sure you want to delete this book? All associated memos will be deleted.",
             start_reading: "Start reading and record your first memo!",
             page: "p.",
             whole_book: "Whole Book",
             unknown_author: "Unknown Author",
-            started: "Started"
+            started: "Started",
+            reset_zoom: "Reset Zoom",
+            zoom_back: "Zoom Back"
         },
         comments: {
             title: "Comments",
@@ -243,14 +246,17 @@ export const translations = {
         },
         book_detail: {
             progress: "진행률",
-            write_memo: "메모 작성",
-            delete_book: "책 삭제",
+            write_memo: "메모",
+            edit_book: "수정",
+            delete_book: "삭제",
             confirm_delete: "이 책을 삭제하시겠습니까? 관련된 모든 메모도 함께 삭제됩니다.",
             start_reading: "독서를 시작하고 첫 번째 메모를 남겨보세요!",
             page: "p.",
             whole_book: "책 전체",
             unknown_author: "저자 미상",
-            started: "시작일"
+            started: "시작일",
+            reset_zoom: "전체 보기",
+            zoom_back: "이전 확대"
         },
         comments: {
             title: "댓글",

@@ -30,6 +30,7 @@ export interface Memo {
     updatedAt: Date;
     threadId?: string;
     threadOrder?: number;
+    type?: 'normal' | 'progress';
 }
 
 export interface Model {
@@ -72,6 +73,10 @@ export class BookMemoDatabase extends Dexie {
         this.version(4).stores({
             books: '++id, title, status, createdAt',
             memos: '++id, bookId, pageNumber, title, *tags, modelId, createdAt, updatedAt, threadId'
+        });
+
+        this.version(5).stores({
+            memos: '++id, bookId, pageNumber, title, *tags, modelId, createdAt, updatedAt, threadId, type'
         });
     }
 }

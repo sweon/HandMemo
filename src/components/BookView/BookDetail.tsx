@@ -1,11 +1,21 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import styled from 'styled-components';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useParams, useNavigate } from 'react-router-dom';
 import { db } from '../../db';
 import { useLanguage } from '../../contexts/LanguageContext';
-import { FiEdit3, FiTrash2 } from 'react-icons/fi';
+import { FiEdit3, FiTrash2, FiRotateCcw, FiMaximize } from 'react-icons/fi';
 import { format } from 'date-fns';
+import {
+  Line,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  ComposedChart,
+  ReferenceArea
+} from 'recharts';
+import { AddBookModal } from './AddBookModal';
 
 const Container = styled.div`
   flex: 1;
@@ -18,28 +28,33 @@ const Container = styled.div`
 `;
 
 const Header = styled.div`
-  padding: 2rem;
+  padding: 1rem 2rem 2rem 2rem;
   background: ${({ theme }) => theme.colors.surface};
   border-bottom: 1px solid ${({ theme }) => theme.colors.border};
 `;
 
 const BookTitle = styled.h1`
-  margin: 0 0 0.5rem 0;
+  margin: 0 0 0.25rem 0;
   font-size: 1.8rem;
   color: ${({ theme }) => theme.colors.primary};
 `;
-
 const MetaInfo = styled.div`
   display: flex;
   align-items: center;
-  gap: 1.5rem;
+  gap: 1rem;
   color: ${({ theme }) => theme.colors.textSecondary};
-  font-size: 0.95rem;
-  margin-bottom: 1.5rem;
+  font-size: 0.9rem;
+  margin-bottom: 0.5rem;
+  white-space: normal;
+  flex-wrap: wrap;
+  
+  &::-webkit-scrollbar {
+    display: none;
+  }
 `;
 
 const ProgressSection = styled.div`
-  margin-top: 1rem;
+  margin-top: 0.5rem;
 `;
 
 const ProgressBar = styled.div<{ $percent: number }>`
@@ -59,6 +74,23 @@ const ProgressBar = styled.div<{ $percent: number }>`
     width: ${props => props.$percent}%;
     background: ${({ theme }) => theme.colors.primary};
     transition: width 0.3s ease;
+  }
+`;
+
+const GraphContainer = styled.div`
+  position: relative;
+  height: 360px;
+  width: 100%;
+  margin-top: 0.5rem;
+  padding-right: 20px;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  outline: none;
+  
+  & .recharts-wrapper {
+    outline: none;
   }
 `;
 
@@ -109,29 +141,83 @@ const ActionButton = styled.button`
   background: ${({ theme }) => theme.colors.primary};
   color: white;
   border: none;
-  padding: 0.75rem 1.5rem;
-  border-radius: 8px;
-  font-weight: 600;
+  padding: 0.3rem 0.6rem;
+  border-radius: 6px;
+  font-weight: 500;
+  font-size: 0.85rem;
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.3rem;
   
   &:hover {
     opacity: 0.9;
   }
 `;
 
-const ButtonGroup = styled.div`
-    display: flex;
-    gap: 1rem;
-    margin-top: 1rem;
+const MiniPillButton = styled.button`
+  height: 22px;
+  padding: 0 0.5rem;
+  border-radius: 11px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  background: ${({ theme }) => theme.colors.background}dd;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  color: ${({ theme }) => theme.colors.textSecondary};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  font-size: 0.6rem;
+  font-weight: 500;
+  white-space: nowrap;
+
+  &:hover {
+    background: ${({ theme }) => theme.colors.primary};
+    color: white;
+    border-color: ${({ theme }) => theme.colors.primary};
+  }
+
+  svg {
+    stroke-width: 2.5px;
+  }
 `;
+
+const CustomTooltip = ({ active, payload }: any) => {
+  if (active && payload && payload.length) {
+    const data = payload[0].payload;
+    return (
+      <div style={{
+        background: 'linear-gradient(135deg, #1e293b 0%, #334155 100%)',
+        padding: '8px 12px',
+        border: 'none',
+        borderRadius: '8px',
+        boxShadow: '0 4px 12px rgba(0,0,0,0.25)',
+        color: '#fff'
+      }}>
+        <p style={{ margin: 0, fontWeight: 'bold', fontSize: '0.85em' }}>{format(new Date(data.x), 'MMM d, yyyy HH:mm')}</p>
+        <p style={{ margin: '4px 0 0 0', color: '#94a3b8', fontSize: '0.8em' }}>Page {data.y}</p>
+        <p style={{ margin: '2px 0 0 0', fontSize: '0.75em', color: '#60a5fa' }}>
+          {data.type === 'start' ? 'Started Reading' : data.type === 'progress' ? 'Progress Record' : (data.title || 'Untitled Memo')}
+        </p>
+      </div>
+    );
+  }
+  return null;
+};
 
 export const BookDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { t } = useLanguage();
+  const [isEditModalOpen, setIsEditModalOpen] = React.useState(false);
+  const [refAreaLeft, setRefAreaLeft] = React.useState<any>(null);
+  const [refAreaRight, setRefAreaRight] = React.useState<any>(null);
+  const [zoomDomain, setZoomDomain] = React.useState<[any, any] | null>(null);
+  const [zoomHistory, setZoomHistory] = React.useState<[any, any][]>([]);
 
   const book = useLiveQuery(() => db.books.get(Number(id)), [id]);
   const memos = useLiveQuery(() =>
@@ -142,17 +228,105 @@ export const BookDetail: React.FC = () => {
       .sortBy('createdAt')
     , [id]);
 
+  // Filter out progress-only memos for the list view
+  const displayMemos = useMemo(() => {
+    return memos?.filter(m => m.type !== 'progress')
+      .sort((a, b) => {
+        if ((a.pageNumber || 0) !== (b.pageNumber || 0)) {
+          return (a.pageNumber || 0) - (b.pageNumber || 0);
+        }
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      });
+  }, [memos]);
+
+  const { allChartData } = useMemo(() => {
+    if (!memos || !book) return { allChartData: [] };
+
+    const sorted = memos.map(m => ({
+      x: m.createdAt.getTime(),
+      y: m.pageNumber || 0,
+      id: m.id,
+      title: m.title,
+      type: m.type || 'normal',
+    })).sort((a, b) => a.x - b.x);
+
+    const mainLine: typeof sorted = [];
+    const backtrack: typeof sorted = [];
+    let maxPageSoFar = 0;
+
+    for (const point of sorted) {
+      if (point.y >= maxPageSoFar) {
+        mainLine.push(point);
+        maxPageSoFar = point.y;
+      } else {
+        backtrack.push({ ...point, type: 'backtrack' as any });
+      }
+    }
+
+    // Add the start point to mainLine for interpolation
+    const fullMainLine = [
+      { x: book.startDate.getTime(), y: 0, type: 'start' as any },
+      ...mainLine
+    ];
+
+    // Interpolate x position for backtrack dots based on their y value
+    const interpolatedBacktrack = backtrack.map(point => {
+      const targetY = point.y;
+
+      // Find the two points in mainLine that bracket this y value
+      let lowerPoint = fullMainLine[0];
+      let upperPoint = fullMainLine[fullMainLine.length - 1];
+
+      for (let i = 0; i < fullMainLine.length - 1; i++) {
+        if (fullMainLine[i].y <= targetY && fullMainLine[i + 1].y >= targetY) {
+          lowerPoint = fullMainLine[i];
+          upperPoint = fullMainLine[i + 1];
+          break;
+        }
+      }
+
+      // Linear interpolation to find x for the given y
+      let interpolatedX: number;
+      if (upperPoint.y === lowerPoint.y) {
+        interpolatedX = lowerPoint.x;
+      } else {
+        const ratio = (targetY - lowerPoint.y) / (upperPoint.y - lowerPoint.y);
+        interpolatedX = lowerPoint.x + ratio * (upperPoint.x - lowerPoint.x);
+      }
+
+      return { ...point, x: interpolatedX };
+    });
+
+    // Merge all data for the unified chart
+    const startPoint = {
+      x: book.startDate.getTime(),
+      y: 0,
+      yMain: 0,
+      yBacktrack: null,
+      type: 'start' as any,
+      title: 'Started'
+    };
+
+    const mainLinePoints = mainLine.map(p => ({
+      ...p,
+      yMain: p.y,
+      yBacktrack: null
+    }));
+
+    const backtrackPoints = interpolatedBacktrack.map(p => ({
+      ...p,
+      yMain: null,
+      yBacktrack: p.y
+    }));
+
+    const allData = [startPoint, ...mainLinePoints, ...backtrackPoints].sort((a, b) => a.x - b.x);
+
+    return { allChartData: allData };
+  }, [memos, book]);
+
   if (!book) return <div style={{ padding: '2rem' }}>{t.memo_detail.loading}</div>;
 
   const progressPercent = Math.round(((book.currentPage || 0) / book.totalPages) * 100);
-
-  const sortedMemos = memos?.sort((a, b) => {
-    // Sort by page number (asc), then by creation date (desc)
-    if ((a.pageNumber || 0) !== (b.pageNumber || 0)) {
-      return (a.pageNumber || 0) - (b.pageNumber || 0);
-    }
-    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-  });
 
   const handleDelete = async () => {
     if (confirm(t.book_detail.confirm_delete)) {
@@ -164,36 +338,228 @@ export const BookDetail: React.FC = () => {
     }
   };
 
+  const handlePointClick = (data: any) => {
+    if (data.id) {
+      // If it's just progress, go to edit mode directly so they can "add" a memo to it.
+      const query = data.type === 'progress' ? '?edit=true' : '';
+      navigate(`/memo/${data.id}${query}`);
+    }
+  };
+
+  const handleZoom = () => {
+    if (refAreaLeft === refAreaRight || !refAreaRight) {
+      setRefAreaLeft(null);
+      setRefAreaRight(null);
+      return;
+    }
+
+    let [l, r] = [refAreaLeft, refAreaRight];
+    if (l > r) [l, r] = [r, l];
+
+    if (zoomDomain) {
+      setZoomHistory(prev => [...prev, zoomDomain]);
+    }
+    setZoomDomain([l, r]);
+    setRefAreaLeft(null);
+    setRefAreaRight(null);
+  };
+
+  const zoomBack = () => {
+    if (zoomHistory.length > 0) {
+      const prevZoom = zoomHistory[zoomHistory.length - 1];
+      setZoomDomain(prevZoom);
+      setZoomHistory(prev => prev.slice(0, -1));
+    } else {
+      setZoomDomain(null);
+    }
+  };
+
+  const resetZoom = () => {
+    setZoomDomain(null);
+    setZoomHistory([]);
+  };
+
   return (
     <Container>
       <Header>
         <BookTitle>{book.title}</BookTitle>
         <MetaInfo>
           <span>{book.author || t.book_detail.unknown_author}</span>
-          <span>•</span>
-          <span>{t.book_detail.started} {format(book.startDate, 'MMM d, yyyy')}</span>
         </MetaInfo>
 
-        <ProgressSection>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem', fontSize: '0.9rem' }}>
-            <span>{t.book_detail.progress}</span>
-            <span>{book.currentPage || 0} / {book.totalPages} p ({progressPercent}%)</span>
-          </div>
-          <ProgressBar $percent={progressPercent} />
-        </ProgressSection>
-
-        <ButtonGroup>
+        <div style={{ display: 'flex', gap: '8px', marginBottom: '1.5rem' }}>
           <ActionButton onClick={() => navigate(`/book/${book.id}/new`)}>
             <FiEdit3 /> {t.book_detail.write_memo}
+          </ActionButton>
+          <ActionButton style={{ background: '#64748b' }} onClick={() => setIsEditModalOpen(true)}>
+            <FiEdit3 /> {t.book_detail.edit_book}
           </ActionButton>
           <ActionButton style={{ background: '#ef4444' }} onClick={handleDelete}>
             <FiTrash2 /> {t.book_detail.delete_book}
           </ActionButton>
-        </ButtonGroup>
+        </div>
+
+        <ProgressSection>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem', fontSize: '0.9rem' }}>
+            <span>{t.book_detail.progress}</span>
+            <span style={{ color: progressPercent === 100 ? '#22c55e' : 'inherit', fontWeight: progressPercent === 100 ? '600' : '400' }}>
+              {book.currentPage || 0} / {book.totalPages} pages ({progressPercent}%)
+            </span>
+          </div>
+          <ProgressBar $percent={progressPercent} />
+        </ProgressSection>
+
+        {allChartData.length > 0 && (
+          <GraphContainer>
+            {zoomDomain && (
+              <div style={{
+                position: 'absolute',
+                bottom: '10px',
+                right: '25px',
+                display: 'flex',
+                gap: '6px',
+                zIndex: 10
+              }}>
+                <MiniPillButton onClick={zoomBack}>
+                  <FiRotateCcw size={11} /> {t.book_detail.zoom_back}
+                </MiniPillButton>
+                <MiniPillButton onClick={resetZoom}>
+                  <FiMaximize size={11} /> {t.book_detail.reset_zoom}
+                </MiniPillButton>
+              </div>
+            )}
+            <ResponsiveContainer width="100%" height="100%">
+              <ComposedChart
+                margin={{ top: 20, right: 20, bottom: 60, left: 0 }}
+                data={allChartData}
+                onMouseDown={(e) => e && setRefAreaLeft(e.activeLabel)}
+                onMouseMove={(e) => refAreaLeft && setRefAreaRight(e.activeLabel)}
+                onMouseUp={handleZoom}
+                style={{ cursor: 'crosshair' }}
+              >
+                <XAxis
+                  type="number"
+                  dataKey="x"
+                  name="Date"
+                  domain={zoomDomain || [book.startDate.getTime(), 'dataMax']}
+                  allowDataOverflow={true}
+                  tickFormatter={(timestamp) => format(new Date(timestamp), 'yy/M/d')}
+                  tick={{ fontSize: 11, fill: '#888' }}
+                  angle={-45}
+                  textAnchor="end"
+                  height={60}
+                />
+                <YAxis
+                  type="number"
+                  dataKey={(payload) => payload.yMain ?? payload.yBacktrack ?? 0}
+                  name="Page"
+                  domain={[0, book.totalPages]}
+                  tick={{ fontSize: 12, fill: '#888' }}
+                />
+                {!refAreaLeft && (
+                  <Tooltip
+                    content={<CustomTooltip />}
+                    cursor={{ strokeDasharray: '3 3' }}
+                    offset={50}
+                  />
+                )}
+
+
+
+                {/* Main progress line */}
+                <Line
+                  type="monotone"
+                  dataKey="yMain"
+                  connectNulls={true}
+                  stroke="#64748b"
+                  strokeWidth={2}
+                  dot={(props: any) => {
+                    const { cx, cy, payload } = props;
+                    if (payload.yMain === null) return null;
+                    if (payload.type === 'start') {
+                      return <circle cx={cx} cy={cy} r={4} fill="#94a3b8" />;
+                    }
+                    const isProgress = payload.type === 'progress';
+                    return (
+                      <circle
+                        cx={cx}
+                        cy={cy}
+                        r={5}
+                        fill={isProgress ? '#22c55e' : '#2563eb'}
+                        style={{ cursor: isProgress ? 'default' : 'pointer' }}
+                        onClick={() => handlePointClick(payload)}
+                      />
+                    );
+                  }}
+                  activeDot={(props: any) => {
+                    const { cx, cy, payload } = props;
+                    return (
+                      <circle
+                        cx={cx}
+                        cy={cy}
+                        r={7}
+                        fill="#1d4ed8"
+                        stroke="#fff"
+                        strokeWidth={2}
+                        style={{ cursor: 'pointer' }}
+                        onClick={() => handlePointClick(payload)}
+                      />
+                    );
+                  }}
+                />
+
+                {/* Backtrack dots - memos at earlier pages */}
+                <Line
+                  type="monotone"
+                  dataKey="yBacktrack"
+                  stroke="none"
+                  dot={(props: any) => {
+                    const { cx, cy, payload } = props;
+                    if (payload.yBacktrack === null) return null;
+                    return (
+                      <circle
+                        cx={cx}
+                        cy={cy}
+                        r={5}
+                        fill="#f59e0b"
+                        style={{ cursor: 'pointer' }}
+                        onClick={() => handlePointClick(payload)}
+                      />
+                    );
+                  }}
+                  activeDot={(props: any) => {
+                    const { cx, cy, payload } = props;
+                    return (
+                      <circle
+                        cx={cx}
+                        cy={cy}
+                        r={7}
+                        fill="#f59e0b"
+                        stroke="#fff"
+                        strokeWidth={2}
+                        style={{ cursor: 'pointer' }}
+                        onClick={() => handlePointClick(payload)}
+                      />
+                    );
+                  }}
+                />
+                {refAreaLeft && refAreaRight && (
+                  <ReferenceArea
+                    x1={refAreaLeft}
+                    x2={refAreaRight}
+                    strokeOpacity={0.3}
+                    fill="#3b82f6"
+                    fillOpacity={0.1}
+                  />
+                )}
+              </ComposedChart>
+            </ResponsiveContainer>
+          </GraphContainer>
+        )}
       </Header>
 
       <MemoListSection>
-        {sortedMemos && sortedMemos.map(memo => (
+        {displayMemos && displayMemos.map(memo => (
           <MemoCard key={memo.id} onClick={() => navigate(`/memo/${memo.id}`)}>
             <PageMeta>
               <span>{memo.pageNumber ? `${t.book_detail.page} ${memo.pageNumber}` : t.book_detail.whole_book}</span>
@@ -204,12 +570,20 @@ export const BookDetail: React.FC = () => {
           </MemoCard>
         ))}
 
-        {(!sortedMemos || sortedMemos.length === 0) && (
+        {(!displayMemos || displayMemos.length === 0) && (
           <div style={{ textAlign: 'center', color: '#999', marginTop: '2rem' }}>
             {t.book_detail.start_reading}
           </div>
         )}
       </MemoListSection>
-    </Container>
+      {
+        isEditModalOpen && (
+          <AddBookModal
+            onClose={() => setIsEditModalOpen(false)}
+            editTarget={book}
+          />
+        )
+      }
+    </Container >
   );
 };
