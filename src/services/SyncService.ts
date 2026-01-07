@@ -81,10 +81,11 @@ export class SyncService {
             }
 
             const totalMemos = await db.memos.count();
+            const totalBooks = await db.books.count();
             this.options.onSyncInfo({
                 type: 'full',
                 count: totalMemos,
-                label: 'All Data'
+                label: `${totalBooks} Books, ${totalMemos} Memos`
             });
         } catch (e) {
             console.error('Failed to analyze sync data', e);
@@ -129,6 +130,12 @@ export class SyncService {
                 try {
                     const msg = JSON.parse(event.data);
                     if (msg.event === 'message') {
+                        // Global check for own messages (for both text and attachments)
+                        if (msg.tags && msg.tags.includes(`inst_${this.instanceId}`)) {
+                            console.log('Ignoring own message');
+                            return;
+                        }
+
                         if (msg.id === this.lastMessageId) return;
                         this.lastMessageId = msg.id;
 
@@ -157,11 +164,6 @@ export class SyncService {
 
     private async handleRelayMessage(msg: any) {
         if (msg.attachment) {
-            // Check if this is an attachment we sent ourselves
-            if (msg.tags && msg.tags.includes(`inst_${this.instanceId}`)) {
-                console.log('Ignoring own attachment');
-                return;
-            }
             console.log('Received attachment:', msg.attachment.url);
             this.options.onStatusChange('syncing', 'Downloading data...');
             await this.downloadAndProcessAttachment(msg.attachment.url);
@@ -170,9 +172,9 @@ export class SyncService {
 
         let payload: any;
         try {
-            payload = JSON.parse(msg.message || msg);
+            payload = JSON.parse(msg.message);
         } catch (e) {
-            return; // Not a message for us
+            return; // Not a JSON message for us
         }
 
         console.log('Received relay message:', payload.type);
@@ -187,7 +189,7 @@ export class SyncService {
                 }
                 break;
             case 'sync_data':
-                if (!this.isHost && payload.data) {
+                if (payload.data) {
                     this.options.onStatusChange('syncing', 'Decrypting data...');
                     await this.processReceivedEncodedData(payload.data);
                 }
