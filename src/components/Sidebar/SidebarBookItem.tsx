@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { NavLink, useParams } from 'react-router-dom';
 import styled from 'styled-components';
 import type { Book, Memo } from '../../db';
-import { FiBook } from 'react-icons/fi';
+
 import { MemoItemLink, MemoTitle, MemoDate, ThreadToggleBtn } from './itemStyles';
 import { format } from 'date-fns';
 import { useLanguage } from '../../contexts/LanguageContext';
@@ -36,13 +36,7 @@ const ItemContainer = styled(NavLink) <{ $isActive?: boolean }>`
   }
 `;
 
-const IconWrapper = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: ${({ theme }) => theme.colors.primary};
-  opacity: 0.8;
-`;
+
 
 const Info = styled.div`
   flex: 1;
@@ -91,7 +85,7 @@ export const SidebarBookItem: React.FC<Props> = ({ book, memos, onClick }) => {
   const { id: activeId, memoId: activeMemoId } = useParams();
   const { t } = useLanguage();
   const { searchQuery } = useSearch();
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(true);
 
   const progressPercent = book.totalPages > 0
     ? Math.round(((book.currentPage || 0) / book.totalPages) * 100)
@@ -126,9 +120,7 @@ export const SidebarBookItem: React.FC<Props> = ({ book, memos, onClick }) => {
   return (
     <GroupContainer>
       <ItemContainer to={`/book/${book.id}`} onClick={onClick} $isActive={isActive}>
-        <IconWrapper>
-          <FiBook size={18} />
-        </IconWrapper>
+
         <Info>
           <Title>{book.title}</Title>
           <Meta>

@@ -4,7 +4,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { useParams, useNavigate } from 'react-router-dom';
 import { db } from '../../db';
 import { useLanguage } from '../../contexts/LanguageContext';
-import { FiEdit3, FiTrash2, FiRotateCcw, FiMaximize } from 'react-icons/fi';
+import { FiEdit3, FiTrash2, FiRotateCcw, FiMaximize, FiChevronLeft, FiChevronRight } from 'react-icons/fi';
 import { format } from 'date-fns';
 import {
   Line,
@@ -218,6 +218,7 @@ export const BookDetail: React.FC = () => {
   const [refAreaRight, setRefAreaRight] = React.useState<any>(null);
   const [zoomDomain, setZoomDomain] = React.useState<[any, any] | null>(null);
   const [zoomHistory, setZoomHistory] = React.useState<[any, any][]>([]);
+  const [focusedIndex, setFocusedIndex] = React.useState<number | null>(null);
 
   const book = useLiveQuery(() => db.books.get(Number(id)), [id]);
   const memos = useLiveQuery(() =>
@@ -304,7 +305,8 @@ export const BookDetail: React.FC = () => {
       yMain: 0,
       yBacktrack: null,
       type: 'start' as any,
-      title: 'Started'
+      title: 'Started',
+      id: undefined
     };
 
     const mainLinePoints = mainLine.map(p => ({
@@ -321,8 +323,43 @@ export const BookDetail: React.FC = () => {
 
     const allData = [startPoint, ...mainLinePoints, ...backtrackPoints].sort((a, b) => a.x - b.x);
 
-    return { allChartData: allData };
+    return { allChartData: allData as any[] };
   }, [memos, book]);
+
+  React.useEffect(() => {
+    if (!book) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Skip if typing in an input
+      if (document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA') return;
+
+      if (allChartData.length === 0) return;
+
+      if (e.key === 'ArrowRight') {
+        setFocusedIndex(prev => {
+          const current = prev ?? -1;
+          if (current + 1 < allChartData.length) return current + 1;
+          return current;
+        });
+      } else if (e.key === 'ArrowLeft') {
+        setFocusedIndex(prev => {
+          const current = prev ?? allChartData.length;
+          if (current - 1 >= 0) return current - 1;
+          return current;
+        });
+      } else if (e.key === 'Enter') {
+        if (focusedIndex !== null) {
+          const data = allChartData[focusedIndex];
+          if (data.id) handlePointClick(data);
+        }
+      } else if (e.key === 'Escape') {
+        setFocusedIndex(null);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [allChartData, focusedIndex, book]);
 
   if (!book) return <div style={{ padding: '2rem' }}>{t.memo_detail.loading}</div>;
 
@@ -338,7 +375,11 @@ export const BookDetail: React.FC = () => {
     }
   };
 
-  const handlePointClick = (data: any) => {
+  const handlePointClick = (data: any, index?: number) => {
+    if (index !== undefined) {
+      setFocusedIndex(index);
+    }
+
     if (data.id) {
       // If it's just progress, go to edit mode directly so they can "add" a memo to it.
       const query = data.type === 'progress' ? '?edit=true' : '';
@@ -377,6 +418,37 @@ export const BookDetail: React.FC = () => {
   const resetZoom = () => {
     setZoomDomain(null);
     setZoomHistory([]);
+  };
+
+  const scrollChart = (direction: 'left' | 'right') => {
+    if (!zoomDomain || allChartData.length === 0) return;
+
+    const minX = allChartData[0].x;
+    const maxX = allChartData[allChartData.length - 1].x;
+
+    const [left, right] = zoomDomain;
+    const range = right - left;
+    const step = range * 0.2; // 20% scroll
+
+    if (direction === 'left') {
+      let newLeft = left - step;
+      let newRight = right - step;
+
+      if (newLeft < minX) {
+        newLeft = minX;
+        newRight = minX + range;
+      }
+      setZoomDomain([newLeft, newRight]);
+    } else {
+      let newLeft = left + step;
+      let newRight = right + step;
+
+      if (newRight > maxX) {
+        newRight = maxX;
+        newLeft = maxX - range;
+      }
+      setZoomDomain([newLeft, newRight]);
+    }
   };
 
   return (
@@ -422,6 +494,12 @@ export const BookDetail: React.FC = () => {
                 gap: '6px',
                 zIndex: 10
               }}>
+                <MiniPillButton onClick={() => scrollChart('left')}>
+                  <FiChevronLeft size={11} />
+                </MiniPillButton>
+                <MiniPillButton onClick={() => scrollChart('right')} style={{ marginRight: '8px' }}>
+                  <FiChevronRight size={11} />
+                </MiniPillButton>
                 <MiniPillButton onClick={zoomBack}>
                   <FiRotateCcw size={11} /> {t.book_detail.zoom_back}
                 </MiniPillButton>
@@ -434,8 +512,13 @@ export const BookDetail: React.FC = () => {
               <ComposedChart
                 margin={{ top: 20, right: 20, bottom: 60, left: 0 }}
                 data={allChartData}
+                {...({ activeTooltipIndex: focusedIndex ?? undefined } as any)}
                 onMouseDown={(e) => e && setRefAreaLeft(e.activeLabel)}
-                onMouseMove={(e) => refAreaLeft && setRefAreaRight(e.activeLabel)}
+                onMouseMove={(e) => {
+                  if (refAreaLeft) setRefAreaRight(e?.activeLabel);
+                  if (e && e.activeTooltipIndex !== undefined) setFocusedIndex(e.activeTooltipIndex as number);
+                }}
+                onMouseLeave={() => setFocusedIndex(null)}
                 onMouseUp={handleZoom}
                 style={{ cursor: 'crosshair' }}
               >
@@ -458,15 +541,16 @@ export const BookDetail: React.FC = () => {
                   domain={[0, book.totalPages]}
                   tick={{ fontSize: 12, fill: '#888' }}
                 />
+
+
                 {!refAreaLeft && (
                   <Tooltip
                     content={<CustomTooltip />}
                     cursor={{ strokeDasharray: '3 3' }}
                     offset={50}
+                    active={focusedIndex !== null}
                   />
                 )}
-
-
 
                 {/* Main progress line */}
                 <Line
@@ -476,35 +560,40 @@ export const BookDetail: React.FC = () => {
                   stroke="#64748b"
                   strokeWidth={2}
                   dot={(props: any) => {
-                    const { cx, cy, payload } = props;
+                    const { cx, cy, payload, index } = props;
                     if (payload.yMain === null) return null;
+
                     if (payload.type === 'start') {
                       return <circle cx={cx} cy={cy} r={4} fill="#94a3b8" />;
                     }
                     const isProgress = payload.type === 'progress';
+                    const isFocused = focusedIndex === index;
                     return (
                       <circle
                         cx={cx}
                         cy={cy}
-                        r={5}
-                        fill={isProgress ? '#22c55e' : '#2563eb'}
-                        style={{ cursor: isProgress ? 'default' : 'pointer' }}
-                        onClick={() => handlePointClick(payload)}
+                        r={isFocused ? 8 : 5}
+                        fill={isFocused ? '#f59e0b' : (isProgress ? '#22c55e' : '#2563eb')}
+                        stroke={isFocused ? '#fff' : 'none'}
+                        strokeWidth={isFocused ? 2 : 0}
+                        style={{ cursor: isProgress ? 'default' : 'pointer', zIndex: isFocused ? 20 : 1 }}
+                        onClick={() => handlePointClick(payload, index)}
                       />
                     );
                   }}
                   activeDot={(props: any) => {
-                    const { cx, cy, payload } = props;
+                    const { cx, cy, payload, index } = props;
+                    const isFocused = focusedIndex === index;
                     return (
                       <circle
                         cx={cx}
                         cy={cy}
-                        r={7}
-                        fill="#1d4ed8"
+                        r={isFocused ? 8 : 7}
+                        fill={isFocused ? '#f59e0b' : '#1d4ed8'}
                         stroke="#fff"
                         strokeWidth={2}
                         style={{ cursor: 'pointer' }}
-                        onClick={() => handlePointClick(payload)}
+                        onClick={() => handlePointClick(payload, index)}
                       />
                     );
                   }}
@@ -516,31 +605,35 @@ export const BookDetail: React.FC = () => {
                   dataKey="yBacktrack"
                   stroke="none"
                   dot={(props: any) => {
-                    const { cx, cy, payload } = props;
+                    const { cx, cy, payload, index } = props;
                     if (payload.yBacktrack === null) return null;
+                    const isFocused = focusedIndex === index;
                     return (
                       <circle
                         cx={cx}
                         cy={cy}
-                        r={5}
-                        fill="#f59e0b"
-                        style={{ cursor: 'pointer' }}
-                        onClick={() => handlePointClick(payload)}
+                        r={isFocused ? 8 : 5}
+                        fill={isFocused ? '#f59e0b' : '#f59e0b'}
+                        stroke={isFocused ? '#fff' : 'none'}
+                        strokeWidth={isFocused ? 2 : 0}
+                        style={{ cursor: 'pointer', zIndex: isFocused ? 20 : 1 }}
+                        onClick={() => handlePointClick(payload, index)}
                       />
                     );
                   }}
                   activeDot={(props: any) => {
-                    const { cx, cy, payload } = props;
+                    const { cx, cy, payload, index } = props;
+                    const isFocused = focusedIndex === index;
                     return (
                       <circle
                         cx={cx}
                         cy={cy}
-                        r={7}
+                        r={isFocused ? 8 : 7}
                         fill="#f59e0b"
                         stroke="#fff"
                         strokeWidth={2}
                         style={{ cursor: 'pointer' }}
-                        onClick={() => handlePointClick(payload)}
+                        onClick={() => handlePointClick(payload, index)}
                       />
                     );
                   }}
