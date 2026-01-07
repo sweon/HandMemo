@@ -383,9 +383,11 @@ export const BookDetail: React.FC = () => {
     <Container>
       <Header>
         <BookTitle>{book.title}</BookTitle>
-        <MetaInfo>
-          <span>{book.author || t.book_detail.unknown_author}</span>
-        </MetaInfo>
+        {book.author && book.author.trim() !== '' && (
+          <MetaInfo>
+            <span>{book.author}</span>
+          </MetaInfo>
+        )}
 
         <div style={{ display: 'flex', gap: '8px', marginBottom: '1.5rem' }}>
           <ActionButton onClick={() => navigate(`/book/${book.id}/new`)}>
