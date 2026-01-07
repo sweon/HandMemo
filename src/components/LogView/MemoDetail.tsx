@@ -73,7 +73,7 @@ const MetaInput = styled.input`
     color: ${({ theme }) => theme.colors.text};
     padding: 0.25rem 0.5rem;
     border-radius: 4px;
-    width: 80px;
+    width: 90px;
 `;
 
 const DateInput = styled.input`
@@ -82,7 +82,7 @@ const DateInput = styled.input`
     color: ${({ theme }) => theme.colors.text};
     padding: 0.25rem 2.2rem 0.25rem 0.5rem;
     border-radius: 4px;
-    width: 150px;
+    width: 170px;
 `;
 
 const InputWrapper = styled.div`
