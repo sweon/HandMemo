@@ -254,10 +254,13 @@ export const BookDetail: React.FC = () => {
 
     const mainLine: typeof sorted = [];
     const backtrack: typeof sorted = [];
+    const noPageMemos: typeof sorted = [];
     let maxPageSoFar = 0;
 
     for (const point of sorted) {
-      if (point.y >= maxPageSoFar) {
+      if (!point.y || point.y === 0) {
+        noPageMemos.push(point);
+      } else if (point.y >= maxPageSoFar) {
         mainLine.push(point);
         maxPageSoFar = point.y;
       } else {
@@ -299,6 +302,19 @@ export const BookDetail: React.FC = () => {
       return { ...point, x: interpolatedX };
     });
 
+    // Process no-page memos: stack them from the left
+    // We use a fixed time offset (e.g., 12 hours) to separate them visually
+    const startTimeWidth = book.startDate.getTime();
+    const offsetStep = 12 * 60 * 60 * 1000; // 12 hours
+
+    const noPagePoints = noPageMemos.map((point, index) => ({
+      ...point,
+      x: startTimeWidth + (index + 1) * offsetStep,
+      y: 0,
+      yMain: null,
+      yBacktrack: 0 // Use backtrack style (orange/blue dot) at y=0
+    }));
+
     // Merge all data for the unified chart
     const startPoint = {
       x: book.startDate.getTime(),
@@ -322,7 +338,7 @@ export const BookDetail: React.FC = () => {
       yBacktrack: p.y
     }));
 
-    const allData = [startPoint, ...mainLinePoints, ...backtrackPoints].sort((a, b) => a.x - b.x);
+    const allData = [startPoint, ...noPagePoints, ...mainLinePoints, ...backtrackPoints].sort((a, b) => a.x - b.x);
 
     return { allChartData: allData as any[] };
   }, [memos, book]);

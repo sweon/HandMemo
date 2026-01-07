@@ -199,9 +199,46 @@ export const MemoDetail: React.FC = () => {
         const targetBookId = bookId ? Number(bookId) : memo?.bookId;
 
         // Check if it's a "progress only" update (no title, content, or quote, but has page number)
-        const isProgressOnly = !title.trim() && !content.trim() && !quote.trim() && (pNum !== undefined);
+        // Determine final title and type
+        let finalTitle = title.trim();
+        let finalType: 'normal' | 'progress' = 'normal';
 
-        if (isProgressOnly && targetBookId && pNum) {
+        // Check emptiness
+        const hasTitle = !!finalTitle;
+        const hasContent = !!content.trim() || !!quote.trim();
+        const hasPage = pNum !== undefined;
+
+        // Validation: if nothing at all, return (should be disabled anyway)
+        if (!hasTitle && !hasContent && !hasPage) return;
+
+        // Logic for auto-title
+        if (!hasTitle) {
+            if (hasPage && !hasContent) {
+                // If only page is present, it's a progress record
+                finalTitle = "Progress Record";
+                finalType = 'progress';
+            } else {
+                // Otherwise (has content, or page+content) -> Untitled
+                finalTitle = t.memo_detail.untitled;
+                finalType = 'normal';
+            }
+        } else {
+            // User provided title -> normal
+            finalType = 'normal';
+        }
+
+        // Special check: If user typed "Progress Record" manually? 
+        // Let's stick to the prompt rules. The prompt implies logic based on *missing* fields.
+        // If user typed title, we just use it.
+
+        // Refined isProgressOnly logic for book update (if strictly page update)
+        // Actually, request says "1 and 3 are missing, 2 exists -> Progress Record". 
+        // This maps to finalType === 'progress' above.
+
+        // We still need to update book progress regardless of type if pNum > current.
+        // We can reuse the book update logic block.
+
+        if (targetBookId && pNum) {
             const b = await db.books.get(targetBookId);
             if (b) {
                 const updates: any = {};
@@ -217,55 +254,20 @@ export const MemoDetail: React.FC = () => {
                 if (Object.keys(updates).length > 0) {
                     await db.books.update(targetBookId, updates);
                 }
-
-                // Create progress record even if fields are empty
-                await db.memos.add({
-                    bookId: targetBookId,
-                    title: '',
-                    content: '',
-                    tags: [],
-                    pageNumber: pNum,
-                    quote: '',
-                    createdAt: now,
-                    updatedAt: now,
-                    type: 'progress'
-                });
-
-                navigate(`/book/${targetBookId}`);
-                return;
             }
         }
 
-        // Standard Memo Save Logic
+        // Standard Memo Save Logic with finalTitle and finalType
         if (id) {
             await db.memos.update(Number(id), {
-                title,
+                title: finalTitle,
                 content,
                 tags: tagArray,
                 pageNumber: pNum,
                 quote,
                 updatedAt: now,
-                type: 'normal'
+                type: finalType
             });
-
-            if (targetBookId && pNum) {
-                const b = await db.books.get(targetBookId);
-                if (b) {
-                    const updates: any = {};
-                    if ((b.currentPage || 0) < pNum) {
-                        updates.currentPage = pNum;
-                    }
-
-                    if (pNum >= b.totalPages && b.status !== 'completed') {
-                        updates.status = 'completed';
-                        updates.completedDate = now;
-                    }
-
-                    if (Object.keys(updates).length > 0) {
-                        await db.books.update(targetBookId, updates);
-                    }
-                }
-            }
 
             if (searchParams.get('edit')) {
                 navigate(`/memo/${id}`, { replace: true });
@@ -275,35 +277,15 @@ export const MemoDetail: React.FC = () => {
             // Create New Memo
             const newId = await db.memos.add({
                 bookId: targetBookId,
-                title: title || t.memo_detail.untitled,
+                title: finalTitle,
                 content,
                 tags: tagArray,
                 pageNumber: pNum,
                 quote,
                 createdAt: now,
                 updatedAt: now,
-                type: 'normal'
+                type: finalType
             });
-
-            // Update Book Progress logic for new memo
-            if (targetBookId && pNum) {
-                const b = await db.books.get(targetBookId);
-                if (b) {
-                    const updates: any = {};
-                    if ((b.currentPage || 0) < pNum) {
-                        updates.currentPage = pNum;
-                    }
-
-                    if (pNum >= b.totalPages && b.status !== 'completed') {
-                        updates.status = 'completed';
-                        updates.completedDate = now;
-                    }
-
-                    if (Object.keys(updates).length > 0) {
-                        await db.books.update(targetBookId, updates);
-                    }
-                }
-            }
 
             navigate(`/memo/${newId}`);
         }
@@ -421,7 +403,12 @@ export const MemoDetail: React.FC = () => {
                 <ActionBar>
                     {isEditing ? (
                         <>
-                            <ActionButton $variant="primary" onClick={handleSave}>
+                            <ActionButton
+                                $variant="primary"
+                                onClick={handleSave}
+                                disabled={!title.trim() && !pageNumber && !content.trim() && !quote.trim()}
+                                style={{ opacity: (!title.trim() && !pageNumber && !content.trim() && !quote.trim()) ? 0.5 : 1, cursor: (!title.trim() && !pageNumber && !content.trim() && !quote.trim()) ? 'not-allowed' : 'pointer' }}
+                            >
                                 <FiSave /> {t.memo_detail.save}
                             </ActionButton>
                             {!isNew && (
