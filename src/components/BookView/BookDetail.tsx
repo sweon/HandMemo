@@ -574,31 +574,32 @@ export const BookDetail: React.FC = () => {
                     const { cx, cy, payload, index } = props;
                     if (payload.yMain === null) return null;
 
-                    const isStart = payload.type === 'start';
+                    if (payload.type === 'start') {
+                      return <circle cx={cx} cy={cy} r={4} fill="#94a3b8" />;
+                    }
                     const isProgress = payload.type === 'progress';
                     const isFocused = focusedIndex === index;
                     return (
                       <circle
                         cx={cx}
                         cy={cy}
-                        r={isFocused ? 8 : (isStart ? 4 : 5)}
-                        fill={isFocused ? '#f59e0b' : (isStart ? '#94a3b8' : (isProgress ? '#22c55e' : '#2563eb'))}
+                        r={isFocused ? 8 : 5}
+                        fill={isProgress ? '#22c55e' : '#2563eb'}
                         stroke={isFocused ? '#fff' : 'none'}
                         strokeWidth={isFocused ? 2 : 0}
-                        style={{ cursor: isProgress || isStart ? 'default' : 'pointer', zIndex: isFocused ? 20 : 1 }}
+                        style={{ cursor: isProgress ? 'default' : 'pointer', zIndex: isFocused ? 20 : 1 }}
                         onClick={() => handlePointClick(payload, index)}
                       />
                     );
                   }}
                   activeDot={(props: any) => {
                     const { cx, cy, payload, index } = props;
-                    const isFocused = focusedIndex === index;
                     return (
                       <circle
                         cx={cx}
                         cy={cy}
-                        r={isFocused ? 8 : 7}
-                        fill={isFocused ? '#f59e0b' : '#1d4ed8'}
+                        r={7}
+                        fill={payload.type === 'progress' ? '#22c55e' : '#1d4ed8'}
                         stroke="#fff"
                         strokeWidth={2}
                         style={{ cursor: 'pointer' }}
