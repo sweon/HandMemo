@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import styled from 'styled-components';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../../db';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { FiPlus, FiMinus, FiSettings, FiSun, FiMoon, FiSearch, FiX, FiRefreshCw, FiArrowUpCircle } from 'react-icons/fi';
 import { useRegisterSW } from 'virtual:pwa-register/react';
 import { Tooltip } from '../UI/Tooltip';
@@ -214,6 +214,7 @@ const AppVersion = styled.span`
 export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
   const { searchQuery, setSearchQuery } = useSearch();
   const { t } = useLanguage();
+  const location = useLocation();
   const [sortBy, setSortBy] = useState<'date-desc' | 'date-asc' | 'title-asc' | 'last-memo-desc' | 'last-comment-desc'>('date-desc');
   const [isAddBookModalOpen, setIsAddBookModalOpen] = useState(false);
 
@@ -419,7 +420,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
 
             <Tooltip content={t.sidebar.settings}>
               <IconButton onClick={() => {
-                navigate('/settings');
+                const isAtRoot = location.pathname === '/' || location.pathname === '';
+                navigate('/settings', { replace: !isAtRoot });
                 onCloseMobile();
               }}>
                 <FiSettings size={18} />

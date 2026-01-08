@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { NavLink, useParams } from 'react-router-dom';
+import { NavLink, useParams, useLocation, useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import type { Book, Memo } from '../../db';
 
@@ -36,8 +36,6 @@ const ItemContainer = styled(NavLink) <{ $isActive?: boolean }>`
     font-weight: 600;
   }
 `;
-
-
 
 const Info = styled.div`
   flex: 1;
@@ -87,7 +85,11 @@ export const SidebarBookItem: React.FC<Props> = ({ book, memos, onClick }) => {
   const { t, language } = useLanguage();
   const { searchQuery } = useSearch();
   const { theme } = useTheme();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [isCollapsed, setIsCollapsed] = useState(true);
+
+  const isAtRoot = location.pathname === '/' || location.pathname === '';
 
   const progressPercent = book.totalPages > 0
     ? Math.round(((book.currentPage || 0) / book.totalPages) * 100)
@@ -111,6 +113,19 @@ export const SidebarBookItem: React.FC<Props> = ({ book, memos, onClick }) => {
     setIsCollapsed(!isCollapsed);
   };
 
+  const handleBookClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    // If we are already on a detail page, replace history instead of pushing
+    navigate(`/book/${book.id}`, { replace: !isAtRoot });
+    if (onClick) onClick();
+  };
+
+  const handleMemoClick = (memoId: number) => {
+    // Always use replace for sibling memo navigation to flatten history
+    navigate(`/memo/${memoId}`, { replace: !isAtRoot });
+    if (onClick) onClick();
+  };
+
   // Sort memos by page number, then date
   const sortedMemos = [...memos].sort((a, b) => {
     if ((a.pageNumber || 0) !== (b.pageNumber || 0)) {
@@ -121,8 +136,12 @@ export const SidebarBookItem: React.FC<Props> = ({ book, memos, onClick }) => {
 
   return (
     <GroupContainer>
-      <ItemContainer to={`/book/${book.id}`} onClick={onClick} $isActive={isActive}>
-
+      <ItemContainer
+        to={`/book/${book.id}`}
+        onClick={handleBookClick}
+        $isActive={isActive}
+        className={isActive ? 'active' : ''}
+      >
         <Info>
           <Title>{book.title}</Title>
           <Meta>
@@ -159,7 +178,10 @@ export const SidebarBookItem: React.FC<Props> = ({ book, memos, onClick }) => {
                 to={`/memo/${memo.id}`}
                 $isActive={activeMemoId === String(memo.id)}
                 $inThread={true}
-                onClick={onClick}
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleMemoClick(memo.id!);
+                }}
                 style={isMatch ? { borderRight: `2px solid ${theme.colors.primary}` } : {}}
               >
                 <MemoTitle title={memo.title || t.sidebar.untitled}>
