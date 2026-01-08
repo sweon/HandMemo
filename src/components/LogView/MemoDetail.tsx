@@ -383,9 +383,15 @@ export const MemoDetail: React.FC = () => {
             <Header>
                 {book && (
                     <div
+                        className="back-to-book"
                         style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem', cursor: 'pointer', color: '#666' }}
                         onClick={() => navigate(`/book/${book.id}`)}
                     >
+                        <style>{`
+                            @media (max-width: 768px) {
+                                .back-to-book { display: none !important; }
+                            }
+                        `}</style>
                         <FiArrowLeft /> Back to {book.title}
                     </div>
                 )}

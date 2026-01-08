@@ -129,6 +129,10 @@ const BackButton = styled.button`
     background: ${({ theme }) => theme.colors.border};
     color: ${({ theme }) => theme.colors.text};
   }
+
+  @media (max-width: 768px) {
+    display: none;
+  }
 `;
 
 const Input = styled.input`

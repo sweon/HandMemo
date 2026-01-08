@@ -201,7 +201,7 @@ export const MainLayout: React.FC = () => {
       />
       <ContentWrapper>
         <MobileHeader>
-          <FiMenu size={24} onClick={() => setSidebarOpen(true)} />
+          {!isSidebarOpen && <FiMenu size={24} onClick={() => setSidebarOpen(true)} />}
           <h3>BookMemo</h3>
         </MobileHeader>
         <Outlet />
