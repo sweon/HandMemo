@@ -53,8 +53,8 @@ export const AndroidExitHandler: React.FC = () => {
     return (
         <Toast
             variant="warning"
-            centered
-            icon={<FiAlertTriangle size={20} />}
+            position="left-centered"
+            icon={<FiAlertTriangle size={14} />}
             message="뒤로 가기 버튼을 한 번 더 누르면 종료됩니다."
             onClose={() => setShowExitToast(false)}
         />
