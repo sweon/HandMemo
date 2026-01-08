@@ -27,8 +27,9 @@ const SidebarWrapper = styled.div<{ $isOpen: boolean; $width: number }>`
   position: relative;
 
   @media (max-width: 768px) {
-    width: ${({ $width }) => Math.min($width, 320)}px !important;
-    min-width: ${({ $width }) => Math.min($width, 240)}px !important;
+    width: 85% !important;
+    max-width: 300px;
+    min-width: auto !important;
     position: absolute;
     z-index: 10;
     height: 100%;

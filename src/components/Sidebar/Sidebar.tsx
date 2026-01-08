@@ -337,7 +337,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
       </BrandHeader>
       <Header>
         <TopActions>
-          <Button onClick={() => setIsAddBookModalOpen(true)}>
+          <Button onClick={() => {
+            setIsAddBookModalOpen(true);
+            onCloseMobile();
+          }}>
             <FiPlus /> {t.sidebar.add_book || "New Book"}
           </Button>
           <div style={{ display: 'flex', gap: '0rem', alignItems: 'center' }}>
@@ -353,7 +356,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
             </Tooltip>
 
             <Tooltip content={t.sidebar.sync_data}>
-              <IconButton onClick={() => setIsSyncModalOpen(true)}>
+              <IconButton onClick={() => {
+                setIsSyncModalOpen(true);
+                onCloseMobile();
+              }}>
                 <FiRefreshCw size={18} />
               </IconButton>
             </Tooltip>
@@ -386,7 +392,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
             </Tooltip>
 
             <Tooltip content={t.sidebar.settings}>
-              <IconButton onClick={() => navigate('/settings')}>
+              <IconButton onClick={() => {
+                navigate('/settings');
+                onCloseMobile();
+              }}>
                 <FiSettings size={18} />
               </IconButton>
             </Tooltip>
