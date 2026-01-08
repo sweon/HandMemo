@@ -15,19 +15,20 @@ const pulse = keyframes`
   100% { transform: scale(1); box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2), 0 0 0px rgba(245, 158, 11, 0); }
 `;
 
-const ToastContainer = styled.div<{ $variant?: 'default' | 'warning' | 'danger' }>`
+const ToastContainer = styled.div<{ $variant?: 'default' | 'warning' | 'danger'; $centered?: boolean }>`
   position: fixed;
-  bottom: 120px;
-  left: 50%;
-  transform: translateX(-50%);
+  ${({ $centered }) => $centered
+    ? `top: 50%; left: 50%; transform: translate(-50%, -50%);`
+    : `bottom: 100px; left: 50%; transform: translateX(-50%);`}
+  
   background: ${({ $variant }) =>
     $variant === 'warning' ? '#f59e0b' :
       $variant === 'danger' ? '#ef4444' :
         'rgba(0, 0, 0, 0.9)'};
   color: white;
-  padding: 16px 32px;
-  border-radius: 40px;
-  font-size: 1rem;
+  padding: 10px 20px;
+  border-radius: 20px;
+  font-size: 0.85rem;
   font-weight: 600;
   z-index: 10000;
   pointer-events: none;
@@ -36,10 +37,10 @@ const ToastContainer = styled.div<{ $variant?: 'default' | 'warning' | 'danger' 
              ${({ $variant }) => $variant === 'warning' ? pulse : 'none'} 1.5s ease-in-out infinite;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
   backdrop-filter: blur(10px);
-  border: 2px solid rgba(255, 255, 255, 0.2);
+  border: 1.5px solid rgba(255, 255, 255, 0.2);
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
 `;
 
 interface ToastProps {
@@ -48,9 +49,10 @@ interface ToastProps {
   duration?: number;
   variant?: 'default' | 'warning' | 'danger';
   icon?: React.ReactNode;
+  centered?: boolean;
 }
 
-export const Toast: React.FC<ToastProps> = ({ message, onClose, duration = 2500, variant = 'default', icon }) => {
+export const Toast: React.FC<ToastProps> = ({ message, onClose, duration = 2500, variant = 'default', icon, centered }) => {
   useEffect(() => {
     const timer = setTimeout(() => {
       onClose();
@@ -60,7 +62,7 @@ export const Toast: React.FC<ToastProps> = ({ message, onClose, duration = 2500,
   }, [duration, onClose]);
 
   return (
-    <ToastContainer $variant={variant}>
+    <ToastContainer $variant={variant} $centered={centered}>
       {icon}
       {message}
     </ToastContainer>
