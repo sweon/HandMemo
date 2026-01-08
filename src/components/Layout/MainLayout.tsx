@@ -27,9 +27,10 @@ const SidebarWrapper = styled.div<{ $isOpen: boolean; $width: number }>`
   position: relative;
 
   @media (max-width: 768px) {
-    width: 85% !important;
-    max-width: 300px;
-    min-width: auto !important;
+    /* Use dynamic width on mobile too */
+    width: ${({ $width }) => $width}px !important;
+    min-width: ${({ $width }) => $width}px !important;
+    max-width: 90vw;
     position: absolute;
     z-index: 10;
     height: 100%;
@@ -107,15 +108,17 @@ const Overlay = styled.div<{ $isOpen: boolean }>`
 
 const STORAGE_KEY = 'bookmemo-sidebar-width';
 const DEFAULT_WIDTH = 300;
-const MIN_WIDTH = 340;
-const MAX_WIDTH = 600;
+const MIN_WIDTH_DESKTOP = 340;
+const MAX_WIDTH_DESKTOP = 600;
+const MIN_WIDTH_MOBILE = 200;
+const MAX_WIDTH_MOBILE = Math.min(400, window.innerWidth * 0.9);
 
 export const MainLayout: React.FC = () => {
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
     const parsed = saved ? parseInt(saved, 10) : DEFAULT_WIDTH;
-    return Math.max(MIN_WIDTH, parsed);
+    return Math.max(MIN_WIDTH_MOBILE, parsed);
   });
   const [isResizing, setIsResizing] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
@@ -154,20 +157,25 @@ export const MainLayout: React.FC = () => {
   const handleMouseMove = useCallback((e: MouseEvent) => {
     if (isResizing) {
       const newWidth = e.clientX;
-      if (newWidth >= MIN_WIDTH && newWidth <= MAX_WIDTH) {
+      const minW = isMobile ? MIN_WIDTH_MOBILE : MIN_WIDTH_DESKTOP;
+      const maxW = isMobile ? Math.min(MAX_WIDTH_MOBILE, window.innerWidth * 0.9) : MAX_WIDTH_DESKTOP;
+      if (newWidth >= minW && newWidth <= maxW) {
         setSidebarWidth(newWidth);
       }
     }
-  }, [isResizing]);
+  }, [isResizing, isMobile]);
 
   const handleTouchMove = useCallback((e: TouchEvent) => {
     if (isResizing) {
+      e.preventDefault(); // Prevent scrolling while resizing
       const newWidth = e.touches[0].clientX;
-      if (newWidth >= MIN_WIDTH && newWidth <= MAX_WIDTH) {
+      const minW = isMobile ? MIN_WIDTH_MOBILE : MIN_WIDTH_DESKTOP;
+      const maxW = isMobile ? Math.min(MAX_WIDTH_MOBILE, window.innerWidth * 0.9) : MAX_WIDTH_DESKTOP;
+      if (newWidth >= minW && newWidth <= maxW) {
         setSidebarWidth(newWidth);
       }
     }
-  }, [isResizing]);
+  }, [isResizing, isMobile]);
 
   useEffect(() => {
     if (isResizing) {
