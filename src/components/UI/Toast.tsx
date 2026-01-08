@@ -2,37 +2,44 @@ import React, { useEffect } from 'react';
 import styled, { keyframes } from 'styled-components';
 
 const fadeInOut = keyframes`
-  0% { opacity: 0; transform: translate(-50%, 20px); }
-  15% { opacity: 1; transform: translate(-50%, 0); }
-  85% { opacity: 1; transform: translate(-50%, 0); }
-  100% { opacity: 0; transform: translate(-50%, -20px); }
+  0% { opacity: 0; transform: translate(-50%, 30px) scale(0.9); }
+  10% { opacity: 1; transform: translate(-50%, 0) scale(1.05); }
+  15% { opacity: 1; transform: translate(-50%, 0) scale(1); }
+  85% { opacity: 1; transform: translate(-50%, 0) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -20px) scale(0.9); }
+`;
+
+const pulse = keyframes`
+  0% { transform: scale(1); box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2), 0 0 0px rgba(245, 158, 11, 0); }
+  50% { transform: scale(1.02); box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2), 0 0 15px rgba(245, 158, 11, 0.4); }
+  100% { transform: scale(1); box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2), 0 0 0px rgba(245, 158, 11, 0); }
 `;
 
 const ToastContainer = styled.div<{ $variant?: 'default' | 'warning' | 'danger' }>`
   position: fixed;
-  bottom: 100px;
+  bottom: 120px;
   left: 50%;
   transform: translateX(-50%);
   background: ${({ $variant }) =>
-    $variant === 'warning' ? 'rgba(245, 158, 11, 0.95)' :
-      $variant === 'danger' ? 'rgba(239, 68, 68, 0.95)' :
-        'rgba(0, 0, 0, 0.85)'};
+    $variant === 'warning' ? '#f59e0b' :
+      $variant === 'danger' ? '#ef4444' :
+        'rgba(0, 0, 0, 0.9)'};
   color: white;
-  padding: 14px 28px;
-  border-radius: 30px;
-  font-size: 0.95rem;
-  font-weight: 500;
+  padding: 16px 32px;
+  border-radius: 40px;
+  font-size: 1rem;
+  font-weight: 600;
   z-index: 10000;
   pointer-events: none;
   white-space: nowrap;
-  animation: ${fadeInOut} 2.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2), 
-              0 0 20px ${({ $variant }) => $variant === 'warning' ? 'rgba(245, 158, 11, 0.3)' : 'transparent'};
-  backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  animation: ${fadeInOut} 2.5s cubic-bezier(0.4, 0, 0.2, 1) forwards,
+             ${({ $variant }) => $variant === 'warning' ? pulse : 'none'} 1.5s ease-in-out infinite;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(10px);
+  border: 2px solid rgba(255, 255, 255, 0.2);
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
 `;
 
 interface ToastProps {

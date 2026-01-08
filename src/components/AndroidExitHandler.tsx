@@ -8,29 +8,36 @@ export const AndroidExitHandler: React.FC = () => {
     const [showExitToast, setShowExitToast] = useState(false);
     const lastPressTime = useRef<number>(0);
 
-    // In HashRouter, the empty root is often exactly '/' or empty
     const isAtRoot = location.pathname === '/' || location.pathname === '';
 
     useEffect(() => {
-        // Intercept back button at root
-        if (!isAtRoot) return;
-
-        // Push a dummy state so we can catch the popstate event
-        window.history.pushState({ noExit: true }, '');
-
-        const handlePopState = () => {
-            const now = Date.now();
-            const timeDiff = now - lastPressTime.current;
-
-            if (timeDiff < 2000) {
-                // Exit: allow browser history back (skips our dummy)
-                window.history.back();
-            } else {
-                // First press: warn
-                lastPressTime.current = now;
-                setShowExitToast(true);
-                // Keep intercepting
+        // Function to ensure we have an interceptor state at the root
+        const ensureDummyState = () => {
+            if (isAtRoot && (!window.history.state || !window.history.state.noExit)) {
                 window.history.pushState({ noExit: true }, '');
+            }
+        };
+
+        ensureDummyState();
+
+        const handlePopState = (event: PopStateEvent) => {
+            if (isAtRoot) {
+                // If the state we popped TO does not have our flag, it means we intercepted a "back" 
+                // that tried to leave the root.
+                if (!event.state || !event.state.noExit) {
+                    const now = Date.now();
+                    const timeDiff = now - lastPressTime.current;
+
+                    if (timeDiff < 2000) {
+                        // Real exit: go back once more to skip our initial entry
+                        window.history.back();
+                    } else {
+                        // First press: warn, show toast, and re-push the dummy
+                        lastPressTime.current = now;
+                        setShowExitToast(true);
+                        window.history.pushState({ noExit: true }, '');
+                    }
+                }
             }
         };
 
@@ -46,7 +53,7 @@ export const AndroidExitHandler: React.FC = () => {
     return (
         <Toast
             variant="warning"
-            icon={<FiAlertTriangle size={20} />}
+            icon={<FiAlertTriangle size={24} />}
             message="뒤로 가기 버튼을 한 번 더 누르면 종료됩니다."
             onClose={() => setShowExitToast(false)}
         />
