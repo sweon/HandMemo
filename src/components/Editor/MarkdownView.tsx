@@ -105,21 +105,46 @@ const FabricPreview = ({ json }: { json: string }) => {
         const originalWidth = data.width || 800;
         const originalHeight = data.height || 600;
 
-        // Responsive scaling
-        const containerWidth = containerRef.current?.clientWidth || window.innerWidth;
-        const scale = containerWidth < originalWidth ? containerWidth / originalWidth : 1;
+        const resizeCanvas = () => {
+          if (!containerRef.current) return;
+          // Force full width of container minus potentially borders/padding
+          const containerWidth = containerRef.current.getBoundingClientRect().width;
 
-        canvas.setWidth(originalWidth * scale);
-        canvas.setHeight(originalHeight * scale);
-        canvas.setZoom(scale);
+          // Calculate scale to FIT the container if original is larger OR if we want it responsive
+          // Usually on phone we always want it to take max width available if possible
+          // But if original is small, maybe not stretch? Let's assume shrinking only for now to avoid pixelation
+          // or maybe stretch to fit container if it's too small?
+          // Safest: Scale DOWN if too big. Scale 1 if fits.
+          // User complaint: "Right side cut off". Means scale was too BIG.
+          // containerWidth might be reported larger than viewport initially or logic flaw?
+          // Let's use `Math.min` carefully.
 
-        canvas.renderAll();
+          const scale = containerWidth < originalWidth ? containerWidth / originalWidth : 1;
+
+          canvas.setWidth(originalWidth * scale);
+          canvas.setHeight(originalHeight * scale);
+          canvas.setZoom(scale);
+          canvas.renderAll();
+        };
+
+        // Initial sizing
+        resizeCanvas();
+
+        // Responsive resizing
+        window.addEventListener('resize', resizeCanvas);
+
+        // Cleanup listener on dispose (but we dispose canvas completely below)
+        // We need to attach listener cleanup to the effect cleanup
+        (canvas as any).__resizeListener = resizeCanvas;
       });
     } catch (e) {
       console.error('Fabric load error:', e);
     }
 
     return () => {
+      if ((canvas as any).__resizeListener) {
+        window.removeEventListener('resize', (canvas as any).__resizeListener);
+      }
       canvas.dispose();
     };
   }, [json]);
