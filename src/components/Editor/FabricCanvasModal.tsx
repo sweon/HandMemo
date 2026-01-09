@@ -68,8 +68,8 @@ const Title = styled.h3`
 
 const Toolbar = styled.div`
   display: flex;
-  gap: 0.5rem;
-  padding: 0.5rem 1rem;
+  gap: 0.25rem;
+  padding: 0.35rem 0.5rem;
   background: #f1f3f5;
   border-bottom: 1px solid #e0e0e0;
   align-items: center;
@@ -89,14 +89,15 @@ const ToolButton = styled.button<{ $active?: boolean }>`
   background: ${({ $active }) => $active ? '#e9ecef' : 'transparent'};
   border: 1px solid ${({ $active }) => $active ? '#adb5bd' : 'transparent'};
   color: #333;
-  padding: 0.5rem;
-  border-radius: 4px;
+  padding: 0.3rem;
+  border-radius: 3px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.2rem;
-  min-width: 40px;
+  font-size: 1rem;
+  min-width: 28px;
+  height: 28px;
   
   &:hover {
     background: #e9ecef;
@@ -105,24 +106,26 @@ const ToolButton = styled.button<{ $active?: boolean }>`
 
 const ToolGroup = styled.div`
   display: flex;
-  gap: 2px;
-  padding-right: 8px;
+  gap: 1px;
+  padding-right: 6px;
   border-right: 1px solid #dee2e6;
-  margin-right: 8px;
+  margin-right: 6px;
 
   &:last-child {
       border: none;
+      margin-right: 0;
+      padding-right: 0;
   }
 `;
 
 const ColorButton = styled.div<{ $color: string; $selected?: boolean }>`
-  width: 24px;
-  height: 24px;
+  width: 18px;
+  height: 18px;
   border-radius: 50%;
   background-color: ${({ $color }) => $color};
   border: 2px solid ${({ $selected }) => $selected ? '#333' : 'transparent'};
   cursor: pointer;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
   
   &:hover {
     transform: scale(1.1);
@@ -660,7 +663,7 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
 
                     <ToolGroup>
                         {COLORS.map(c => (
-                            <div key={c} style={{ padding: 4 }}>
+                            <div key={c} style={{ padding: 2 }}>
                                 <ColorButton
                                     $color={c}
                                     $selected={color === c && !activeTool.startsWith('eraser')}
