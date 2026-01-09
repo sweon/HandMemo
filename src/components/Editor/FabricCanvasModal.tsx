@@ -68,21 +68,12 @@ const Title = styled.h3`
 
 const Toolbar = styled.div`
   display: flex;
+  flex-wrap: wrap;
   gap: 0.25rem;
   padding: 0.35rem 0.5rem;
   background: #f1f3f5;
   border-bottom: 1px solid #e0e0e0;
   align-items: center;
-  overflow-x: auto;
-  
-  /* Hide scrollbar for clean look */
-  &::-webkit-scrollbar {
-    height: 4px;
-  }
-  &::-webkit-scrollbar-thumb {
-    background: #ccc;
-    border-radius: 4px;
-  }
 `;
 
 const ToolButton = styled.button<{ $active?: boolean }>`
