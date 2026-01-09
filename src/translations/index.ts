@@ -149,6 +149,16 @@ export const translations = {
             ready_to_share: "Session active. Waiting for connection...",
             connected: "Linked",
             data_synced_reload: "Sync Completed! Reloading in 3 seconds..."
+        },
+        drawing: {
+            title: "Drawing",
+            insert: "Insert Drawing",
+            cancel: "Cancel",
+            placeholder: "Drawing Object (Click to Edit)",
+            clear: "Clear",
+            undo: "Undo",
+            pen: "Pen",
+            eraser: "Eraser"
         }
     },
     ko: {
@@ -301,6 +311,16 @@ export const translations = {
             ready_to_share: "세션 활성화됨. 연결을 기다리는 중...",
             connected: "연결됨",
             data_synced_reload: "동기화 완료! 3초 후 새로고침합니다..."
+        },
+        drawing: {
+            title: "그림판",
+            insert: "그림 삽입",
+            cancel: "취소",
+            placeholder: "그림 객체 (클릭하여 편집)",
+            clear: "지우기",
+            undo: "실행 취소",
+            pen: "펜",
+            eraser: "지우개"
         }
     }
 };

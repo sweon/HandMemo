@@ -6,6 +6,7 @@ import remarkGfm from 'remark-gfm';
 import remarkBreaks from 'remark-breaks';
 import 'katex/dist/katex.min.css';
 import styled from 'styled-components';
+import { fabric } from 'fabric';
 
 const MarkdownContainer = styled.div<{ $tableHeaderBg?: string }>`
   line-height: 1.6;
@@ -85,11 +86,50 @@ const MarkdownContainer = styled.div<{ $tableHeaderBg?: string }>`
   }
 
   /* Katex adjustments if needed */
-  .katex-display {
-    overflow-x: auto;
-    overflow-y: hidden;
   }
 `;
+
+
+const FabricPreview = ({ json }: { json: string }) => {
+  const canvasRef = React.useRef<HTMLCanvasElement>(null);
+  const containerRef = React.useRef<HTMLDivElement>(null);
+
+  React.useLayoutEffect(() => {
+    if (!canvasRef.current || !containerRef.current) return;
+
+    const canvas = new fabric.StaticCanvas(canvasRef.current);
+
+    try {
+      const data = JSON.parse(json);
+      canvas.loadFromJSON(data, () => {
+        const originalWidth = data.width || 800;
+        const originalHeight = data.height || 600;
+
+        // Responsive scaling
+        const containerWidth = containerRef.current?.clientWidth || window.innerWidth;
+        const scale = containerWidth < originalWidth ? containerWidth / originalWidth : 1;
+
+        canvas.setWidth(originalWidth * scale);
+        canvas.setHeight(originalHeight * scale);
+        canvas.setZoom(scale);
+
+        canvas.renderAll();
+      });
+    } catch (e) {
+      console.error('Fabric load error:', e);
+    }
+
+    return () => {
+      canvas.dispose();
+    };
+  }, [json]);
+
+  return (
+    <div ref={containerRef} style={{ width: '100%', overflow: 'hidden', margin: '1em 0', border: '1px solid #eee', borderRadius: '8px' }}>
+      <canvas ref={canvasRef} />
+    </div>
+  );
+};
 
 export const MarkdownView: React.FC<{ content: string; tableHeaderBg?: string }> = ({ content, tableHeaderBg }) => {
   return (
@@ -97,6 +137,16 @@ export const MarkdownView: React.FC<{ content: string; tableHeaderBg?: string }>
       <ReactMarkdown
         remarkPlugins={[remarkMath, remarkGfm, remarkBreaks]}
         rehypePlugins={[rehypeKatex]}
+        components={{
+          code({ node, className, children, ...props }: any) {
+            const match = /language-(\w+)/.exec(className || '');
+            // Check if it's a fabric block
+            if (!props.inline && match && match[1] === 'fabric') {
+              return <FabricPreview json={String(children).replace(/\n$/, '')} />;
+            }
+            return <code className={className} {...props}>{children}</code>;
+          }
+        }}
       >
         {content}
       </ReactMarkdown>
