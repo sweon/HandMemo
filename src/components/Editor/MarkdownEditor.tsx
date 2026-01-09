@@ -237,9 +237,9 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({ value, onChange 
     placeholder: "Type here... (Markdown + Math supported)",
     previewRender: customRenderer,
     toolbar: [
-      "bold", "italic", "heading", "|",
-      "quote", "unordered-list", "ordered-list", "|",
-      "link", "image", "|",
+      "bold", "italic", "heading",
+      "quote", "unordered-list", "ordered-list",
+      "link", "image",
       // Custom Drawing Button
       {
         name: "drawing",
@@ -247,8 +247,7 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({ value, onChange 
         className: "fa fa-pencil",
         title: "Insert/Edit Drawing",
       },
-      "|",
-      "preview", "side-by-side", "fullscreen", "|",
+      "preview", "side-by-side", "fullscreen",
       "guide"
     ] as any,
     status: false,
