@@ -6,7 +6,7 @@ import { useLanguage } from '../../contexts/LanguageContext';
 
 // Pixel Eraser Icon - looks like a classic eraser
 const PixelEraserIcon = () => (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M18 13L11 20H4L2 18C1.4 17.4 1.4 16.6 2 16L14 4L20 10L18 13Z" />
         <path d="M14 4L20 10" strokeWidth="2.5" />
         <rect x="2" y="20" width="20" height="2" fill="currentColor" stroke="none" rx="1" />
@@ -15,7 +15,7 @@ const PixelEraserIcon = () => (
 
 // Object Eraser Icon - eraser with target/pointer indicator
 const ObjectEraserIcon = () => (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M18 13L11 20H4L2 18C1.4 17.4 1.4 16.6 2 16L14 4L20 10L18 13Z" />
         <path d="M14 4L20 10" strokeWidth="2.5" />
         <circle cx="19" cy="5" r="4" fill="#f03e3e" stroke="#f03e3e" strokeWidth="1" />
@@ -24,13 +24,13 @@ const ObjectEraserIcon = () => (
 );
 
 const EllipseIcon = () => (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <ellipse cx="12" cy="12" rx="9" ry="5" />
     </svg>
 );
 
 const DiamondIcon = () => (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M12 2L2 12L12 22L22 12L12 2Z" />
     </svg>
 );
@@ -718,28 +718,28 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                 <Toolbar>
                     <ToolGroup>
                         <ToolButton $active={activeTool === 'pen'} onClick={() => setActiveTool('pen')} title="Pen">
-                            <FiEdit2 />
+                            <FiEdit2 size={18} />
                         </ToolButton>
                         <ToolButton $active={activeTool === 'line'} onClick={() => setActiveTool('line')} title="Line">
-                            <FiMinus style={{ transform: 'rotate(-45deg)' }} />
+                            <FiMinus size={18} style={{ transform: 'rotate(-45deg)' }} />
                         </ToolButton>
                         <ToolButton $active={activeTool === 'rect'} onClick={() => setActiveTool('rect')} title="Rectangle">
-                            <FiSquare />
+                            <FiSquare size={18} />
                         </ToolButton>
                         <ToolButton $active={activeTool === 'circle'} onClick={() => setActiveTool('circle')} title="Circle">
-                            <FiCircle />
+                            <FiCircle size={18} />
                         </ToolButton>
                         <ToolButton $active={activeTool === 'ellipse'} onClick={() => setActiveTool('ellipse')} title="Ellipse">
                             <EllipseIcon />
                         </ToolButton>
                         <ToolButton $active={activeTool === 'triangle'} onClick={() => setActiveTool('triangle')} title="Triangle">
-                            <FiTriangle />
+                            <FiTriangle size={18} />
                         </ToolButton>
                         <ToolButton $active={activeTool === 'diamond'} onClick={() => setActiveTool('diamond')} title="Diamond">
                             <DiamondIcon />
                         </ToolButton>
                         <ToolButton $active={activeTool === 'text'} onClick={() => setActiveTool('text')} title="Text (T)">
-                            <FiType />
+                            <FiType size={18} />
                         </ToolButton>
                     </ToolGroup>
 
@@ -754,16 +754,24 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
 
                     <ToolGroup>
                         <ToolButton onClick={handleUndo} title="Undo (Ctrl+Z)">
-                            <FiRotateCcw />
+                            <FiRotateCcw size={18} />
                         </ToolButton>
-                        <ToolButton onClick={handleRedo} title="Redo (Ctrl+Shift+Z)">
-                            <FiRotateCw />
+                        <ToolButton onClick={handleRedo} title="Redo (Ctrl+Y)">
+                            <FiRotateCw size={18} />
                         </ToolButton>
-                        <ToolButton onClick={handleExtendHeight} title={language === 'ko' ? "아래로 확장" : "Extend Down"}>
-                            <FiArrowDown />
+                        <ToolButton onClick={() => {
+                            if (window.confirm('Clear all?')) {
+                                fabricCanvasRef.current?.clear();
+                                fabricCanvasRef.current?.setBackgroundColor('#ffffff', () => fabricCanvasRef.current?.renderAll());
+                            }
+                        }} title="Clear All">
+                            <FiTrash2 size={18} />
                         </ToolButton>
-                        <ToolButton onClick={handleClear} title="Clear All">
-                            <FiTrash2 />
+                    </ToolGroup>
+
+                    <ToolGroup>
+                        <ToolButton onClick={handleExtendHeight} title="Extend height">
+                            <FiArrowDown size={18} />
                         </ToolButton>
                     </ToolGroup>
 
