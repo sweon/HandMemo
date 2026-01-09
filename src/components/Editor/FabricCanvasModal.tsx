@@ -266,7 +266,20 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                 break;
 
             case 'eraser_object':
+                canvas.isDrawingMode = false;
                 canvas.defaultCursor = 'pointer';
+                canvas.hoverCursor = 'not-allowed';
+
+                // Enable events on all objects so they can be clicked
+                canvas.forEachObject((obj) => {
+                    obj.set({
+                        selectable: false,
+                        evented: true,
+                        hoverCursor: 'not-allowed'
+                    });
+                });
+                canvas.requestRenderAll();
+
                 canvas.on('mouse:down', (opt) => {
                     if (opt.target) {
                         canvas.remove(opt.target);
