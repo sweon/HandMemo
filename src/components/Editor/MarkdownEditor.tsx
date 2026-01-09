@@ -75,6 +75,9 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({ value, onChange 
   // Stable reference to the handler for the toolbar
   const handleDrawingRef = useRef<() => void>(() => { });
 
+  // Ref to hold the widget update function for external access (initial load)
+  const updateWidgetsRef = useRef<(cm: any) => void>(() => { });
+
   const handleDrawing = () => {
     if (!cmRef.current) return;
     const cm = cmRef.current;
@@ -253,12 +256,12 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({ value, onChange 
   }), []);
 
   // Effect to update CodeMirror widgets safely without flickering
+  // Effect to update CodeMirror widgets safely without flickering
   useEffect(() => {
-    const cm = cmRef.current;
-    if (!cm) return;
+    // Define the update function and assign to ref
+    updateWidgetsRef.current = (cm: any) => {
+      if (!cm) return;
 
-    const updateWidgets = () => {
-      // 1. Collect all existing fabric markers
       const existingMarks: any[] = [];
       cm.getAllMarks().forEach((m: any) => {
         if (m.className === 'fabric-replacement-mark') {
@@ -266,7 +269,6 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({ value, onChange 
         }
       });
 
-      // 2. Identify current fabric blocks in text
       const fabricBlocks: { start: any; end: any; }[] = [];
       const lineCount = cm.lineCount();
       let inBlock = false;
@@ -279,7 +281,6 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({ value, onChange 
           startLine = i;
         } else if (inBlock && lineText.trim().startsWith('```')) {
           inBlock = false;
-          // Valid block found
           fabricBlocks.push({
             start: { line: startLine, ch: 0 },
             end: { line: i, ch: lineText.length }
@@ -287,35 +288,21 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({ value, onChange 
         }
       }
 
-      // 3. Reconcile: Remove invalid marks
+      // Cleanup invalid marks
       existingMarks.forEach((mark) => {
         const pos = mark.find();
-        if (!pos) return; // already cleared
-        // Check if this mark matches any current block range roughly
-        // Strictly, we can simply check if the text inside is still valid fabric block
-        // But atomic markers usually handle deletions. 
-        // We just need to check if existing marks align with current desired blocks.
-        // Actually, simpler: 
-        // If a mark exists, check if it's in our `fabricBlocks` list.
-        // If it is, remove from list (don't re-add). If it's not in list, clear mark?
-        // Note: pos.from.line might differ if lines moved. CodeMirror handles line tracking.
-
-        // Let's rely on overlap detection.
+        if (!pos) return;
         const isStillValid = fabricBlocks.some(block =>
           block.start.line === pos.from.line && block.end.line === pos.to.line
         );
-
         if (!isStillValid) {
-          // Check if text inside is truly not fabric anymore? 
-          // Or just clear and assume re-add if valid? 
-          // Clearing leads to potential flash if we re-add immediately?
-          // Let's simply clear all and re-add? No, flickering.
-
-          // Optimization: Skip checking, just find UNMARKED blocks.
+          // mark.clear(); // We purposely leave this implicit or handle by overwriting?
+          // Actually, standard atomic marks stick around. We should clear invalid ones.
+          mark.clear();
         }
       });
 
-      // Simpler V2: Just find blocks, check if marked.
+      // Add new marks
       fabricBlocks.forEach(block => {
         const marksAtStart = cm.findMarksAt(block.start);
         const hasFabricMark = marksAtStart.some((m: any) => m.className === 'fabric-replacement-mark');
@@ -336,6 +323,7 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({ value, onChange 
                 font-family: system-ui, sans-serif;
                 box-shadow: 0 1px 2px rgba(0,0,0,0.05);
                 cursor: pointer;
+                user-select: none;
               `;
           el.innerHTML = `
                 <div style="font-size: 20px;">🎨</div>
@@ -347,8 +335,7 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({ value, onChange 
 
           el.onclick = (e) => {
             e.stopPropagation();
-            // Temporarily clear mark to allow 'handleDrawing' to read raw text?
-            // No, handleDrawing reads cm.getLine() which returns raw text even if marked replaced!
+            e.preventDefault();
             cm.setCursor(block.start);
             handleDrawingRef.current();
           };
@@ -357,23 +344,23 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({ value, onChange 
             replacedWith: el,
             atomic: true,
             className: 'fabric-replacement-mark',
-            selectRight: true, // Allow cursor to coexist?
+            selectRight: true,
+            handleMouseEvents: true
           });
         }
       });
     };
 
-    // Run initially
-    updateWidgets();
+    const cm = cmRef.current;
+    if (cm) {
+      // Run immediately
+      updateWidgetsRef.current(cm);
 
-    // Hook into changes to update
-    const changeHandler = () => updateWidgets();
-    cm.on('change', changeHandler);
-
-    return () => {
-      cm.off('change', changeHandler);
-    };
-  }, [value]); // Dep on value ensures we get fresh ref if re-mounted, but cm.on handles live updates
+      const changeHandler = () => updateWidgetsRef.current(cm);
+      cm.on('change', changeHandler);
+      return () => cm.off('change', changeHandler);
+    }
+  }, [value]); // Re-run when value changes to ensure sync
 
   return (
     <>
@@ -384,8 +371,10 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({ value, onChange 
           options={options}
           getCodemirrorInstance={(cm) => {
             cmRef.current = cm;
-            // Trigger explicit update on mount
-            // setTimeout(() => updateFabricWidgets(cm), 100);
+            // Trigger explicit update on mount using ref
+            if (updateWidgetsRef.current) {
+              setTimeout(() => updateWidgetsRef.current(cm), 100);
+            }
           }}
         />
       </EditorWrapper>
