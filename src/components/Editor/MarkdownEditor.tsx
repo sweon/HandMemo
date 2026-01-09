@@ -181,10 +181,40 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({ value, onChange 
 
     // Replace ```fabric ... ``` with <div class="fabric-placeholder">Drawing</div>
     const processedText = plainText.replace(/```fabric\s*([\s\S]*?)\s*```/g, () => {
-      return `<div style="background: #f0f0f0; border: 1px dashed #ccc; padding: 20px; text-align: center; border-radius: 8px; margin: 10px 0; color: #555;">
-          🎨 Drawing Object<br/>
-          <span style="font-size: 0.8em; color: #888;">(Click "Insert Drawing" toolbar button to edit)</span>
-        </div>`;
+      return `
+          <div class="drawing-banner" style="
+            background: linear-gradient(to right, #f8f9fa, #e9ecef); 
+            border: 1px solid #dee2e6; 
+            border-left: 4px solid #333;
+            border-radius: 6px; 
+            padding: 16px 20px; 
+            margin: 16px 0; 
+            display: flex; 
+            align-items: center; 
+            gap: 12px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            cursor: pointer;
+          ">
+            <div style="
+              display: flex; 
+              align-items: center; 
+              justify-content: center; 
+              width: 40px; 
+              height: 40px; 
+              background: #fff; 
+              border-radius: 8px; 
+              box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+              font-size: 20px;
+            ">🎨</div>
+            <div style="flex: 1;">
+              <div style="font-weight: 600; color: #343a40; font-size: 14px;">Drawing Object</div>
+              <div style="font-size: 12px; color: #868e96; margin-top: 2px;">
+                Open "Side-by-Side" view or click the Pen icon to edit.
+              </div>
+            </div>
+          </div>
+        `;
     });
 
     return renderToStaticMarkup(
