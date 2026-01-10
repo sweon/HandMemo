@@ -628,6 +628,17 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
     const [canUndo, setCanUndo] = useState(false);
     const [canRedo, setCanRedo] = useState(false);
     const [tempBrushType, setTempBrushType] = useState(brushType);
+    const [palmRejection, setPalmRejection] = useState(() => {
+        return localStorage.getItem('fabric_palm_rejection') === 'true';
+    });
+    const palmRejectionRef = useRef(palmRejection);
+    useEffect(() => {
+        palmRejectionRef.current = palmRejection;
+        localStorage.setItem('fabric_palm_rejection', palmRejection ? 'true' : 'false');
+    }, [palmRejection]);
+
+    const [tempPalmRejection, setTempPalmRejection] = useState(palmRejection);
+
     const [isPenEditOpen, setIsPenEditOpen] = useState(false);
     const lastInteractionTimeRef = useRef(0);
 
@@ -773,6 +784,20 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
 
         fabricCanvasRef.current = canvas;
 
+        // Palm Rejection Filter
+        const filterPointer = (e: PointerEvent) => {
+            if (palmRejectionRef.current && e.pointerType === 'touch') {
+                e.stopImmediatePropagation();
+                // e.preventDefault(); // Don't preventDefault here as it might break scrolling if we allow it later
+            }
+        };
+
+        const upperCanvas = (canvas as any).upperCanvasEl;
+        if (upperCanvas) {
+            upperCanvas.addEventListener('pointerdown', filterPointer as any, true);
+            upperCanvas.addEventListener('pointermove', filterPointer as any, true);
+        }
+
         // Save initial state to history
         setTimeout(() => saveHistory(), 100);
 
@@ -823,6 +848,10 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
         }
 
         return () => {
+            if (upperCanvas) {
+                upperCanvas.removeEventListener('pointerdown', filterPointer as any, true);
+                upperCanvas.removeEventListener('pointermove', filterPointer as any, true);
+            }
             canvas.off('object:added', saveHistory);
             canvas.off('object:modified', saveHistory);
             canvas.off('object:removed', saveHistory);
@@ -965,6 +994,7 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
 
     const handlePenOk = () => {
         setBrushType(tempBrushType);
+        setPalmRejection(tempPalmRejection);
         setSettingsAnchor(null);
         setIsPenEditOpen(false);
         lastInteractionTimeRef.current = Date.now();
@@ -972,11 +1002,14 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
 
     const handlePenReset = () => {
         setTempBrushType('pen');
+        setTempPalmRejection(false);
     };
 
     const handlePenCancel = () => {
         setSettingsAnchor(null);
         setIsPenEditOpen(false);
+        setTempBrushType(brushType);
+        setTempPalmRejection(palmRejection);
     };
 
     const handleFontCancel = () => {
@@ -2421,6 +2454,28 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                                         $color={toolSettings['circle']?.color || color}
                                         $size={toolSettings['circle']?.size || brushSize}
                                     />
+                                </DashOption>
+
+                                <div style={{ borderTop: '1px solid #eee', margin: '4px 0' }}></div>
+
+                                <DashOption
+                                    $active={tempPalmRejection}
+                                    onClick={() => setTempPalmRejection(!tempPalmRejection)}
+                                    style={{ height: '36px', justifyContent: 'flex-start', padding: '0 12px', gap: '12px' }}
+                                >
+                                    <div style={{
+                                        width: '18px',
+                                        height: '18px',
+                                        borderRadius: '4px',
+                                        border: '2px solid #333',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        background: tempPalmRejection ? '#333' : 'transparent'
+                                    }}>
+                                        {tempPalmRejection && <div style={{ width: '8px', height: '8px', background: 'white', borderRadius: '1px' }} />}
+                                    </div>
+                                    <span style={{ fontSize: '0.85rem' }}>{(t.drawing as any)?.palm_rejection || 'Palm Rejection'}</span>
                                 </DashOption>
                             </div>
                             <CompactModalFooter>

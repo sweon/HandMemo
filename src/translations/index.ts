@@ -163,7 +163,8 @@ export const translations = {
             reset: "Reset",
             enter_filename: "Enter filename:",
             head_size: "Arrow Head Size",
-            opacity: "Opacity"
+            opacity: "Opacity",
+            palm_rejection: "Palm Rejection (Pen Only)"
         },
         android: {
             exit_warning: "Press back again to exit."
@@ -333,7 +334,8 @@ export const translations = {
             reset: "초기화",
             enter_filename: "파일명을 입력하세요:",
             head_size: "화살표 머리 크기",
-            opacity: "투명도"
+            opacity: "투명도",
+            palm_rejection: "팜 리젝션 (펜 전용)"
         },
         android: {
             exit_warning: "뒤로 가기 버튼을\n한 번 더 누르면 종료됩니다."
