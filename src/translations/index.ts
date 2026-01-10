@@ -161,7 +161,9 @@ export const translations = {
             eraser: "Eraser",
             ok: "OK",
             reset: "Reset",
-            enter_filename: "Enter filename:"
+            enter_filename: "Enter filename:",
+            head_size: "Arrow Head Size",
+            opacity: "Opacity"
         },
         android: {
             exit_warning: "Press back again to exit."
@@ -329,7 +331,9 @@ export const translations = {
             eraser: "지우개",
             ok: "확인",
             reset: "초기화",
-            enter_filename: "파일명을 입력하세요:"
+            enter_filename: "파일명을 입력하세요:",
+            head_size: "화살표 머리 크기",
+            opacity: "투명도"
         },
         android: {
             exit_warning: "뒤로 가기 버튼을\n한 번 더 누르면 종료됩니다."

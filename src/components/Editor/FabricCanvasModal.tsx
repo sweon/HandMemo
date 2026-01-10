@@ -354,7 +354,7 @@ const ColorInputWrapper = styled.div`
 const CustomRangeInput = styled.input<{ $size: number; $opacityValue?: number }>`
   appearance: none;
   width: 100%;
-  margin: 1rem 0;
+  margin: 0.2rem 0;
   cursor: pointer;
   background: transparent;
 
@@ -439,11 +439,13 @@ const INITIAL_SHAPE_DASH = 0; // Index in DASH_OPTIONS
 type ShapeStyle = {
     dashArray: number[] | undefined;
     opacity: number;
+    headSize?: number;
 };
 
 const DEFAULT_SHAPE_STYLE: ShapeStyle = {
     dashArray: DASH_OPTIONS[INITIAL_SHAPE_DASH],
-    opacity: INITIAL_SHAPE_OPACITY
+    opacity: INITIAL_SHAPE_OPACITY,
+    headSize: 20
 };
 
 type ToolbarItem = {
@@ -591,6 +593,7 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
     const [isShapeSettingsOpen, setIsShapeSettingsOpen] = useState(false);
     const [tempDashIndex, setTempDashIndex] = useState(0);
     const [tempShapeOpacity, setTempShapeOpacity] = useState(100);
+    const [tempHeadSize, setTempHeadSize] = useState(20);
 
     const [fontFamily, setFontFamily] = useState(() => localStorage.getItem('fabric_font_family') || 'Arial');
     const [isFontEditOpen, setIsFontEditOpen] = useState(false);
@@ -693,6 +696,7 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
     const isDrawingRef = useRef(false);
     const startPointRef = useRef<{ x: number, y: number } | null>(null);
     const activeShapeRef = useRef<fabric.Object | null>(null);
+    const arrowHeadPreviewRef = useRef<fabric.Polyline | null>(null);
 
     // History for undo/redo
     const historyRef = useRef<string[]>([]);
@@ -919,6 +923,7 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
         const currentIndex = DASH_OPTIONS.findIndex(d => JSON.stringify(d) === JSON.stringify(style.dashArray));
         setTempDashIndex(currentIndex === -1 ? 0 : currentIndex);
         setTempShapeOpacity(style.opacity);
+        setTempHeadSize(style.headSize || 20);
         setIsShapeSettingsOpen(true);
     };
 
@@ -929,7 +934,8 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                 ...prev,
                 [activeTool]: {
                     dashArray: DASH_OPTIONS[tempDashIndex],
-                    opacity: tempShapeOpacity
+                    opacity: tempShapeOpacity,
+                    headSize: tempHeadSize
                 }
             }));
         }
@@ -939,6 +945,7 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
     const handleShapeSettingsReset = () => {
         setTempDashIndex(0);
         setTempShapeOpacity(100);
+        setTempHeadSize(20);
     };
 
     const handleShapeSettingsCancel = () => {
@@ -1360,6 +1367,24 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
             if (activeTool === 'arrow') {
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 (shape as any).hasArrow = true;
+
+                // Add preview head
+                const head = new fabric.Polyline([
+                    new fabric.Point(pointer.x, pointer.y),
+                    new fabric.Point(pointer.x, pointer.y),
+                    new fabric.Point(pointer.x, pointer.y)
+                ], {
+                    stroke: color,
+                    strokeWidth: brushSize,
+                    fill: 'transparent',
+                    strokeLineCap: 'round',
+                    strokeLineJoin: 'round',
+                    selectable: false,
+                    evented: false,
+                    opacity: (currentStyle.opacity || 100) / 100
+                });
+                arrowHeadPreviewRef.current = head;
+                canvas.add(head);
             }
         } else if (activeTool === 'rect') {
             shape = new fabric.Rect({
@@ -1423,32 +1448,38 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
 
             if (activeTool === 'arrow') {
                 // Re-calculate arrow head points
-                const line = shape as fabric.Line;
-                const x1 = line.x1!;
-                const y1 = line.y1!;
-                const x2 = pointer.x;
-                const y2 = pointer.y;
+                const x2 = Math.round(pointer.x);
+                const y2 = Math.round(pointer.y);
+                const headAngle = Math.PI / 6;
 
-                // Calculate angle
-                const angle = Math.atan2(y2 - y1, x2 - x1);
-                const headLength = Math.max(10, brushSize * 3);
+                // Calculate angle from start to current pointer
+                const start = startPointRef.current!;
+                const angle = Math.atan2(y2 - Math.round(start.y), x2 - Math.round(start.x));
+                const currentStyle = shapeStyles['arrow'] || DEFAULT_SHAPE_STYLE;
+                const headLength = Math.round(currentStyle.headSize || Math.max(12, brushSize * 3));
 
-                // Arrow head points
-                const x3 = x2 - headLength * Math.cos(angle - Math.PI / 6);
-                const y3 = y2 - headLength * Math.sin(angle - Math.PI / 6);
-                const x4 = x2 - headLength * Math.cos(angle + Math.PI / 6);
-                const y4 = y2 - headLength * Math.sin(angle + Math.PI / 6);
+                // Arrow head points (pure mathematical symmetry, rounded for stability)
+                const x3 = Math.round(x2 - headLength * Math.cos(angle - headAngle));
+                const y3 = Math.round(y2 - headLength * Math.sin(angle - headAngle));
+                const x4 = Math.round(x2 - headLength * Math.cos(angle + headAngle));
+                const y4 = Math.round(y2 - headLength * Math.sin(angle + headAngle));
 
-                // We'll store arrow head properties on the object
-                // and use a custom render method or just add more lines.
-                // For simplicity during drawing, let's use a "Polyline" for the whole arrow or 
-                // just update this line and add the head at mouseUp.
-                // But it's better to see it while drawing.
-                // Let's use a custom property and override render.
+                if (arrowHeadPreviewRef.current) {
+                    arrowHeadPreviewRef.current.set({
+                        points: [
+                            new fabric.Point(x3, y3),
+                            new fabric.Point(x2, y2),
+                            new fabric.Point(x4, y4)
+                        ]
+                    });
+                    arrowHeadPreviewRef.current.setCoords();
+                    canvas.requestRenderAll();
+                }
 
-                // For now, let's keep it simple: store head points.
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 (shape as any).arrowHead = [new fabric.Point(x3, y3), new fabric.Point(x2, y2), new fabric.Point(x4, y4)];
+
+                // Update the line part
+                (shape as fabric.Line).set({ x2: x2, y2: y2 });
             }
         } else if (activeTool === 'rect') {
             shape.set({ left, top, width, height });
@@ -1502,38 +1533,79 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
             // If it's an arrow, we might want to convert it to a Path or Group for permanent storage
             if (activeTool === 'arrow' && (shape as fabric.Line).x1 !== undefined) {
                 const line = shape as fabric.Line;
-                const x1 = line.x1!;
-                const y1 = line.y1!;
-                const x2 = line.x2!;
-                const y2 = line.y2!;
+                const x1 = Math.round(line.x1!);
+                const y1 = Math.round(line.y1!);
+                const x2 = Math.round(line.x2!);
+                const y2 = Math.round(line.y2!);
 
                 const angle = Math.atan2(y2 - y1, x2 - x1);
-                const headLength = Math.max(10, brushSize * 3);
+                const currentStyle = shapeStyles[activeTool] || DEFAULT_SHAPE_STYLE;
+                const headLength = Math.round(currentStyle.headSize || Math.max(12, brushSize * 3));
+                const headAngle = Math.PI / 6;
 
-                const x3 = x2 - headLength * Math.cos(angle - Math.PI / 6);
-                const y3 = y2 - headLength * Math.sin(angle - Math.PI / 6);
-                const x4 = x2 - headLength * Math.cos(angle + Math.PI / 6);
-                const y4 = y2 - headLength * Math.sin(angle + Math.PI / 6);
-
+                const x3 = Math.round(x2 - headLength * Math.cos(angle - headAngle));
+                const y3 = Math.round(y2 - headLength * Math.sin(angle - headAngle));
+                const x4 = Math.round(x2 - headLength * Math.cos(angle + headAngle));
+                const y4 = Math.round(y2 - headLength * Math.sin(angle + headAngle));
                 const canvas = fabricCanvasRef.current;
+
                 if (canvas) {
                     canvas.remove(shape);
-                    const currentStyle = shapeStyles[activeTool] || DEFAULT_SHAPE_STYLE;
 
-                    const arrowPath = new fabric.Path(`M ${x1} ${y1} L ${x2} ${y2} M ${x3} ${y3} L ${x2} ${y2} L ${x4} ${y4}`, {
+                    // Calculate minimal point to use as group origin for precision
+                    const minX = Math.min(x1, x2, x3, x4);
+                    const minY = Math.min(y1, y2, y3, y4);
+
+                    // Line part (can be dashed)
+                    const linePart = new fabric.Line([x1 - minX, y1 - minY, x2 - minX, y2 - minY], {
                         stroke: color,
                         strokeWidth: brushSize,
                         strokeDashArray: currentStyle.dashArray,
-                        opacity: currentStyle.opacity / 100,
+                        strokeLineCap: 'round',
+                        originX: 'left',
+                        originY: 'top',
+                        left: x1 < x2 ? 0 : x1 - x2 // This is handled by Line, but let's be careful
+                    });
+                    // Re-set absolute positioning for Line based on the parent group's left/top
+                    linePart.set({ left: Math.min(x1, x2) - minX, top: Math.min(y1, y2) - minY });
+
+                    // Head part (always solid)
+                    const headPart = new fabric.Polyline([
+                        new fabric.Point(x3 - minX, y3 - minY),
+                        new fabric.Point(x2 - minX, y2 - minY),
+                        new fabric.Point(x4 - minX, y4 - minY)
+                    ], {
+                        stroke: color,
+                        strokeWidth: brushSize,
+                        strokeDashArray: undefined,
                         fill: 'transparent',
                         strokeLineCap: 'round',
                         strokeLineJoin: 'round',
+                        originX: 'left',
+                        originY: 'top',
+                        left: Math.min(x2, x3, x4) - minX,
+                        top: Math.min(y2, y3, y4) - minY
+                    });
+
+                    const arrowGroup = new fabric.Group([linePart, headPart], {
                         selectable: false,
                         evented: true,
                         isArrow: true,
+                        opacity: (currentStyle.opacity || 100) / 100,
+                        left: minX,
+                        top: minY,
+                        originX: 'left',
+                        originY: 'top'
                     } as any);
-                    canvas.add(arrowPath);
+
+                    canvas.add(arrowGroup);
                 }
+            }
+
+            if (arrowHeadPreviewRef.current) {
+                const canvas = fabricCanvasRef.current;
+                if (canvas) canvas.remove(arrowHeadPreviewRef.current);
+                arrowHeadPreviewRef.current = null;
             }
 
             activeShapeRef.current.setCoords();
@@ -1978,7 +2050,20 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
         const activeObjects = canvas.getActiveObjects();
         if (activeObjects.length > 0) {
             activeObjects.forEach((obj) => {
-                if (obj.type === 'i-text' || obj.type === 'text') {
+                if ((obj as any).isArrow && obj.type === 'group') {
+                    const group = obj as fabric.Group;
+                    group.getObjects().forEach((child, index) => {
+                        child.set({ stroke: color, strokeWidth: brushSize });
+                        // child 0 is the line, keep its dash if applicable
+                        // child 1 is the head, always solid
+                        if (index === 0) {
+                            const currentStyle = shapeStyles['arrow'] || DEFAULT_SHAPE_STYLE;
+                            child.set({ strokeDashArray: currentStyle.dashArray });
+                        } else {
+                            child.set({ strokeDashArray: undefined });
+                        }
+                    });
+                } else if (obj.type === 'i-text' || obj.type === 'text') {
                     obj.set({ fill: color });
                 } else {
                     obj.set({ stroke: color, strokeWidth: brushSize });
@@ -2007,7 +2092,7 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
             canvas.requestRenderAll();
             saveHistory();
         }
-    }, [color, brushSize, brushType, saveHistory]);
+    }, [color, brushSize, brushType, shapeStyles, saveHistory]);
 
     // Handle background change
     useEffect(() => {
@@ -2183,20 +2268,45 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                                 ))}
                             </div>
                             <div style={{ borderTop: '1px solid #eee', margin: '4px 0' }}></div>
-                            <ColorInputWrapper>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '0 4px' }}>
+                                <div style={{ fontSize: '0.7rem', color: '#666', fontWeight: 600, minWidth: '35px' }}>
+                                    {t.drawing?.opacity || 'Opacity'}
+                                </div>
                                 <CustomRangeInput
                                     type="range"
                                     min="10"
                                     max="100"
-                                    $size={10}
+                                    $size={6}
                                     $opacityValue={tempShapeOpacity}
                                     value={tempShapeOpacity}
                                     onChange={(e) => setTempShapeOpacity(parseInt(e.target.value))}
+                                    style={{ margin: 0, flex: 1 }}
                                 />
-                                <div style={{ fontSize: '0.7rem', color: '#666', fontWeight: 500 }}>
+                                <div style={{ fontSize: '0.7rem', color: '#666', fontWeight: 500, minWidth: '30px', textAlign: 'right' }}>
                                     {tempShapeOpacity}%
                                 </div>
-                            </ColorInputWrapper>
+                            </div>
+
+                            {activeTool === 'arrow' && (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '4px', borderTop: '1px solid #eee' }}>
+                                    <div style={{ fontSize: '0.7rem', color: '#666', fontWeight: 600, minWidth: '35px' }}>
+                                        {t.drawing?.head_size || 'Head'}
+                                    </div>
+                                    <CustomRangeInput
+                                        type="range"
+                                        min="5"
+                                        max="100"
+                                        $size={6}
+                                        value={tempHeadSize}
+                                        onChange={(e) => setTempHeadSize(parseInt(e.target.value))}
+                                        style={{ margin: 0, flex: 1 }}
+                                    />
+                                    <div style={{ fontSize: '0.7rem', color: '#666', fontWeight: 500, minWidth: '30px', textAlign: 'right' }}>
+                                        {tempHeadSize}px
+                                    </div>
+                                </div>
+                            )}
+
                             <CompactModalFooter>
                                 <CompactModalButton onClick={handleShapeSettingsReset}>
                                     {t.drawing?.reset || 'Reset'}
