@@ -226,7 +226,7 @@ const CompactModal = styled.div`
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
-  min-width: 110px;
+  min-width: 85px;
 `;
 
 const CompactModalFooter = styled.div`
