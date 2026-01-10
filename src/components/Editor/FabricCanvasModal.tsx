@@ -120,6 +120,7 @@ const ToolButton = styled.button<{ $active?: boolean }>`
 const ToolGroup = styled.div`
   display: flex;
   gap: 1px;
+  align-items: center;
 `;
 
 const ColorButton = styled.div<{ $color: string; $selected?: boolean }>`
@@ -808,9 +809,6 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                         <ToolButton $active={activeTool === 'diamond'} onClick={() => setActiveTool('diamond')} title="Diamond">
                             <DiamondIcon />
                         </ToolButton>
-                    </ToolGroup>
-
-                    <ToolGroup>
                         <ToolButton $active={activeTool === 'text'} onClick={() => setActiveTool('text')} title="Text (T)">
                             <FiType size={18} />
                         </ToolButton>
@@ -820,9 +818,7 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                         <ToolButton $active={activeTool === 'eraser_object'} onClick={() => setActiveTool('eraser_object')} title="Eraser (Object Delete)">
                             <ObjectEraserIcon />
                         </ToolButton>
-                    </ToolGroup>
 
-                    <ToolGroup>
                         <ToolButton onClick={handleUndo} title="Undo (Ctrl+Z)">
                             <FiRotateCcw size={18} />
                         </ToolButton>
@@ -836,9 +832,6 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                         }} title="Clear All">
                             <FiTrash2 size={18} />
                         </ToolButton>
-                    </ToolGroup>
-
-                    <ToolGroup style={{ position: 'relative' }}>
                         <ToolButton onClick={handleExtendHeight} title="Extend height">
                             <FiArrowDown size={18} />
                         </ToolButton>
@@ -1024,11 +1017,14 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                                 </button>
                             </div>
                         )}
-                    </ToolGroup>
 
-                    <ToolGroup>
                         {COLORS.map(c => (
-                            <div key={c} style={{ padding: 2 }}>
+                            <div key={c} style={{
+                                padding: '0 4px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                height: '28px'
+                            }}>
                                 <ColorButton
                                     $color={c}
                                     $selected={color === c && !activeTool.startsWith('eraser')}
@@ -1042,9 +1038,7 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                                 />
                             </div>
                         ))}
-                    </ToolGroup>
 
-                    <ToolGroup>
                         {BRUSH_SIZES.map(s => (
                             <ToolButton
                                 key={s}
