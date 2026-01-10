@@ -355,6 +355,16 @@ const DASH_OPTIONS: (number[] | undefined)[] = [
 const INITIAL_SHAPE_OPACITY = 100;
 const INITIAL_SHAPE_DASH = 0; // Index in DASH_OPTIONS
 
+type ShapeStyle = {
+    dashArray: number[] | undefined;
+    opacity: number;
+};
+
+const DEFAULT_SHAPE_STYLE: ShapeStyle = {
+    dashArray: DASH_OPTIONS[INITIAL_SHAPE_DASH],
+    opacity: INITIAL_SHAPE_OPACITY
+};
+
 type ToolbarItem = {
     id: string;
     type: 'tool' | 'action' | 'color' | 'size';
@@ -482,13 +492,9 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
     const [tempSize, setTempSize] = useState(2);
     const [editingSizeIndex, setEditingSizeIndex] = useState<number | null>(null);
 
-    const [shapeDashArray, setShapeDashArray] = useState<number[] | undefined>(() => {
-        const saved = localStorage.getItem('fabric_shape_dash');
-        return saved ? JSON.parse(saved) : DASH_OPTIONS[INITIAL_SHAPE_DASH];
-    });
-    const [shapeOpacity, setShapeOpacity] = useState<number>(() => {
-        const saved = localStorage.getItem('fabric_shape_opacity');
-        return saved ? parseInt(saved) : INITIAL_SHAPE_OPACITY;
+    const [shapeStyles, setShapeStyles] = useState<Record<string, ShapeStyle>>(() => {
+        const saved = localStorage.getItem('fabric_shape_styles');
+        return saved ? JSON.parse(saved) : {};
     });
     const [isShapeSettingsOpen, setIsShapeSettingsOpen] = useState(false);
     const [tempDashIndex, setTempDashIndex] = useState(0);
@@ -508,12 +514,8 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
     }, [toolbarItems]);
 
     useEffect(() => {
-        localStorage.setItem('fabric_shape_dash', JSON.stringify(shapeDashArray));
-    }, [shapeDashArray]);
-
-    useEffect(() => {
-        localStorage.setItem('fabric_shape_opacity', shapeOpacity.toString());
-    }, [shapeOpacity]);
+        localStorage.setItem('fabric_shape_styles', JSON.stringify(shapeStyles));
+    }, [shapeStyles]);
 
     // Shape drawing refs
     const isDrawingRef = useRef(false);
@@ -675,16 +677,24 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
         setEditingSizeIndex(null);
     };
 
-    const handleShapeToolDoubleClick = () => {
-        const currentIndex = DASH_OPTIONS.findIndex(d => JSON.stringify(d) === JSON.stringify(shapeDashArray));
+    const handleShapeToolDoubleClick = (toolId: string) => {
+        const style = shapeStyles[toolId] || DEFAULT_SHAPE_STYLE;
+        const currentIndex = DASH_OPTIONS.findIndex(d => JSON.stringify(d) === JSON.stringify(style.dashArray));
         setTempDashIndex(currentIndex === -1 ? 0 : currentIndex);
-        setTempShapeOpacity(shapeOpacity);
+        setTempShapeOpacity(style.opacity);
         setIsShapeSettingsOpen(true);
     };
 
     const handleShapeSettingsOk = () => {
-        setShapeDashArray(DASH_OPTIONS[tempDashIndex]);
-        setShapeOpacity(tempShapeOpacity);
+        if (activeTool) {
+            setShapeStyles(prev => ({
+                ...prev,
+                [activeTool]: {
+                    dashArray: DASH_OPTIONS[tempDashIndex],
+                    opacity: tempShapeOpacity
+                }
+            }));
+        }
         setIsShapeSettingsOpen(false);
     };
 
@@ -727,12 +737,12 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                                 onClick={() => setActiveTool(item.toolId!)}
                                 onDoubleClick={() => {
                                     if (['line', 'rect', 'circle', 'ellipse', 'triangle', 'diamond'].includes(item.toolId!)) {
-                                        handleShapeToolDoubleClick();
+                                        handleShapeToolDoubleClick(item.toolId!);
                                     }
                                 }}
                                 onTouchStart={() => {
                                     if (['line', 'rect', 'circle', 'ellipse', 'triangle', 'diamond'].includes(item.toolId!)) {
-                                        handleDoubleTap(`tool-${item.toolId}`, handleShapeToolDoubleClick);
+                                        handleDoubleTap(`tool-${item.toolId}`, () => handleShapeToolDoubleClick(item.toolId!));
                                     }
                                 }}
                                 title={(item.toolId ?? '').charAt(0).toUpperCase() + (item.toolId ?? '').slice(1)}
@@ -1023,11 +1033,12 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
         startPointRef.current = { x: pointer.x, y: pointer.y };
 
         let shape: fabric.Object | null = null;
+        const currentStyle = shapeStyles[activeTool] || DEFAULT_SHAPE_STYLE;
         const commonProps = {
             stroke: color,
             strokeWidth: brushSize,
-            strokeDashArray: shapeDashArray,
-            opacity: shapeOpacity / 100,
+            strokeDashArray: currentStyle.dashArray,
+            opacity: currentStyle.opacity / 100,
             fill: 'transparent',
             left: pointer.x,
             top: pointer.y,
@@ -1078,7 +1089,7 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
             activeShapeRef.current = shape;
             canvas.add(shape);
         }
-    }, [activeTool, color, brushSize, shapeDashArray, shapeOpacity]);
+    }, [activeTool, color, brushSize, shapeStyles]);
 
     const handleShapeMouseMove = React.useCallback((opt: fabric.IEvent) => {
         if (!isDrawingRef.current || !activeShapeRef.current || !startPointRef.current) return;
@@ -1427,7 +1438,7 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                 break;
         }
 
-    }, [activeTool, color, brushSize, handleShapeMouseDown, handleShapeMouseMove, handleShapeMouseUp]);
+    }, [activeTool, color, brushSize, shapeStyles, handleShapeMouseDown, handleShapeMouseMove, handleShapeMouseUp]);
 
     // Handle background change
     useEffect(() => {
