@@ -332,10 +332,40 @@ const ColorInputWrapper = styled.div`
 const CustomColorInput = styled.input`
   width: 100%;
   height: 38px;
-  border: none;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  padding: 0.2rem;
+  font-family: monospace;
+  font-size: 0.9rem;
+  text-align: center;
+  outline: none;
+
+  &:focus {
+    border-color: #333;
+  }
+`;
+
+const ColorGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 6px;
+  padding: 4px;
+`;
+
+const PaletteColor = styled.button<{ $color: string; $active: boolean }>`
+  width: 28px;
+  height: 28px;
+  background-color: ${({ $color }) => $color};
+  border: 1px solid ${({ $active }) => $active ? 'transparent' : 'rgba(0,0,0,0.1)'};
+  border-radius: 4px;
   cursor: pointer;
-  background: none;
   padding: 0;
+  box-shadow: ${({ $active }) => $active ? '0 0 0 2px #fff, 0 0 0 4px #333' : 'none'};
+  z-index: ${({ $active }) => $active ? 1 : 0};
+  
+  &:hover {
+    transform: scale(1.05);
+  }
 `;
 
 const CustomRangeInput = styled.input<{ $size: number; $opacityValue?: number }>`
@@ -413,6 +443,14 @@ interface FabricCanvasModalProps {
 }
 
 const INITIAL_COLORS = ['#000000', '#e03131', '#2f9e44', '#1971c2', '#f08c00', '#9c36b5'];
+const COLOR_PICKER_PALETTE = [
+    '#000000', '#495057', '#adb5bd', '#dee2e6', '#f8f9fa', '#ffffff',
+    '#c92a2a', '#e03131', '#ff8787', '#ffc9c9', '#a61e4d', '#d6336c',
+    '#862e9c', '#ae3ec9', '#5f3dc4', '#7048e8', '#364fc7', '#4263eb',
+    '#1864ab', '#1c7ed6', '#0b7285', '#1098ad', '#087f5f', '#0ca678',
+    '#2b8a3e', '#37b24d', '#5c940d', '#74b816', '#e67700', '#f59f00',
+    '#d9480f', '#f76707', '#ff922b', '#ffa94d', '#51cf66', '#94d82d'
+];
 const INITIAL_BRUSH_SIZES = [2, 4, 8, 16];
 const DASH_OPTIONS: (number[] | undefined)[] = [
     undefined,
@@ -1703,14 +1741,38 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                         <CompactModal
                             $anchor={settingsAnchor || undefined}
                             onClick={e => e.stopPropagation()}
+                            style={{ minWidth: '220px' }}
                         >
                             <ColorInputWrapper>
-                                <CustomColorInput
-                                    type="color"
-                                    value={tempColor}
-                                    onChange={(e) => setTempColor(e.target.value)}
-                                />
-                                <div style={{ fontSize: '0.75rem', color: '#888', fontWeight: 500 }}>{tempColor.toUpperCase()}</div>
+                                <ColorGrid>
+                                    {COLOR_PICKER_PALETTE.map((c) => (
+                                        <PaletteColor
+                                            key={c}
+                                            $color={c}
+                                            $active={tempColor.toLowerCase() === c.toLowerCase()}
+                                            onClick={() => setTempColor(c)}
+                                        />
+                                    ))}
+                                </ColorGrid>
+                                <div style={{ borderTop: '1px solid #eee', width: '100%', margin: '4px 0' }}></div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%' }}>
+                                    <div style={{
+                                        width: '32px',
+                                        height: '32px',
+                                        background: tempColor,
+                                        borderRadius: '4px',
+                                        border: '1px solid #eee'
+                                    }} />
+                                    <CustomColorInput
+                                        type="text"
+                                        value={tempColor}
+                                        onChange={(e) => {
+                                            const val = e.target.value;
+                                            setTempColor(val);
+                                        }}
+                                        placeholder="#000000"
+                                    />
+                                </div>
                             </ColorInputWrapper>
                             <CompactModalFooter>
                                 <CompactModalButton onClick={handleColorReset}>
