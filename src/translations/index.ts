@@ -160,7 +160,8 @@ export const translations = {
             pen: "Pen",
             eraser: "Eraser",
             ok: "OK",
-            reset: "Reset"
+            reset: "Reset",
+            enter_filename: "Enter filename:"
         },
         android: {
             exit_warning: "Press back again to exit."
@@ -327,7 +328,8 @@ export const translations = {
             pen: "펜",
             eraser: "지우개",
             ok: "확인",
-            reset: "초기화"
+            reset: "초기화",
+            enter_filename: "파일명을 입력하세요:"
         },
         android: {
             exit_warning: "뒤로 가기 버튼을\n한 번 더 누르면 종료됩니다."

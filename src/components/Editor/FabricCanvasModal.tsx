@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState, useLayoutEffect } from 'react';
 import styled from 'styled-components';
 import { fabric } from 'fabric';
-import { FiX, FiCheck, FiTrash2, FiEdit2, FiRotateCcw, FiRotateCw, FiSquare, FiCircle, FiMinus, FiType, FiArrowDown, FiTriangle, FiMousePointer } from 'react-icons/fi';
+import { FiX, FiCheck, FiTrash2, FiEdit2, FiRotateCcw, FiRotateCw, FiSquare, FiCircle, FiMinus, FiType, FiArrowDown, FiTriangle, FiMousePointer, FiDownload } from 'react-icons/fi';
 import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd';
 import { HexColorPicker } from 'react-colorful';
 import { useLanguage } from '../../contexts/LanguageContext';
@@ -462,6 +462,7 @@ const INITIAL_TOOLBAR_ITEMS: ToolbarItem[] = [
     { id: 'eraser_object', type: 'tool', toolId: 'eraser_object' },
     { id: 'undo', type: 'action', actionId: 'undo' },
     { id: 'redo', type: 'action', actionId: 'redo' },
+    { id: 'download_png', type: 'action', actionId: 'download_png' },
     { id: 'clear', type: 'action', actionId: 'clear' },
     { id: 'extend_height', type: 'action', actionId: 'extend_height' },
     { id: 'background', type: 'action', actionId: 'background' },
@@ -1032,6 +1033,11 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                                         <FiRotateCw size={18} />
                                     </ToolButton>
                                 )}
+                                {item.actionId === 'download_png' && (
+                                    <ToolButton onClick={handleDownloadPNG} title="Download as PNG">
+                                        <FiDownload size={18} />
+                                    </ToolButton>
+                                )}
                                 {item.actionId === 'clear' && (
                                     <ToolButton onClick={() => {
                                         if (window.confirm('Clear all?')) {
@@ -1500,6 +1506,43 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
         fabricCanvasRef.current.setBackgroundColor('#ffffff', () => {
             fabricCanvasRef.current?.renderAll();
         });
+    };
+
+    const handleDownloadPNG = () => {
+        const canvas = fabricCanvasRef.current;
+        if (!canvas) return;
+
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        const seconds = String(now.getSeconds()).padStart(2, '0');
+
+        const timestamp = `${year}${month}${day}-${hours}${minutes}${seconds}`;
+        const defaultName = `drawing-${timestamp}`;
+        const fileName = window.prompt(t.drawing?.enter_filename || 'Enter filename:', defaultName);
+
+        if (fileName === null) return; // User cancelled
+
+        const finalFileName = fileName.trim() || defaultName;
+
+        // Get the data URL of the canvas
+        // This includes the background color/pattern
+        const dataURL = canvas.toDataURL({
+            format: 'png',
+            quality: 1,
+            enableRetinaScaling: true
+        });
+
+        // Create a temporary link and trigger download
+        const link = document.createElement('a');
+        link.download = finalFileName.endsWith('.png') ? finalFileName : `${finalFileName}.png`;
+        link.href = dataURL;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     };
 
     const handleUndo = React.useCallback(() => {
