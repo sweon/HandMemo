@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState, useLayoutEffect } from 'react';
 import styled from 'styled-components';
 import { fabric } from 'fabric';
-import { FiX, FiCheck, FiTrash2, FiEdit2, FiRotateCcw, FiRotateCw, FiSquare, FiCircle, FiMinus, FiType, FiArrowDown, FiTriangle, FiGrid } from 'react-icons/fi';
+import { FiX, FiCheck, FiTrash2, FiEdit2, FiRotateCcw, FiRotateCw, FiSquare, FiCircle, FiMinus, FiType, FiArrowDown, FiTriangle } from 'react-icons/fi';
 import { useLanguage } from '../../contexts/LanguageContext';
 
 // Pixel Eraser Icon - 3D pink block eraser
@@ -32,6 +32,16 @@ const EllipseIcon = () => (
 const DiamondIcon = () => (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M12 2L2 12L12 22L22 12L12 2Z" />
+    </svg>
+);
+
+const BackgroundIcon = () => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="3" y="3" width="18" height="18" rx="2" />
+        <line x1="3" y1="9" x2="21" y2="9" />
+        <line x1="3" y1="15" x2="21" y2="15" />
+        <line x1="9" y1="3" x2="9" y2="21" />
+        <line x1="15" y1="3" x2="15" y2="21" />
     </svg>
 );
 
@@ -849,7 +859,7 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                             onClick={() => setIsBgPickerOpen(!isBgPickerOpen)}
                             title="Background"
                         >
-                            <FiGrid size={18} />
+                            <BackgroundIcon />
                         </ToolButton>
 
                         {isBgPickerOpen && (
