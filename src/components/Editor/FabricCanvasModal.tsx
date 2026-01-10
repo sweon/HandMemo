@@ -459,7 +459,7 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                 canvas.defaultCursor = 'pointer';
                 canvas.hoverCursor = 'not-allowed';
 
-                // Enable events on all objects so they can be clicked
+                // Enable events on all objects so they can be detected
                 canvas.forEachObject((obj) => {
                     obj.set({
                         selectable: false,
@@ -469,11 +469,25 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                 });
                 canvas.requestRenderAll();
 
+                let isErasingDragging = false;
+
                 canvas.on('mouse:down', (opt) => {
+                    isErasingDragging = true;
                     if (opt.target) {
                         canvas.remove(opt.target);
                         canvas.requestRenderAll();
                     }
+                });
+
+                canvas.on('mouse:move', (opt) => {
+                    if (isErasingDragging && opt.target) {
+                        canvas.remove(opt.target);
+                        canvas.requestRenderAll();
+                    }
+                });
+
+                canvas.on('mouse:up', () => {
+                    isErasingDragging = false;
                 });
                 break;
 
