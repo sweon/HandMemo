@@ -788,16 +788,37 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
         const filterPointer = (e: any) => {
             if (!palmRejectionRef.current) return;
 
-            // 1. Allow Pen (Pointer Event)
-            if (e.pointerType === 'pen') return;
+            // 1. Check Pointer Properties
+            const isPenPointer = e.pointerType === 'pen';
 
-            // 2. Allow Stylus (Touch Event)
+            // 2. Check Touch Properties (Stylus specific)
+            let isStylusTouch = false;
             if (e.touches && e.touches.length > 0) {
                 const t = e.touches[0];
-                if ((t as any).touchType === 'stylus') return;
+                if ((t as any).touchType === 'stylus') isStylusTouch = true;
+
+                // Heuristic: Check for Pressure/Force or Tilt (Hardware features of S-Pen)
+                // Fingers on Android usually report force=0 or force=1. S-Pen reports variable force.
+                const force = t.force || e.pressure || 0;
+                // Allow if force is valid and "variable" (not just a binary 1 for a hard press)
+                // Also check tilt if available (Touch events rarely have tilt, but Pointer events might)
+                // Note: We check e.pressure for PointerEvents as well.
+                if (force > 0 && force !== 1) isStylusTouch = true;
             }
 
-            // 3. Block Everything Else (Finger, Mouse, etc.)
+            // 3. Check specific Pointer properties (Tilt/Pressure)
+            const pressure = e.pressure || 0;
+            const tilt = (e.tiltX || 0) !== 0 || (e.tiltY || 0) !== 0;
+
+            // ALLOW if:
+            // - It says it's a pen/stylus
+            // - It has tilt (Fingers don't tilt)
+            // - It has pressure sensitivity (typical of pens)
+            if (isPenPointer || isStylusTouch || tilt || (pressure > 0 && pressure !== 0.5 && pressure !== 1)) {
+                return; // PASS
+            }
+
+            // Otherwise, BLOCK (Finger/Mouse)
             if (e.cancelable && e.type !== 'pointerleave' && e.type !== 'pointercancel') {
                 e.preventDefault();
             }
