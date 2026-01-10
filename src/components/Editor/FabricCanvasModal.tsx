@@ -2,7 +2,6 @@ import React, { useEffect, useRef, useState, useLayoutEffect } from 'react';
 import styled from 'styled-components';
 import { fabric } from 'fabric';
 import { FiX, FiCheck, FiTrash2, FiEdit2, FiRotateCcw, FiRotateCw, FiSquare, FiCircle, FiMinus, FiType, FiArrowDown, FiTriangle, FiMousePointer, FiDownload } from 'react-icons/fi';
-import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd';
 import { HexColorPicker } from 'react-colorful';
 import { useLanguage } from '../../contexts/LanguageContext';
 
@@ -544,7 +543,7 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
         const saved = localStorage.getItem('fabric_brush_sizes');
         return saved ? JSON.parse(saved) : INITIAL_BRUSH_SIZES;
     });
-    const [toolbarItems, setToolbarItems] = useState<ToolbarItem[]>(() => {
+    const [toolbarItems] = useState<ToolbarItem[]>(() => {
         const saved = localStorage.getItem('fabric_toolbar_order');
         if (!saved) return INITIAL_TOOLBAR_ITEMS;
 
@@ -1074,7 +1073,7 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
     };
 
 
-    const renderToolbarItem = (item: ToolbarItem, index: number) => {
+    const renderToolbarItem = (item: ToolbarItem) => {
         return (
             <div
                 key={item.id}
@@ -2187,7 +2186,7 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
             <ModalContainer>
                 <Toolbar>
                     <ToolGroup>
-                        {toolbarItems.map((item, index) => renderToolbarItem(item, index))}
+                        {toolbarItems.map((item) => renderToolbarItem(item))}
                     </ToolGroup>
                 </Toolbar>
                 {isColorEditOpen && (
