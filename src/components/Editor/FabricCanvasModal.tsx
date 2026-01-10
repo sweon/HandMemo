@@ -120,15 +120,6 @@ const ToolButton = styled.button<{ $active?: boolean }>`
 const ToolGroup = styled.div`
   display: flex;
   gap: 1px;
-  padding-right: 6px;
-  border-right: 1px solid #dee2e6;
-  margin-right: 6px;
-
-  &:last-child {
-      border: none;
-      margin-right: 0;
-      padding-right: 0;
-  }
 `;
 
 const ColorButton = styled.div<{ $color: string; $selected?: boolean }>`
@@ -817,12 +808,12 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                         <ToolButton $active={activeTool === 'diamond'} onClick={() => setActiveTool('diamond')} title="Diamond">
                             <DiamondIcon />
                         </ToolButton>
-                        <ToolButton $active={activeTool === 'text'} onClick={() => setActiveTool('text')} title="Text (T)">
-                            <FiType size={18} />
-                        </ToolButton>
                     </ToolGroup>
 
                     <ToolGroup>
+                        <ToolButton $active={activeTool === 'text'} onClick={() => setActiveTool('text')} title="Text (T)">
+                            <FiType size={18} />
+                        </ToolButton>
                         <ToolButton $active={activeTool === 'eraser_pixel'} onClick={() => setActiveTool('eraser_pixel')} title="Eraser (Brush)">
                             <PixelEraserIcon />
                         </ToolButton>
@@ -847,13 +838,10 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                         </ToolButton>
                     </ToolGroup>
 
-                    <ToolGroup>
+                    <ToolGroup style={{ position: 'relative' }}>
                         <ToolButton onClick={handleExtendHeight} title="Extend height">
                             <FiArrowDown size={18} />
                         </ToolButton>
-                    </ToolGroup>
-
-                    <ToolGroup style={{ position: 'relative' }}>
                         <ToolButton
                             $active={background !== 'none' || isBgPickerOpen}
                             onClick={() => setIsBgPickerOpen(!isBgPickerOpen)}
