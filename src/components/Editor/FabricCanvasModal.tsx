@@ -785,17 +785,33 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
         fabricCanvasRef.current = canvas;
 
         // Palm Rejection Filter
-        const filterPointer = (e: PointerEvent) => {
-            if (palmRejectionRef.current && e.pointerType === 'touch') {
-                e.stopImmediatePropagation();
-                // e.preventDefault(); // Don't preventDefault here as it might break scrolling if we allow it later
+        const filterPointer = (e: any) => {
+            if (!palmRejectionRef.current) return;
+
+            // 1. Allow Pen (Pointer Event)
+            if (e.pointerType === 'pen') return;
+
+            // 2. Allow Stylus (Touch Event)
+            if (e.touches && e.touches.length > 0) {
+                const t = e.touches[0];
+                if ((t as any).touchType === 'stylus') return;
             }
+
+            // 3. Block Everything Else (Finger, Mouse, etc.)
+            if (e.cancelable && e.type !== 'pointerleave' && e.type !== 'pointercancel') {
+                e.preventDefault();
+            }
+            e.stopImmediatePropagation();
+            e.stopPropagation();
         };
 
         const upperCanvas = (canvas as any).upperCanvasEl;
         if (upperCanvas) {
-            upperCanvas.addEventListener('pointerdown', filterPointer as any, true);
-            upperCanvas.addEventListener('pointermove', filterPointer as any, true);
+            const opts = { capture: true, passive: false };
+            upperCanvas.addEventListener('pointerdown', filterPointer, opts);
+            upperCanvas.addEventListener('pointermove', filterPointer, opts);
+            upperCanvas.addEventListener('touchstart', filterPointer, opts);
+            upperCanvas.addEventListener('touchmove', filterPointer, opts);
         }
 
         // Save initial state to history
@@ -849,8 +865,10 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
 
         return () => {
             if (upperCanvas) {
-                upperCanvas.removeEventListener('pointerdown', filterPointer as any, true);
-                upperCanvas.removeEventListener('pointermove', filterPointer as any, true);
+                upperCanvas.removeEventListener('pointerdown', filterPointer, true);
+                upperCanvas.removeEventListener('pointermove', filterPointer, true);
+                upperCanvas.removeEventListener('touchstart', filterPointer, true);
+                upperCanvas.removeEventListener('touchmove', filterPointer, true);
             }
             canvas.off('object:added', saveHistory);
             canvas.off('object:modified', saveHistory);
