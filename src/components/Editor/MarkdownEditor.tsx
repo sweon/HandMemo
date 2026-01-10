@@ -250,6 +250,7 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({ value, onChange 
       "preview", "side-by-side", "fullscreen",
       "guide"
     ] as any,
+    autofocus: false,
     status: false,
     maxHeight: "500px",
   }), []);

@@ -234,7 +234,6 @@ export const AddBookModal: React.FC<AddBookModalProps> = ({ onClose, editTarget 
               onChange={e => setTitle(e.target.value)}
               placeholder={t.book_detail.title}
               required
-              autoFocus
             />
           </FormGroup>
           <FormGroup>

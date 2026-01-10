@@ -408,7 +408,6 @@ export const MemoDetail: React.FC = () => {
                         value={title}
                         onChange={e => setTitle(e.target.value)}
                         placeholder={t.memo_detail.title_placeholder}
-                        autoFocus
                     />
                 ) : (
                     <TitleDisplay>{memo?.title}</TitleDisplay>
