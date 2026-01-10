@@ -135,13 +135,13 @@ const Toolbar = styled.div`
   align-items: center;
 `;
 
-const ToolButton = styled.button<{ $active?: boolean }>`
+const ToolButton = styled.button<{ $active?: boolean; disabled?: boolean }>`
   background: ${({ $active }) => $active ? '#e9ecef' : 'transparent'};
   border: 1px solid ${({ $active }) => $active ? '#adb5bd' : 'transparent'};
   color: #333;
   padding: 0.3rem;
   border-radius: 3px;
-  cursor: pointer;
+  cursor: ${({ disabled }) => disabled ? 'default' : 'pointer'};
   display: flex;
   align-items: center;
   justify-content: center;
@@ -149,9 +149,11 @@ const ToolButton = styled.button<{ $active?: boolean }>`
   min-width: 28px;
   height: 28px;
   touch-action: manipulation;
+  opacity: ${({ disabled }) => disabled ? 0.3 : 1};
+  pointer-events: ${({ disabled }) => disabled ? 'none' : 'auto'};
   
   &:hover {
-    background: #e9ecef;
+    background: ${({ disabled }) => disabled ? 'transparent' : '#e9ecef'};
   }
 `;
 
@@ -422,6 +424,7 @@ const DASH_OPTIONS: (number[] | undefined)[] = [
     [20, 10],
     [5, 10]
 ];
+const INITIAL_FONTS = ['Arial', 'Times New Roman', 'Courier New', 'Georgia', 'Verdana', 'Impact', 'Comic Sans MS'];
 const INITIAL_SHAPE_OPACITY = 100;
 const INITIAL_SHAPE_DASH = 0; // Index in DASH_OPTIONS
 
@@ -448,6 +451,7 @@ const INITIAL_TOOLBAR_ITEMS: ToolbarItem[] = [
     { id: 'select', type: 'tool', toolId: 'select' },
     { id: 'pen', type: 'tool', toolId: 'pen' },
     { id: 'line', type: 'tool', toolId: 'line' },
+    { id: 'arrow_v2', type: 'tool', toolId: 'arrow' },
     { id: 'rect', type: 'tool', toolId: 'rect' },
     { id: 'circle', type: 'tool', toolId: 'circle' },
     { id: 'ellipse', type: 'tool', toolId: 'ellipse' },
@@ -473,7 +477,7 @@ const INITIAL_TOOLBAR_ITEMS: ToolbarItem[] = [
     { id: 'size-3', type: 'size', sizeIndex: 3 },
 ];
 
-type ToolType = 'select' | 'pen' | 'eraser_pixel' | 'eraser_object' | 'line' | 'rect' | 'circle' | 'text' | 'triangle' | 'ellipse' | 'diamond';
+type ToolType = 'select' | 'pen' | 'eraser_pixel' | 'eraser_object' | 'line' | 'arrow' | 'rect' | 'circle' | 'text' | 'triangle' | 'ellipse' | 'diamond';
 type BackgroundType = 'none' | 'lines-xs' | 'lines-sm' | 'lines-md' | 'lines-lg' | 'lines-xl' | 'grid-xs' | 'grid-sm' | 'grid-md' | 'grid-lg' | 'grid-xl';
 
 const createBackgroundPattern = (type: BackgroundType) => {
@@ -536,15 +540,24 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
         const saved = localStorage.getItem('fabric_toolbar_order');
         if (!saved) return INITIAL_TOOLBAR_ITEMS;
 
-        const parsed: ToolbarItem[] = JSON.parse(saved);
-        // Check if all tools from INITIAL_TOOLBAR_ITEMS are present (specifically the new 'select' tool)
+        let parsed: ToolbarItem[] = JSON.parse(saved);
+
+        // Filter out any items that are no longer in INITIAL_TOOLBAR_ITEMS (migration)
+        parsed = parsed.filter(p => INITIAL_TOOLBAR_ITEMS.some(i => i.id === p.id));
+
+        // Check if all tools from INITIAL_TOOLBAR_ITEMS are present
         const missingItems = INITIAL_TOOLBAR_ITEMS.filter(initialItem =>
             !parsed.some(parsedItem => parsedItem.id === initialItem.id)
         );
 
         if (missingItems.length > 0) {
-            // Add missing items to the front
-            return [...missingItems, ...parsed];
+            // Insert missing items at their intended position
+            const newItems = [...parsed];
+            missingItems.forEach(item => {
+                const intendedIndex = INITIAL_TOOLBAR_ITEMS.findIndex(i => i.id === item.id);
+                newItems.splice(intendedIndex, 0, item);
+            });
+            return newItems;
         }
         return parsed;
     });
@@ -570,6 +583,15 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
     const [tempDashIndex, setTempDashIndex] = useState(0);
     const [tempShapeOpacity, setTempShapeOpacity] = useState(100);
 
+    const [fontFamily, setFontFamily] = useState(() => localStorage.getItem('fabric_font_family') || 'Arial');
+    const [isFontEditOpen, setIsFontEditOpen] = useState(false);
+    const [tempFontFamily, setTempFontFamily] = useState(fontFamily);
+
+    // Save customized settings
+    useEffect(() => {
+        localStorage.setItem('fabric_font_family', fontFamily);
+    }, [fontFamily]);
+
     // Save customized settings
     useEffect(() => {
         localStorage.setItem('fabric_colors', JSON.stringify(availableColors));
@@ -591,6 +613,8 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         return (localStorage.getItem('fabric_brush_type') as any) || 'pen';
     });
+    const [canUndo, setCanUndo] = useState(false);
+    const [canRedo, setCanRedo] = useState(false);
     const [tempBrushType, setTempBrushType] = useState(brushType);
     const [isPenEditOpen, setIsPenEditOpen] = useState(false);
     const lastInteractionTimeRef = useRef(0);
@@ -645,7 +669,7 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
     }, [activeTool, brushType]);
 
     // Helper to update persistent settings
-    const updateToolSetting = (newColor?: string, newSize?: number) => {
+    const updateToolSetting = React.useCallback((newColor?: string, newSize?: number) => {
         const key = getToolKey(activeTool, brushType);
         setToolSettings(prev => ({
             ...prev,
@@ -654,7 +678,7 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                 size: newSize !== undefined ? newSize : (prev[key]?.size || brushSize)
             }
         }));
-    };
+    }, [activeTool, brushType, color, brushSize]);
 
     // Shape drawing refs
     const isDrawingRef = useRef(false);
@@ -685,7 +709,7 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
         }
     };
 
-    const saveHistory = () => {
+    const saveHistory = React.useCallback(() => {
         if (isUndoRedoRef.current) return;
         const canvas = fabricCanvasRef.current;
         if (!canvas) return;
@@ -705,7 +729,10 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
             historyRef.current.shift();
             historyIndexRef.current--;
         }
-    };
+
+        setCanUndo(historyIndexRef.current > 0);
+        setCanRedo(false);
+    }, []);
 
     useLayoutEffect(() => {
         if (!canvasRef.current || !containerRef.current) return;
@@ -908,6 +935,28 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
         setIsPenEditOpen(false);
     };
 
+    const handleFontCancel = () => {
+        setSettingsAnchor(null);
+        setIsFontEditOpen(false);
+    };
+
+    const handleTextDoubleClick = (e: React.MouseEvent | React.TouchEvent) => {
+        const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+        setSettingsAnchor({
+            top: rect.bottom + 5
+        });
+        setTempFontFamily(fontFamily);
+        openedTimeRef.current = Date.now();
+        setIsFontEditOpen(true);
+    };
+
+    const handleFontOk = () => {
+        setFontFamily(tempFontFamily);
+        setSettingsAnchor(null);
+        setIsFontEditOpen(false);
+        lastInteractionTimeRef.current = Date.now();
+    };
+
     const handleDragEnd = (result: DropResult) => {
         if (!result.destination) return;
 
@@ -939,14 +988,18 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                                 onDoubleClick={(e) => {
                                     if (item.toolId === 'pen') {
                                         handlePenDoubleClick(e);
-                                    } else if (['line', 'rect', 'circle', 'ellipse', 'triangle', 'diamond'].includes(item.toolId!)) {
+                                    } else if (item.toolId === 'text') {
+                                        handleTextDoubleClick(e);
+                                    } else if (['line', 'arrow', 'rect', 'circle', 'ellipse', 'triangle', 'diamond'].includes(item.toolId!)) {
                                         handleShapeToolDoubleClick(e, item.toolId!);
                                     }
                                 }}
                                 onTouchStart={(e) => {
                                     if (item.toolId === 'pen') {
                                         handleDoubleTap(e, `tool - ${item.toolId} `, (ev) => handlePenDoubleClick(ev));
-                                    } else if (['line', 'rect', 'circle', 'ellipse', 'triangle', 'diamond'].includes(item.toolId!)) {
+                                    } else if (item.toolId === 'text') {
+                                        handleDoubleTap(e, `tool - ${item.toolId} `, (ev) => handleTextDoubleClick(ev));
+                                    } else if (['line', 'arrow', 'rect', 'circle', 'ellipse', 'triangle', 'diamond'].includes(item.toolId!)) {
                                         handleDoubleTap(e, `tool - ${item.toolId} `, (ev) => handleShapeToolDoubleClick(ev, item.toolId!));
                                     }
                                 }}
@@ -955,6 +1008,7 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                                 {item.toolId === 'select' && <FiMousePointer size={18} />}
                                 {item.toolId === 'pen' && <FiEdit2 size={18} />}
                                 {item.toolId === 'line' && <FiMinus size={18} style={{ transform: 'rotate(-45deg)' }} />}
+                                {item.toolId === 'arrow' && <FiArrowDown size={18} style={{ transform: 'rotate(-135deg)' }} />}
                                 {item.toolId === 'rect' && <FiSquare size={18} />}
                                 {item.toolId === 'circle' && <FiCircle size={18} />}
                                 {item.toolId === 'ellipse' && <EllipseIcon />}
@@ -969,12 +1023,12 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                         {item.type === 'action' && (
                             <>
                                 {item.actionId === 'undo' && (
-                                    <ToolButton onClick={handleUndo} title="Undo (Ctrl+Z)">
+                                    <ToolButton onClick={handleUndo} title="Undo (Ctrl+Z)" disabled={!canUndo}>
                                         <FiRotateCcw size={18} />
                                     </ToolButton>
                                 )}
                                 {item.actionId === 'redo' && (
-                                    <ToolButton onClick={handleRedo} title="Redo (Ctrl+Y)">
+                                    <ToolButton onClick={handleRedo} title="Redo (Ctrl+Y)" disabled={!canRedo}>
                                         <FiRotateCw size={18} />
                                     </ToolButton>
                                 )}
@@ -1256,11 +1310,15 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
             evented: false,
         };
 
-        if (activeTool === 'line') {
+        if (activeTool === 'line' || activeTool === 'arrow') {
             shape = new fabric.Line([pointer.x, pointer.y, pointer.x, pointer.y], {
                 ...commonProps,
                 strokeLineCap: 'round'
             });
+            if (activeTool === 'arrow') {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                (shape as any).hasArrow = true;
+            }
         } else if (activeTool === 'rect') {
             shape = new fabric.Rect({
                 ...commonProps,
@@ -1315,8 +1373,38 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
         const width = Math.abs(pointer.x - start.x);
         const height = Math.abs(pointer.y - start.y);
 
-        if (activeTool === 'line') {
+        if (activeTool === 'line' || activeTool === 'arrow') {
             (shape as fabric.Line).set({ x2: pointer.x, y2: pointer.y });
+
+            if (activeTool === 'arrow') {
+                // Re-calculate arrow head points
+                const line = shape as fabric.Line;
+                const x1 = line.x1!;
+                const y1 = line.y1!;
+                const x2 = pointer.x;
+                const y2 = pointer.y;
+
+                // Calculate angle
+                const angle = Math.atan2(y2 - y1, x2 - x1);
+                const headLength = Math.max(10, brushSize * 3);
+
+                // Arrow head points
+                const x3 = x2 - headLength * Math.cos(angle - Math.PI / 6);
+                const y3 = y2 - headLength * Math.sin(angle - Math.PI / 6);
+                const x4 = x2 - headLength * Math.cos(angle + Math.PI / 6);
+                const y4 = y2 - headLength * Math.sin(angle + Math.PI / 6);
+
+                // We'll store arrow head properties on the object
+                // and use a custom render method or just add more lines.
+                // For simplicity during drawing, let's use a "Polyline" for the whole arrow or 
+                // just update this line and add the head at mouseUp.
+                // But it's better to see it while drawing.
+                // Let's use a custom property and override render.
+
+                // For now, let's keep it simple: store head points.
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                (shape as any).arrowHead = [new fabric.Point(x3, y3), new fabric.Point(x2, y2), new fabric.Point(x4, y4)];
+            }
         } else if (activeTool === 'rect') {
             shape.set({ left, top, width, height });
         } else if (activeTool === 'circle') {
@@ -1363,10 +1451,48 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
     const handleShapeMouseUp = React.useCallback(() => {
         isDrawingRef.current = false;
         if (activeShapeRef.current) {
+            const shape = activeShapeRef.current;
+
+            // If it's an arrow, we might want to convert it to a Path or Group for permanent storage
+            if (activeTool === 'arrow' && (shape as fabric.Line).x1 !== undefined) {
+                const line = shape as fabric.Line;
+                const x1 = line.x1!;
+                const y1 = line.y1!;
+                const x2 = line.x2!;
+                const y2 = line.y2!;
+
+                const angle = Math.atan2(y2 - y1, x2 - x1);
+                const headLength = Math.max(10, brushSize * 3);
+
+                const x3 = x2 - headLength * Math.cos(angle - Math.PI / 6);
+                const y3 = y2 - headLength * Math.sin(angle - Math.PI / 6);
+                const x4 = x2 - headLength * Math.cos(angle + Math.PI / 6);
+                const y4 = y2 - headLength * Math.sin(angle + Math.PI / 6);
+
+                const canvas = fabricCanvasRef.current;
+                if (canvas) {
+                    canvas.remove(shape);
+                    const currentStyle = shapeStyles[activeTool] || DEFAULT_SHAPE_STYLE;
+
+                    const arrowPath = new fabric.Path(`M ${x1} ${y1} L ${x2} ${y2} M ${x3} ${y3} L ${x2} ${y2} L ${x4} ${y4}`, {
+                        stroke: color,
+                        strokeWidth: brushSize,
+                        strokeDashArray: currentStyle.dashArray,
+                        opacity: currentStyle.opacity / 100,
+                        fill: 'transparent',
+                        strokeLineCap: 'round',
+                        strokeLineJoin: 'round',
+                        selectable: false,
+                        evented: true,
+                    });
+                    canvas.add(arrowPath);
+                }
+            }
+
             activeShapeRef.current.setCoords();
             activeShapeRef.current = null;
         }
-    }, []);
+    }, [activeTool, color, brushSize, shapeStyles]);
 
     const handleClear = () => {
         if (!fabricCanvasRef.current) return;
@@ -1376,7 +1502,7 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
         });
     };
 
-    const handleUndo = () => {
+    const handleUndo = React.useCallback(() => {
         const canvas = fabricCanvasRef.current;
         if (!canvas) return;
 
@@ -1387,11 +1513,13 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
             canvas.loadFromJSON(JSON.parse(json), () => {
                 canvas.renderAll();
                 isUndoRedoRef.current = false;
+                setCanUndo(historyIndexRef.current > 0);
+                setCanRedo(true);
             });
         }
-    };
+    }, []);
 
-    const handleRedo = () => {
+    const handleRedo = React.useCallback(() => {
         const canvas = fabricCanvasRef.current;
         if (!canvas) return;
 
@@ -1402,9 +1530,11 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
             canvas.loadFromJSON(JSON.parse(json), () => {
                 canvas.renderAll();
                 isUndoRedoRef.current = false;
+                setCanUndo(true);
+                setCanRedo(historyIndexRef.current < historyRef.current.length - 1);
             });
         }
-    };
+    }, []);
 
     const handleExtendHeight = () => {
         const canvas = fabricCanvasRef.current;
@@ -1443,6 +1573,9 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                 case 'l': // Line
                     setActiveTool('line');
                     break;
+                case 'a': // Arrow
+                    setActiveTool('arrow');
+                    break;
                 case 'r': // Rectangle
                     setActiveTool('rect');
                     break;
@@ -1477,14 +1610,26 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                 case 'escape': // Close modal
                     onClose();
                     break;
+                case 'delete':
                 case 'backspace': {
-                    // Delete selected object if any (for object eraser mode)
+                    // Delete selected object if any (for object eraser mode or general selection)
                     const canvas = fabricCanvasRef.current;
                     if (canvas) {
-                        const active = canvas.getActiveObject();
-                        if (active) {
-                            canvas.remove(active);
+                        const activeObject = canvas.getActiveObject();
+                        // If user is editing a text object, let fabric handle backspace/delete
+                        if (activeObject && (activeObject as any).isEditing) {
+                            return;
+                        }
+
+                        const activeObjects = canvas.getActiveObjects();
+                        if (activeObjects.length > 0) {
+                            e.preventDefault();
+                            canvas.discardActiveObject();
+                            activeObjects.forEach((obj) => {
+                                canvas.remove(obj);
+                            });
                             canvas.requestRenderAll();
+                            saveHistory();
                         }
                     }
                     break;
@@ -1511,7 +1656,7 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [onClose, availableBrushSizes]);
+    }, [onClose, availableBrushSizes, handleUndo, handleRedo, setBrushSize, updateToolSetting, saveHistory]);
 
     // Tool Switching Logic
     useEffect(() => {
@@ -1710,7 +1855,7 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                     const text = new fabric.IText('Type here...', {
                         left: pointer.x,
                         top: pointer.y,
-                        fontFamily: 'Arial, sans-serif',
+                        fontFamily: fontFamily,
                         fontSize: Math.max(16, brushSize * 4),
                         fill: color,
                         editable: true,
@@ -1726,6 +1871,7 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                 break;
 
             case 'line':
+            case 'arrow':
             case 'rect':
             case 'circle':
             case 'triangle':
@@ -1739,7 +1885,7 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                 break;
         }
 
-    }, [activeTool, color, brushSize, shapeStyles, brushType, handleShapeMouseDown, handleShapeMouseMove, handleShapeMouseUp]);
+    }, [activeTool, color, brushSize, shapeStyles, brushType, fontFamily, handleShapeMouseDown, handleShapeMouseMove, handleShapeMouseUp]);
 
     // Handle background change
     useEffect(() => {
@@ -1756,7 +1902,7 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
         <ModalOverlay onClick={(e) => {
             if (e.target === e.currentTarget) {
                 // If any settings modal is open (Level 1)
-                if (isColorEditOpen || isSizeEditOpen || isShapeSettingsOpen || isPenEditOpen) {
+                if (isColorEditOpen || isSizeEditOpen || isShapeSettingsOpen || isPenEditOpen || isFontEditOpen) {
                     // If we just interacted with an input (like the native color picker),
                     // ignore the first backdrop click so the user stays in the sub-modal.
                     if (Date.now() - lastInteractionTimeRef.current > 500) {
@@ -1764,6 +1910,7 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                         handleSizeOk();
                         handleShapeSettingsOk();
                         handlePenOk();
+                        handleFontOk();
                     }
                 } else {
                     // Only close the main modal (Level 0) if no settings are open
@@ -2029,6 +2176,46 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                                         {t.drawing?.cancel || 'Cancel'}
                                     </CompactModalButton>
                                     <CompactModalButton onClick={handlePenOk} $variant="primary">
+                                        {t.drawing?.ok || 'OK'}
+                                    </CompactModalButton>
+                                </div>
+                            </CompactModalFooter>
+                        </CompactModal>
+                    </Backdrop>
+                )}
+
+                {isFontEditOpen && (
+                    <Backdrop
+                        $centered={!settingsAnchor}
+                        onClick={(e) => {
+                            const now = Date.now();
+                            if (now - openedTimeRef.current < 400) return; // Ignore ghost clicks
+                            if (e.target === e.currentTarget) handleFontOk();
+                        }}>
+                        <CompactModal
+                            $anchor={settingsAnchor || undefined}
+                            onClick={e => e.stopPropagation()}
+                            style={{ minWidth: '180px' }}
+                        >
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                {INITIAL_FONTS.map((font) => (
+                                    <DashOption
+                                        key={font}
+                                        $active={tempFontFamily === font}
+                                        onClick={() => setTempFontFamily(font)}
+                                        style={{ fontFamily: font, height: '32px', justifyContent: 'flex-start', padding: '0 12px' }}
+                                    >
+                                        {font}
+                                    </DashOption>
+                                ))}
+                            </div>
+                            <CompactModalFooter>
+                                <div />
+                                <div style={{ display: 'flex', gap: '0.4rem' }}>
+                                    <CompactModalButton onClick={handleFontCancel}>
+                                        {t.drawing?.cancel || 'Cancel'}
+                                    </CompactModalButton>
+                                    <CompactModalButton onClick={handleFontOk} $variant="primary">
                                         {t.drawing?.ok || 'OK'}
                                     </CompactModalButton>
                                 </div>
