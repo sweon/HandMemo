@@ -51,6 +51,46 @@ const CircleBrushIcon = () => (
     </svg>
 );
 
+const MarkerIcon = () => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M21 11.5L13 3.5L3 13.5V21H10.5L20.5 11" />
+        <path d="M16.5 7L18.5 9" />
+    </svg>
+);
+
+const HighlighterIcon = () => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="4" y="16" width="16" height="4" rx="1" />
+        <path d="M17 16L14 3H10L7 16" />
+    </svg>
+);
+
+const CalligraphyIcon = () => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M20 5L15 20L12 12L5 8L20 5Z" />
+    </svg>
+);
+
+const GlowIcon = () => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="3" />
+        <path d="M12 2V4M12 20V22M4 12H2M22 12H20M19.07 4.93L17.66 6.34M6.34 17.66L4.93 19.07M19.07 19.07L17.66 17.66M6.34 6.34L4.93 4.93" />
+    </svg>
+);
+
+const NeonIcon = () => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M13 2L3 14H12L11 22L21 10H12L13 2Z" />
+    </svg>
+);
+
+const CrayonIcon = () => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M18 20V10M18 10L12 4L6 10V20H18Z" />
+        <path d="M6 10H18" />
+    </svg>
+);
+
 const DiamondIcon = () => (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M12 2L2 12L12 22L22 12L12 2Z" />
@@ -548,7 +588,7 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
         localStorage.setItem('fabric_shape_styles', JSON.stringify(shapeStyles));
     }, [shapeStyles]);
 
-    const [brushType, setBrushType] = useState<'pencil' | 'spray' | 'circle'>(() => {
+    const [brushType, setBrushType] = useState<'pencil' | 'pen' | 'marker' | 'highlighter' | 'glow' | 'neon' | 'spray' | 'circle' | 'calligraphy' | 'crayon'>(() => {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         return (localStorage.getItem('fabric_brush_type') as any) || 'pencil';
     });
@@ -1435,11 +1475,76 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                 } else if (brushType === 'circle') {
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     canvas.freeDrawingBrush = new (fabric as any).CircleBrush(canvas);
+                } else if (brushType === 'marker') {
+                    canvas.freeDrawingBrush = new fabric.PencilBrush(canvas);
+                } else if (brushType === 'highlighter') {
+                    canvas.freeDrawingBrush = new fabric.PencilBrush(canvas);
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    (canvas.freeDrawingBrush as any).strokeLinecap = 'butt';
+                } else if (brushType === 'glow') {
+                    canvas.freeDrawingBrush = new fabric.PencilBrush(canvas);
+                    canvas.freeDrawingBrush.shadow = new fabric.Shadow({
+                        blur: 15,
+                        offsetX: 0,
+                        offsetY: 0,
+                        color: color
+                    });
+                } else if (brushType === 'neon') {
+                    canvas.freeDrawingBrush = new fabric.PencilBrush(canvas);
+                    canvas.freeDrawingBrush.shadow = new fabric.Shadow({
+                        blur: 5,
+                        offsetX: 0,
+                        offsetY: 0,
+                        color: '#fff'
+                    });
+                } else if (brushType === 'calligraphy') {
+                    canvas.freeDrawingBrush = new fabric.PencilBrush(canvas);
+                    // Calligraphy effect via varying width is hard with PencilBrush, 
+                    // but we can at least set a specific stroke line join
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    (canvas.freeDrawingBrush as any).strokeLinejoin = 'miter';
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    (canvas.freeDrawingBrush as any).strokeMiterLimit = 2;
+                } else if (brushType === 'crayon') {
+                    // Crayon effect using a pattern
+                    const patternCanvas = document.createElement('canvas');
+                    patternCanvas.width = 10;
+                    patternCanvas.height = 10;
+                    const pCtx = patternCanvas.getContext('2d');
+                    if (pCtx) {
+                        pCtx.fillStyle = color;
+                        pCtx.fillRect(0, 0, 10, 10);
+                        pCtx.fillStyle = 'rgba(255,255,255,0.2)';
+                        for (let i = 0; i < 20; i++) {
+                            pCtx.fillRect(Math.random() * 10, Math.random() * 10, 1, 1);
+                        }
+                    }
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    canvas.freeDrawingBrush = new (fabric as any).PatternBrush(canvas);
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    (canvas.freeDrawingBrush as any).source = patternCanvas;
+                } else if (brushType === 'pen') {
+                    canvas.freeDrawingBrush = new fabric.PencilBrush(canvas);
                 } else {
                     canvas.freeDrawingBrush = new fabric.PencilBrush(canvas);
                 }
-                canvas.freeDrawingBrush.color = color;
-                canvas.freeDrawingBrush.width = brushSize;
+
+                canvas.freeDrawingBrush.color = (brushType === 'highlighter')
+                    ? color.replace(')', ', 0.3)').replace('rgb', 'rgba').replace('#', color) // Basic alpha support
+                    : (brushType === 'marker') ? color : color;
+
+                // Better highlighter color handling
+                if (brushType === 'highlighter') {
+                    if (color.startsWith('#')) {
+                        const r = parseInt(color.slice(1, 3), 16);
+                        const g = parseInt(color.slice(3, 5), 16);
+                        const b = parseInt(color.slice(5, 7), 16);
+                        canvas.freeDrawingBrush.color = `rgba(${r}, ${g}, ${b}, 0.3)`;
+                    }
+                }
+
+                canvas.freeDrawingBrush.width = (brushType === 'highlighter' || brushType === 'marker')
+                    ? brushSize * 2 : brushSize;
                 canvas.defaultCursor = 'crosshair';
                 break;
 
@@ -1723,9 +1828,9 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                         <CompactModal
                             $anchor={settingsAnchor || undefined}
                             onClick={e => e.stopPropagation()}
-                            style={{ minWidth: '150px' }}
+                            style={{ minWidth: '240px' }}
                         >
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px' }}>
                                 <DashOption
                                     $active={brushType === 'pencil'}
                                     onClick={() => { setBrushType('pencil'); setIsPenEditOpen(false); }}
@@ -1733,7 +1838,52 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                                 >
                                     <FiEdit2 size={16} />
                                     {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                                    <span style={{ fontSize: '0.8rem' }}>{(t.drawing as any)?.pen_pencil || 'Pencil'}</span>
+                                    <span style={{ fontSize: '0.75rem' }}>{(t.drawing as any)?.pen_pencil || 'Pencil'}</span>
+                                </DashOption>
+                                <DashOption
+                                    $active={brushType === 'pen'}
+                                    onClick={() => { setBrushType('pen'); setIsPenEditOpen(false); }}
+                                    style={{ height: '32px', justifyContent: 'flex-start', padding: '0 8px', gap: '8px' }}
+                                >
+                                    <FiMinus size={16} />
+                                    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                                    <span style={{ fontSize: '0.75rem' }}>{(t.drawing as any)?.pen_pen || 'Pen'}</span>
+                                </DashOption>
+                                <DashOption
+                                    $active={brushType === 'marker'}
+                                    onClick={() => { setBrushType('marker'); setIsPenEditOpen(false); }}
+                                    style={{ height: '32px', justifyContent: 'flex-start', padding: '0 8px', gap: '8px' }}
+                                >
+                                    <MarkerIcon />
+                                    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                                    <span style={{ fontSize: '0.75rem' }}>{(t.drawing as any)?.pen_marker || 'Marker'}</span>
+                                </DashOption>
+                                <DashOption
+                                    $active={brushType === 'highlighter'}
+                                    onClick={() => { setBrushType('highlighter'); setIsPenEditOpen(false); }}
+                                    style={{ height: '32px', justifyContent: 'flex-start', padding: '0 8px', gap: '8px' }}
+                                >
+                                    <HighlighterIcon />
+                                    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                                    <span style={{ fontSize: '0.75rem' }}>{(t.drawing as any)?.pen_highlighter || 'Highlight'}</span>
+                                </DashOption>
+                                <DashOption
+                                    $active={brushType === 'glow'}
+                                    onClick={() => { setBrushType('glow'); setIsPenEditOpen(false); }}
+                                    style={{ height: '32px', justifyContent: 'flex-start', padding: '0 8px', gap: '8px' }}
+                                >
+                                    <GlowIcon />
+                                    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                                    <span style={{ fontSize: '0.75rem' }}>{(t.drawing as any)?.pen_glow || 'Glow'}</span>
+                                </DashOption>
+                                <DashOption
+                                    $active={brushType === 'neon'}
+                                    onClick={() => { setBrushType('neon'); setIsPenEditOpen(false); }}
+                                    style={{ height: '32px', justifyContent: 'flex-start', padding: '0 8px', gap: '8px' }}
+                                >
+                                    <NeonIcon />
+                                    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                                    <span style={{ fontSize: '0.75rem' }}>{(t.drawing as any)?.pen_neon || 'Neon'}</span>
                                 </DashOption>
                                 <DashOption
                                     $active={brushType === 'spray'}
@@ -1742,7 +1892,7 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                                 >
                                     <SprayBrushIcon />
                                     {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                                    <span style={{ fontSize: '0.8rem' }}>{(t.drawing as any)?.pen_spray || 'Spray'}</span>
+                                    <span style={{ fontSize: '0.75rem' }}>{(t.drawing as any)?.pen_spray || 'Spray'}</span>
                                 </DashOption>
                                 <DashOption
                                     $active={brushType === 'circle'}
@@ -1751,7 +1901,25 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                                 >
                                     <CircleBrushIcon />
                                     {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                                    <span style={{ fontSize: '0.8rem' }}>{(t.drawing as any)?.pen_circle || 'Bubble'}</span>
+                                    <span style={{ fontSize: '0.75rem' }}>{(t.drawing as any)?.pen_circle || 'Bubble'}</span>
+                                </DashOption>
+                                <DashOption
+                                    $active={brushType === 'calligraphy'}
+                                    onClick={() => { setBrushType('calligraphy'); setIsPenEditOpen(false); }}
+                                    style={{ height: '32px', justifyContent: 'flex-start', padding: '0 8px', gap: '8px' }}
+                                >
+                                    <CalligraphyIcon />
+                                    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                                    <span style={{ fontSize: '0.75rem' }}>{(t.drawing as any)?.pen_calligraphy || 'Slanted'}</span>
+                                </DashOption>
+                                <DashOption
+                                    $active={brushType === 'crayon'}
+                                    onClick={() => { setBrushType('crayon'); setIsPenEditOpen(false); }}
+                                    style={{ height: '32px', justifyContent: 'flex-start', padding: '0 8px', gap: '8px' }}
+                                >
+                                    <CrayonIcon />
+                                    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                                    <span style={{ fontSize: '0.75rem' }}>{(t.drawing as any)?.pen_crayon || 'Crayon'}</span>
                                 </DashOption>
                             </div>
                         </CompactModal>
