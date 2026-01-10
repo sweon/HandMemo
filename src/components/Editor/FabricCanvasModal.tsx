@@ -777,6 +777,32 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
         canvas.on('object:modified', saveHistory);
         canvas.on('object:removed', saveHistory);
 
+        // Selection listeners to sync toolbar with selected object
+        const handleSelection = (opt: fabric.IEvent) => {
+            const activeObject = opt.target;
+            if (activeObject) {
+                // Determine color
+                let objectColor = '';
+                if (activeObject.type === 'i-text' || activeObject.type === 'text') {
+                    objectColor = activeObject.fill as string;
+                } else {
+                    objectColor = activeObject.stroke as string;
+                }
+
+                // Determine size
+                const objectSize = activeObject.strokeWidth || brushSize;
+
+                if (objectColor) setColor(objectColor);
+                if (objectSize) setBrushSize(objectSize);
+
+                // We don't updateToolSetting here to avoid overwriting tool defaults 
+                // just by selecting an object. But we update the UI.
+            }
+        };
+
+        canvas.on('selection:created', handleSelection);
+        canvas.on('selection:updated', handleSelection);
+
         if (initialData) {
             try {
                 const json = JSON.parse(initialData);
@@ -796,6 +822,8 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
             canvas.off('object:added', saveHistory);
             canvas.off('object:modified', saveHistory);
             canvas.off('object:removed', saveHistory);
+            canvas.off('selection:created', handleSelection);
+            canvas.off('selection:updated', handleSelection);
             canvas.dispose();
             fabricCanvasRef.current = null;
         };
@@ -1366,7 +1394,8 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                 ...commonProps,
                 originX: 'center',
                 originY: 'center',
-            });
+                isDiamond: true,
+            } as any);
         }
 
         if (shape) {
@@ -1501,7 +1530,8 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                         strokeLineJoin: 'round',
                         selectable: false,
                         evented: true,
-                    });
+                        isArrow: true,
+                    } as any);
                     canvas.add(arrowPath);
                 }
             }
@@ -1940,6 +1970,44 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
         }
 
     }, [activeTool, color, brushSize, shapeStyles, brushType, fontFamily, handleShapeMouseDown, handleShapeMouseMove, handleShapeMouseUp]);
+
+    useEffect(() => {
+        const canvas = fabricCanvasRef.current;
+        if (!canvas) return;
+
+        const activeObjects = canvas.getActiveObjects();
+        if (activeObjects.length > 0) {
+            activeObjects.forEach((obj) => {
+                if (obj.type === 'i-text' || obj.type === 'text') {
+                    obj.set({ fill: color });
+                } else {
+                    obj.set({ stroke: color, strokeWidth: brushSize });
+                }
+
+                // Also update toolSettings for this object type
+                const objType = (obj as any).isArrow ? 'arrow' :
+                    (obj as any).isDiamond ? 'diamond' :
+                        (obj.type === 'i-text' || obj.type === 'text') ? 'text' :
+                            obj.type === 'path' ? 'pen' :
+                                obj.type === 'rect' ? 'rect' :
+                                    obj.type === 'circle' ? 'circle' :
+                                        obj.type === 'triangle' ? 'triangle' :
+                                            obj.type === 'ellipse' ? 'ellipse' :
+                                                obj.type;
+
+                // Special case for pen types if we can detect them, but 'pen' is default
+                let targetKey = objType as string;
+                if (targetKey === 'path') targetKey = brushType; // Fallback to current brush type if it's a path
+
+                setToolSettings(prev => ({
+                    ...prev,
+                    [targetKey]: { color, size: brushSize }
+                }));
+            });
+            canvas.requestRenderAll();
+            saveHistory();
+        }
+    }, [color, brushSize, brushType, saveHistory]);
 
     // Handle background change
     useEffect(() => {
