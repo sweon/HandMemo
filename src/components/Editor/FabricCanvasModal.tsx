@@ -8,7 +8,7 @@ import { useLanguage } from '../../contexts/LanguageContext';
 
 // Pixel Eraser Icon - 3D pink block eraser
 const PixelEraserIcon = () => (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
         <path d="M5 14L14 3L22 7L13 18L5 14Z" fill="#ffc9c9" />
         <path d="M5 14L5 19L13 23L13 18" fill="#fa5252" />
         <path d="M13 23L22 12L22 7" fill="#e03131" />
@@ -17,7 +17,7 @@ const PixelEraserIcon = () => (
 
 // Object Eraser Icon - 3D blue block eraser with indicator
 const ObjectEraserIcon = () => (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
         <path d="M5 14L14 3L22 7L13 18L5 14Z" fill="#e7f5ff" />
         <path d="M5 14L5 19L13 23L13 18" fill="#339af0" />
         <path d="M13 23L22 12L22 7" fill="#1c7ed6" />
@@ -26,13 +26,13 @@ const ObjectEraserIcon = () => (
 );
 
 const EllipseIcon = () => (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <ellipse cx="12" cy="12" rx="9" ry="5" />
     </svg>
 );
 
 const SprayBrushIcon = () => (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
         <circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none" />
         <circle cx="16" cy="8" r="1" fill="currentColor" stroke="none" />
         <circle cx="8" cy="16" r="1" fill="currentColor" stroke="none" />
@@ -46,34 +46,34 @@ const SprayBrushIcon = () => (
 );
 
 const CircleBrushIcon = () => (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <circle cx="9" cy="9" r="4" />
         <circle cx="15" cy="15" r="5" />
     </svg>
 );
 
 const HighlighterIcon = () => (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <rect x="4" y="16" width="16" height="4" rx="1" />
         <path d="M17 16L14 3H10L7 16" />
     </svg>
 );
 
 const GlowIcon = () => (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <circle cx="12" cy="12" r="3" />
         <path d="M12 2V4M12 20V22M4 12H2M22 12H20M19.07 4.93L17.66 6.34M6.34 17.66L4.93 19.07M19.07 19.07L17.66 17.66M6.34 6.34L4.93 4.93" />
     </svg>
 );
 
 const DiamondIcon = () => (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M12 2L2 12L12 22L22 12L12 2Z" />
     </svg>
 );
 
 const BackgroundIcon = () => (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <rect x="3" y="3" width="18" height="18" rx="2" />
         <line x1="3" y1="9" x2="21" y2="9" />
         <line x1="3" y1="15" x2="21" y2="15" />
@@ -83,7 +83,7 @@ const BackgroundIcon = () => (
 );
 
 const VerticalExpandIcon = () => (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M12 4v16" />
         <path d="M8 8l4-4 4 4" />
         <path d="M8 16l4 4 4-4" />
@@ -118,7 +118,7 @@ const ModalContainer = styled.div`
 `;
 
 const Header = styled.div`
-  padding: 1rem;
+  padding: 0.5rem 1rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -136,8 +136,8 @@ const Title = styled.h3`
 const Toolbar = styled.div`
   display: flex;
   flex-wrap: wrap;
-  gap: 0.25rem;
-  padding: 0.35rem 0.5rem;
+  gap: 2px;
+  padding: 0.25rem 0.4rem;
   background: #f1f3f5;
   border-bottom: 1px solid #e0e0e0;
   align-items: center;
@@ -147,15 +147,15 @@ const ToolButton = styled.button<{ $active?: boolean; disabled?: boolean }>`
   background: ${({ $active }) => $active ? '#e9ecef' : 'transparent'};
   border: 1px solid ${({ $active }) => $active ? '#adb5bd' : 'transparent'};
   color: #333;
-  padding: 0.3rem;
+  padding: 4px;
   border-radius: 3px;
   cursor: ${({ disabled }) => disabled ? 'default' : 'pointer'};
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1rem;
-  min-width: 28px;
-  height: 28px;
+  font-size: 0.9rem;
+  min-width: 24px;
+  height: 24px;
   touch-action: manipulation;
   opacity: ${({ disabled }) => disabled ? 0.3 : 1};
   pointer-events: ${({ disabled }) => disabled ? 'none' : 'auto'};
@@ -173,8 +173,8 @@ const ToolGroup = styled.div`
 `;
 
 const ColorButton = styled.div<{ $color: string; $selected?: boolean }>`
-  width: 18px;
-  height: 18px;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
   background-color: ${({ $color }) => $color};
   border: 2px solid ${({ $selected }) => $selected ? '#333' : 'transparent'};
@@ -1042,16 +1042,16 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                                 }}
                                 title={(item.toolId ?? '').charAt(0).toUpperCase() + (item.toolId ?? '').slice(1)}
                             >
-                                {item.toolId === 'select' && <FiMousePointer size={18} />}
-                                {item.toolId === 'pen' && <FiEdit2 size={18} />}
-                                {item.toolId === 'line' && <FiMinus size={18} style={{ transform: 'rotate(-45deg)' }} />}
-                                {item.toolId === 'arrow' && <FiArrowDown size={18} style={{ transform: 'rotate(-135deg)' }} />}
-                                {item.toolId === 'rect' && <FiSquare size={18} />}
-                                {item.toolId === 'circle' && <FiCircle size={18} />}
+                                {item.toolId === 'select' && <FiMousePointer size={16} />}
+                                {item.toolId === 'pen' && <FiEdit2 size={16} />}
+                                {item.toolId === 'line' && <FiMinus size={16} style={{ transform: 'rotate(-45deg)' }} />}
+                                {item.toolId === 'arrow' && <FiArrowDown size={16} style={{ transform: 'rotate(-135deg)' }} />}
+                                {item.toolId === 'rect' && <FiSquare size={16} />}
+                                {item.toolId === 'circle' && <FiCircle size={16} />}
                                 {item.toolId === 'ellipse' && <EllipseIcon />}
-                                {item.toolId === 'triangle' && <FiTriangle size={18} />}
+                                {item.toolId === 'triangle' && <FiTriangle size={16} />}
                                 {item.toolId === 'diamond' && <DiamondIcon />}
-                                {item.toolId === 'text' && <FiType size={18} />}
+                                {item.toolId === 'text' && <FiType size={16} />}
                                 {item.toolId === 'eraser_pixel' && <PixelEraserIcon />}
                                 {item.toolId === 'eraser_object' && <ObjectEraserIcon />}
                             </ToolButton>
@@ -1061,17 +1061,17 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                             <>
                                 {item.actionId === 'undo' && (
                                     <ToolButton onClick={handleUndo} title="Undo (Ctrl+Z)" disabled={!canUndo}>
-                                        <FiRotateCcw size={18} />
+                                        <FiRotateCcw size={16} />
                                     </ToolButton>
                                 )}
                                 {item.actionId === 'redo' && (
                                     <ToolButton onClick={handleRedo} title="Redo (Ctrl+Y)" disabled={!canRedo}>
-                                        <FiRotateCw size={18} />
+                                        <FiRotateCw size={16} />
                                     </ToolButton>
                                 )}
                                 {item.actionId === 'download_png' && (
                                     <ToolButton onClick={handleDownloadPNG} title="Download as PNG">
-                                        <FiDownload size={18} />
+                                        <FiDownload size={16} />
                                     </ToolButton>
                                 )}
                                 {item.actionId === 'clear' && (
@@ -1080,7 +1080,7 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                                             handleClear();
                                         }
                                     }} title="Clear All">
-                                        <FiTrash2 size={18} />
+                                        <FiTrash2 size={16} />
                                     </ToolButton>
                                 )}
                                 {item.actionId === 'extend_height' && (
