@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState, useLayoutEffect } from 'react';
 import styled from 'styled-components';
 import { fabric } from 'fabric';
-import { FiX, FiCheck, FiTrash2, FiEdit2, FiRotateCcw, FiRotateCw, FiSquare, FiCircle, FiMinus, FiType, FiArrowDown, FiTriangle, FiMousePointer, FiDownload, FiSettings } from 'react-icons/fi';
+import { FiX, FiCheck, FiTrash2, FiRotateCcw, FiRotateCw, FiSquare, FiCircle, FiMinus, FiType, FiArrowDown, FiTriangle, FiMousePointer, FiDownload, FiSettings } from 'react-icons/fi';
 import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd';
 import { HexColorPicker } from 'react-colorful';
 import { useLanguage } from '../../contexts/LanguageContext';
@@ -1343,7 +1343,7 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
         setIsShapeSettingsOpen(false);
     };
 
-    const handlePenDoubleClick = (e: React.MouseEvent | React.TouchEvent, slotId?: string) => {
+    const handlePenDoubleClick = (e: React.MouseEvent | React.TouchEvent) => {
         const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
         setSettingsAnchor({
             top: rect.bottom + 5
