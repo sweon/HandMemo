@@ -518,6 +518,7 @@ const INITIAL_TOOLBAR_ITEMS: ToolbarItem[] = [
     { id: 'select', type: 'tool', toolId: 'select' },
     { id: 'pen_1', type: 'tool', toolId: 'pen' },
     { id: 'pen_2', type: 'tool', toolId: 'pen' },
+    { id: 'pen_3', type: 'tool', toolId: 'pen' },
     { id: 'line', type: 'tool', toolId: 'line' },
     { id: 'arrow_v2', type: 'tool', toolId: 'arrow' },
     { id: 'rect', type: 'tool', toolId: 'rect' },
@@ -855,7 +856,8 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
         const saved = localStorage.getItem('fabric_pen_slot_settings');
         return saved ? JSON.parse(saved) : {
             'pen_1': { brushType: 'pen', color: '#000000', size: 2 },
-            'pen_2': { brushType: 'highlighter', color: '#ffeb3b', size: 10 }
+            'pen_2': { brushType: 'highlighter', color: '#ffeb3b', size: 10 },
+            'pen_3': { brushType: 'pen', color: '#ff0000', size: 2 }
         };
     });
     const [activePenSlot, setActivePenSlot] = useState<string>('pen_1');
@@ -1007,7 +1009,7 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
     const handleToolSelect = React.useCallback((itemId: string, itemType: string, toolId?: ToolType) => {
         if (itemType === 'tool' && toolId) {
             if (toolId === 'pen') {
-                const slotId = (itemId === 'pen' || itemId === 'pen_1') ? 'pen_1' : (itemId === 'pen_2' ? 'pen_2' : 'pen_1');
+                const slotId = (itemId === 'pen' || itemId === 'pen_1') ? 'pen_1' : (itemId === 'pen_2' ? 'pen_2' : (itemId === 'pen_3' ? 'pen_3' : 'pen_1'));
                 setActivePenSlot(slotId);
                 const settings = penSlotSettings[slotId];
                 if (settings) {
@@ -1437,7 +1439,7 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                     >
                         {item.toolId === 'pen' ? (
                             (() => {
-                                const slotId = (item.id === 'pen' || item.id === 'pen_1') ? 'pen_1' : (item.id === 'pen_2' ? 'pen_2' : 'pen_1');
+                                const slotId = (item.id === 'pen' || item.id === 'pen_1') ? 'pen_1' : (item.id === 'pen_2' ? 'pen_2' : (item.id === 'pen_3' ? 'pen_3' : 'pen_1'));
                                 const settings = penSlotSettings[slotId];
                                 const typeToCheck = settings ? settings.brushType : 'pen';
 
