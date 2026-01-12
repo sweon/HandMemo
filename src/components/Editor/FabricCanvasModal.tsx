@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState, useLayoutEffect } from 'react';
 import styled from 'styled-components';
 import { fabric } from 'fabric';
-import { FiX, FiCheck, FiTrash2, FiEdit2, FiRotateCcw, FiRotateCw, FiSquare, FiCircle, FiMinus, FiType, FiArrowDown, FiTriangle, FiMousePointer, FiDownload } from 'react-icons/fi';
+import { FiX, FiCheck, FiTrash2, FiEdit2, FiRotateCcw, FiRotateCw, FiSquare, FiCircle, FiMinus, FiType, FiArrowDown, FiTriangle, FiMousePointer, FiDownload, FiSettings } from 'react-icons/fi';
+import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd';
 import { HexColorPicker } from 'react-colorful';
 import { useLanguage } from '../../contexts/LanguageContext';
 
@@ -444,6 +445,52 @@ const DEFAULT_SHAPE_STYLE: ShapeStyle = {
     headSize: 20
 };
 
+// Helper to get icon for config item
+const getToolbarItemIcon = (item: ToolbarItem, colors: string[], brushSizes: number[]) => {
+    if (item.type === 'tool') {
+        switch (item.toolId) {
+            case 'select': return <FiMousePointer size={16} />;
+            case 'pen': return <FiEdit2 size={16} />;
+            case 'line': return <FiMinus size={16} style={{ transform: 'rotate(-45deg)' }} />;
+            case 'arrow': return <FiArrowDown size={16} style={{ transform: 'rotate(-135deg)' }} />;
+            case 'rect': return <FiSquare size={16} />;
+            case 'circle': return <FiCircle size={16} />;
+            case 'ellipse': return <EllipseIcon />;
+            case 'triangle': return <FiTriangle size={16} />;
+            case 'diamond': return <DiamondIcon />;
+            case 'text': return <FiType size={16} />;
+            case 'eraser_pixel': return <PixelEraserIcon />;
+            case 'eraser_object': return <ObjectEraserIcon />;
+            default: return <span>{item.toolId}</span>;
+        }
+    } else if (item.type === 'action') {
+        switch (item.actionId) {
+            case 'undo': return <FiRotateCcw size={16} />;
+            case 'redo': return <FiRotateCw size={16} />;
+            case 'download_png': return <FiDownload size={16} />;
+            case 'clear': return <FiTrash2 size={16} />;
+            case 'extend_height': return <VerticalExpandIcon />;
+            case 'background': return <BackgroundIcon />;
+            default: return <span>{item.actionId}</span>;
+        }
+    } else if (item.type === 'color' && item.colorIndex !== undefined) {
+        return (
+            <ColorButton $color={colors[item.colorIndex] || '#000'} style={{ width: 14, height: 14, cursor: 'grab' }} />
+        );
+    } else if (item.type === 'size' && item.sizeIndex !== undefined) {
+        const size = brushSizes[item.sizeIndex] || 2;
+        return (
+            <div style={{
+                width: Math.min(size, 20),
+                height: Math.min(size, 20),
+                borderRadius: '50%',
+                background: '#333'
+            }} />
+        );
+    }
+    return <span>?</span>;
+};
+
 type ToolbarItem = {
     id: string;
     type: 'tool' | 'action' | 'color' | 'size';
@@ -487,9 +534,7 @@ const INITIAL_TOOLBAR_ITEMS: ToolbarItem[] = [
 type ToolType = 'select' | 'pen' | 'eraser_pixel' | 'eraser_object' | 'line' | 'arrow' | 'rect' | 'circle' | 'text' | 'triangle' | 'ellipse' | 'diamond';
 type BackgroundType = 'none' | 'lines-xs' | 'lines-sm' | 'lines-md' | 'lines-lg' | 'lines-xl' | 'grid-xs' | 'grid-sm' | 'grid-md' | 'grid-lg' | 'grid-xl';
 
-const createBackgroundPattern = (type: BackgroundType) => {
-    if (type === 'none') return '#ffffff';
-
+const createBackgroundPattern = (type: BackgroundType, paperColor: string, opacity: number) => {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     if (!ctx) return '#ffffff';
@@ -504,7 +549,21 @@ const createBackgroundPattern = (type: BackgroundType) => {
     canvas.width = size;
     canvas.height = size;
 
-    ctx.strokeStyle = '#f0f0f0'; // Very faint color
+    // Fill background
+    ctx.fillStyle = paperColor;
+    ctx.fillRect(0, 0, size, size);
+
+    if (type === 'none') {
+        return new fabric.Pattern({
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            source: canvas as any,
+            repeat: 'repeat'
+        });
+    }
+
+    // Draw lines
+    // Calculate color based on opacity. We use black with alpha.
+    ctx.strokeStyle = `rgba(0, 0, 0, ${opacity})`;
     ctx.lineWidth = 1;
 
     if (type.startsWith('lines')) {
@@ -529,6 +588,198 @@ const createBackgroundPattern = (type: BackgroundType) => {
     });
 };
 
+const BackgroundOptionButton = styled.button<{ $active: boolean }>`
+  padding: 6px 8px;
+  font-size: 11px;
+  text-align: left;
+  background: ${({ $active }) => $active ? '#e9ecef' : 'transparent'};
+  border: none;
+  cursor: pointer;
+  border-radius: 4px;
+  width: 100%;
+  
+  &:hover {
+    background: #f1f3f5;
+  }
+`;
+
+const BackgroundColorSwatch = styled.button<{ $color: string; $active: boolean }>`
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  background: ${({ $color }) => $color};
+  border: 2px solid ${({ $active }) => $active ? '#333' : '#dee2e6'};
+  cursor: pointer;
+  
+  &:hover {
+    transform: scale(1.1);
+  }
+`;
+
+const ConfigItem = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  margin: 4px;
+  cursor: grab;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+
+  &:hover {
+    border-color: #adb5bd;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+`;
+
+const ConfigArea = styled.div<{ $isDraggingOver: boolean }>`
+  background: ${({ $isDraggingOver }) => $isDraggingOver ? '#f1f3f5' : '#f8f9fa'};
+  border: 2px dashed #dee2e6;
+  border-radius: 8px;
+  padding: 12px;
+  min-height: 80px;
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  gap: 4px;
+  transition: background-color 0.2s;
+`;
+
+interface ToolbarConfiguratorProps {
+    currentItems: ToolbarItem[];
+    allItems: ToolbarItem[];
+    colors: string[];
+    brushSizes: number[];
+    onSave: (items: ToolbarItem[]) => void;
+    onClose: () => void;
+}
+
+const ToolbarConfigurator: React.FC<ToolbarConfiguratorProps> = ({ currentItems, allItems, onSave, onClose, colors, brushSizes }) => {
+    const [activeItems, setActiveItems] = useState<ToolbarItem[]>(currentItems);
+    const [reservoirItems, setReservoirItems] = useState<ToolbarItem[]>(() => {
+        return allItems.filter(item => !currentItems.some(curr => curr.id === item.id));
+    });
+
+    const onDragEnd = (result: DropResult) => {
+        const { source, destination } = result;
+
+        if (!destination) return;
+
+        if (source.droppableId === destination.droppableId) {
+            // Reordering
+            const list = source.droppableId === 'active' ? activeItems : reservoirItems;
+            const setList = source.droppableId === 'active' ? setActiveItems : setReservoirItems;
+
+            const newList = Array.from(list);
+            const [removed] = newList.splice(source.index, 1);
+            newList.splice(destination.index, 0, removed);
+
+            setList(newList);
+        } else {
+            // Moving between lists
+            const sourceList = source.droppableId === 'active' ? activeItems : reservoirItems;
+            const destList = destination.droppableId === 'active' ? activeItems : reservoirItems;
+            const setSource = source.droppableId === 'active' ? setActiveItems : setReservoirItems;
+            const setDest = destination.droppableId === 'active' ? setActiveItems : setReservoirItems;
+
+            const newSource = Array.from(sourceList);
+            const newDest = Array.from(destList);
+            const [removed] = newSource.splice(source.index, 1);
+            newDest.splice(destination.index, 0, removed);
+
+            setSource(newSource);
+            setDest(newDest);
+        }
+    };
+
+    return (
+        <ModalOverlay style={{ zIndex: 11000 }}>
+            <ModalContainer style={{ width: '90vw', height: '80vh', maxWidth: '800px', maxHeight: '700px', overflow: 'hidden' }}>
+                <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', height: '100%' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                        <h3 style={{ margin: 0 }}>Customize Toolbar</h3>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                            <CompactModalButton onClick={onClose}>Cancel</CompactModalButton>
+                            <CompactModalButton $variant="primary" onClick={() => onSave(activeItems)}>Save & Apply</CompactModalButton>
+                        </div>
+                    </div>
+
+                    <DragDropContext onDragEnd={onDragEnd}>
+                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '1rem', overflow: 'hidden' }}>
+                            <div>
+                                <h4 style={{ margin: '0 0 8px 0', fontSize: '0.9rem', color: '#666' }}>Active Toolbar</h4>
+                                <Droppable droppableId="active" direction="horizontal">
+                                    {(provided, snapshot) => (
+                                        <ConfigArea
+                                            ref={provided.innerRef}
+                                            {...provided.droppableProps}
+                                            $isDraggingOver={snapshot.isDraggingOver}
+                                            style={{
+                                                minHeight: '66px',
+                                                flexWrap: 'nowrap',
+                                                overflowX: 'auto',
+                                                alignItems: 'center',
+                                                padding: '8px'
+                                            }}
+                                        >
+                                            {activeItems.map((item, index) => (
+                                                <Draggable key={item.id} draggableId={item.id} index={index}>
+                                                    {(provided) => (
+                                                        <ConfigItem
+                                                            ref={provided.innerRef}
+                                                            {...provided.draggableProps}
+                                                            {...provided.dragHandleProps}
+                                                        >
+                                                            {getToolbarItemIcon(item, colors, brushSizes)}
+                                                        </ConfigItem>
+                                                    )}
+                                                </Draggable>
+                                            ))}
+                                            {provided.placeholder}
+                                        </ConfigArea>
+                                    )}
+                                </Droppable>
+                            </div>
+
+                            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                                <h4 style={{ margin: '0 0 8px 0', fontSize: '0.9rem', color: '#666' }}>Available Tools (Drag here to remove)</h4>
+                                <Droppable droppableId="reservoir">
+                                    {(provided, snapshot) => (
+                                        <ConfigArea
+                                            ref={provided.innerRef}
+                                            {...provided.droppableProps}
+                                            $isDraggingOver={snapshot.isDraggingOver}
+                                            style={{ flex: 1, alignContent: 'flex-start', overflowY: 'auto' }}
+                                        >
+                                            {reservoirItems.map((item, index) => (
+                                                <Draggable key={item.id} draggableId={item.id} index={index}>
+                                                    {(provided) => (
+                                                        <ConfigItem
+                                                            ref={provided.innerRef}
+                                                            {...provided.draggableProps}
+                                                            {...provided.dragHandleProps}
+                                                        >
+                                                            {getToolbarItemIcon(item, colors, brushSizes)}
+                                                        </ConfigItem>
+                                                    )}
+                                                </Draggable>
+                                            ))}
+                                            {provided.placeholder}
+                                        </ConfigArea>
+                                    )}
+                                </Droppable>
+                            </div>
+                        </div>
+                    </DragDropContext>
+                </div>
+            </ModalContainer>
+        </ModalOverlay>
+    );
+};
+
 export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialData, onSave, onClose }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
@@ -543,7 +794,7 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
         const saved = localStorage.getItem('fabric_brush_sizes');
         return saved ? JSON.parse(saved) : INITIAL_BRUSH_SIZES;
     });
-    const [toolbarItems] = useState<ToolbarItem[]>(() => {
+    const [toolbarItems, setToolbarItems] = useState<ToolbarItem[]>(() => {
         const saved = localStorage.getItem('fabric_toolbar_order');
         if (!saved) return INITIAL_TOOLBAR_ITEMS;
 
@@ -572,7 +823,10 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
     const [color, setColor] = useState('#000000');
     const [brushSize, setBrushSize] = useState(2);
     const [background, setBackground] = useState<BackgroundType>('none');
+    const [backgroundColor, setBackgroundColor] = useState('#ffffff');
+    const [lineOpacity, setLineOpacity] = useState(0.1); // Default faint
     const [isBgPickerOpen, setIsBgPickerOpen] = useState(false);
+    const prevBackgroundStateRef = useRef<{ type: BackgroundType; color: string; opacity: number } | null>(null);
 
     const [isColorEditOpen, setIsColorEditOpen] = useState(false);
     const [tempColor, setTempColor] = useState('#000000');
@@ -636,7 +890,9 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
     const [tempPalmRejection, setTempPalmRejection] = useState(palmRejection);
 
     const [isPenEditOpen, setIsPenEditOpen] = useState(false);
+    const [isConfigOpen, setIsConfigOpen] = useState(false);
     const lastInteractionTimeRef = useRef(0);
+
 
 
     useEffect(() => {
@@ -1156,7 +1412,16 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                             <div style={{ position: 'relative', display: 'flex' }}>
                                 <ToolButton
                                     $active={background !== 'none' || isBgPickerOpen}
-                                    onClick={() => setIsBgPickerOpen(!isBgPickerOpen)}
+                                    onClick={() => {
+                                        if (!isBgPickerOpen) {
+                                            // Opening
+                                            prevBackgroundStateRef.current = { type: background, color: backgroundColor, opacity: lineOpacity };
+                                            setIsBgPickerOpen(true);
+                                        } else {
+                                            // Toggle off means accept? Or cancel? Usually toggle off acts like "OK".
+                                            setIsBgPickerOpen(false);
+                                        }
+                                    }}
                                     title="Background"
                                 >
                                     <BackgroundIcon />
@@ -1170,224 +1435,179 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                                         zIndex: 1000,
                                         background: 'white',
                                         border: '1px solid #ced4da',
-                                        borderRadius: '4px',
-                                        boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-                                        padding: '4px',
-                                        display: 'grid',
-                                        gridTemplateColumns: 'repeat(1, 1fr)',
-                                        gap: '2px',
-                                        minWidth: '120px'
-                                    }}>
-                                        <button
-                                            onClick={() => { setBackground('none'); setIsBgPickerOpen(false); }}
-                                            style={{
-                                                padding: '4px 8px',
-                                                fontSize: '12px',
-                                                textAlign: 'left',
-                                                background: background === 'none' ? '#f1f3f5' : 'transparent',
-                                                border: 'none',
-                                                cursor: 'pointer',
-                                                borderRadius: '2px'
-                                            }}
-                                        >
-                                            None
-                                        </button>
-                                        <div style={{ borderTop: '1px solid #eee', margin: '2px 0' }}></div>
-                                        <button
-                                            onClick={() => { setBackground('lines-xs'); setIsBgPickerOpen(false); }}
-                                            style={{
-                                                padding: '4px 8px',
-                                                fontSize: '11px',
-                                                textAlign: 'left',
-                                                background: background === 'lines-xs' ? '#f1f3f5' : 'transparent',
-                                                border: 'none',
-                                                cursor: 'pointer',
-                                                borderRadius: '2px'
-                                            }}
-                                        >
-                                            Lines (XS)
-                                        </button>
-                                        <button
-                                            onClick={() => { setBackground('lines-sm'); setIsBgPickerOpen(false); }}
-                                            style={{
-                                                padding: '4px 8px',
-                                                fontSize: '11px',
-                                                textAlign: 'left',
-                                                background: background === 'lines-sm' ? '#f1f3f5' : 'transparent',
-                                                border: 'none',
-                                                cursor: 'pointer',
-                                                borderRadius: '2px'
-                                            }}
-                                        >
-                                            Lines (Small)
-                                        </button>
-                                        <button
-                                            onClick={() => { setBackground('lines-md'); setIsBgPickerOpen(false); }}
-                                            style={{
-                                                padding: '4px 8px',
-                                                fontSize: '11px',
-                                                textAlign: 'left',
-                                                background: background === 'lines-md' ? '#f1f3f5' : 'transparent',
-                                                border: 'none',
-                                                cursor: 'pointer',
-                                                borderRadius: '2px'
-                                            }}
-                                        >
-                                            Lines (Medium)
-                                        </button>
-                                        <button
-                                            onClick={() => { setBackground('lines-lg'); setIsBgPickerOpen(false); }}
-                                            style={{
-                                                padding: '4px 8px',
-                                                fontSize: '11px',
-                                                textAlign: 'left',
-                                                background: background === 'lines-lg' ? '#f1f3f5' : 'transparent',
-                                                border: 'none',
-                                                cursor: 'pointer',
-                                                borderRadius: '2px'
-                                            }}
-                                        >
-                                            Lines (Large)
-                                        </button>
-                                        <button
-                                            onClick={() => { setBackground('lines-xl'); setIsBgPickerOpen(false); }}
-                                            style={{
-                                                padding: '4px 8px',
-                                                fontSize: '11px',
-                                                textAlign: 'left',
-                                                background: background === 'lines-xl' ? '#f1f3f5' : 'transparent',
-                                                border: 'none',
-                                                cursor: 'pointer',
-                                                borderRadius: '2px'
-                                            }}
-                                        >
-                                            Lines (XL)
-                                        </button>
-                                        <div style={{ borderTop: '1px solid #eee', margin: '2px 0' }}></div>
-                                        <button
-                                            onClick={() => { setBackground('grid-xs'); setIsBgPickerOpen(false); }}
-                                            style={{
-                                                padding: '4px 8px',
-                                                fontSize: '11px',
-                                                textAlign: 'left',
-                                                background: background === 'grid-xs' ? '#f1f3f5' : 'transparent',
-                                                border: 'none',
-                                                cursor: 'pointer',
-                                                borderRadius: '2px'
-                                            }}
-                                        >
-                                            Grid (XS)
-                                        </button>
-                                        <button
-                                            onClick={() => { setBackground('grid-sm'); setIsBgPickerOpen(false); }}
-                                            style={{
-                                                padding: '4px 8px',
-                                                fontSize: '11px',
-                                                textAlign: 'left',
-                                                background: background === 'grid-sm' ? '#f1f3f5' : 'transparent',
-                                                border: 'none',
-                                                cursor: 'pointer',
-                                                borderRadius: '2px'
-                                            }}
-                                        >
-                                            Grid (Small)
-                                        </button>
-                                        <button
-                                            onClick={() => { setBackground('grid-md'); setIsBgPickerOpen(false); }}
-                                            style={{
-                                                padding: '4px 8px',
-                                                fontSize: '11px',
-                                                textAlign: 'left',
-                                                background: background === 'grid-md' ? '#f1f3f5' : 'transparent',
-                                                border: 'none',
-                                                cursor: 'pointer',
-                                                borderRadius: '2px'
-                                            }}
-                                        >
-                                            Grid (Medium)
-                                        </button>
-                                        <button
-                                            onClick={() => { setBackground('grid-lg'); setIsBgPickerOpen(false); }}
-                                            style={{
-                                                padding: '4px 8px',
-                                                fontSize: '11px',
-                                                textAlign: 'left',
-                                                background: background === 'grid-lg' ? '#f1f3f5' : 'transparent',
-                                                border: 'none',
-                                                cursor: 'pointer',
-                                                borderRadius: '2px'
-                                            }}
-                                        >
-                                            Grid (Large)
-                                        </button>
-                                        <button
-                                            onClick={() => { setBackground('grid-xl'); setIsBgPickerOpen(false); }}
-                                            style={{
-                                                padding: '4px 8px',
-                                                fontSize: '11px',
-                                                textAlign: 'left',
-                                                background: background === 'grid-xl' ? '#f1f3f5' : 'transparent',
-                                                border: 'none',
-                                                cursor: 'pointer',
-                                                borderRadius: '2px'
-                                            }}
-                                        >
-                                            Grid (XL)
-                                        </button>
+                                        borderRadius: '6px',
+                                        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                                        padding: '12px',
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        gap: '8px',
+                                        minWidth: '220px',
+                                        maxHeight: '400px',
+                                        overflowY: 'auto'
+                                    }} onClick={e => e.stopPropagation()}>
+                                        <div style={{ fontWeight: 600, fontSize: '0.8rem', color: '#495057' }}>Grid/Line Type</div>
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px' }}>
+                                            <BackgroundOptionButton
+                                                $active={background === 'none'}
+                                                onClick={() => setBackground('none')}
+                                            >
+                                                None
+                                            </BackgroundOptionButton>
+                                            <BackgroundOptionButton
+                                                $active={background.startsWith('lines')}
+                                                onClick={() => setBackground('lines-sm')}
+                                            >
+                                                Lines
+                                            </BackgroundOptionButton>
+                                            <BackgroundOptionButton
+                                                $active={background.startsWith('grid')}
+                                                onClick={() => setBackground('grid-sm')}
+                                            >
+                                                Grid
+                                            </BackgroundOptionButton>
+                                        </div>
+
+                                        {(background.startsWith('lines') || background.startsWith('grid')) && (
+                                            <>
+                                                <div style={{ fontSize: '0.75rem', color: '#888', marginTop: '4px' }}>Size</div>
+                                                <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                                                    {['xs', 'sm', 'md', 'lg', 'xl'].map(size => (
+                                                        <button
+                                                            key={size}
+                                                            style={{
+                                                                flex: 1,
+                                                                padding: '2px',
+                                                                fontSize: '10px',
+                                                                background: background.endsWith(size) ? '#333' : '#f1f3f5',
+                                                                color: background.endsWith(size) ? 'white' : '#333',
+                                                                border: 'none',
+                                                                borderRadius: '2px',
+                                                                cursor: 'pointer'
+                                                            }}
+                                                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                                                            onClick={() => setBackground(`${background.split('-')[0]}-${size}` as any)}
+                                                        >
+                                                            {size.toUpperCase()}
+                                                        </button>
+                                                    ))}
+                                                </div>
+
+                                                <div style={{ fontSize: '0.75rem', color: '#888', marginTop: '4px' }}>Line Darkness</div>
+                                                <CustomRangeInput
+                                                    type="range"
+                                                    min="5"
+                                                    max="80"
+                                                    $size={20}
+                                                    $opacityValue={lineOpacity * 100}
+                                                    value={lineOpacity * 100}
+                                                    onChange={(e) => setLineOpacity(parseInt(e.target.value) / 100)}
+                                                    style={{ margin: '4px 0' }}
+                                                />
+                                            </>
+                                        )}
+
+                                        <div style={{ borderTop: '1px solid #eee', margin: '4px 0' }}></div>
+
+                                        <div style={{ fontWeight: 600, fontSize: '0.8rem', color: '#495057' }}>Paper Color</div>
+                                        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                                            {/* White/None */}
+                                            <BackgroundColorSwatch $color="#ffffff" $active={backgroundColor === '#ffffff'} onClick={() => setBackgroundColor('#ffffff')} title="White" />
+
+                                            {/* Grays */}
+                                            <BackgroundColorSwatch $color="#f8f9fa" $active={backgroundColor === '#f8f9fa'} onClick={() => setBackgroundColor('#f8f9fa')} title="Light Gray" />
+                                            <BackgroundColorSwatch $color="#e9ecef" $active={backgroundColor === '#e9ecef'} onClick={() => setBackgroundColor('#e9ecef')} title="Gray" />
+                                            <BackgroundColorSwatch $color="#dee2e6" $active={backgroundColor === '#dee2e6'} onClick={() => setBackgroundColor('#dee2e6')} title="Dark Gray" />
+
+                                            {/* Beiges - Muji style */}
+                                            <BackgroundColorSwatch $color="#faf9f6" $active={backgroundColor === '#faf9f6'} onClick={() => setBackgroundColor('#faf9f6')} title="Off White" />
+                                            <BackgroundColorSwatch $color="#f5f5dc" $active={backgroundColor === '#f5f5dc'} onClick={() => setBackgroundColor('#f5f5dc')} title="Beige" />
+                                            <BackgroundColorSwatch $color="#e8e4c9" $active={backgroundColor === '#e8e4c9'} onClick={() => setBackgroundColor('#e8e4c9')} title="Dark Beige" />
+                                        </div>
+
+                                        <div style={{ borderTop: '1px solid #eee', margin: '8px 0 4px 0' }}></div>
+
+                                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                                            <CompactModalButton
+                                                onClick={() => {
+                                                    // Revert
+                                                    if (prevBackgroundStateRef.current) {
+                                                        setBackground(prevBackgroundStateRef.current.type);
+                                                        setBackgroundColor(prevBackgroundStateRef.current.color);
+                                                        setLineOpacity(prevBackgroundStateRef.current.opacity);
+                                                    }
+                                                    setIsBgPickerOpen(false);
+                                                }}
+                                            >
+                                                Cancel
+                                            </CompactModalButton>
+                                            <CompactModalButton
+                                                $variant="primary"
+                                                onClick={() => {
+                                                    setIsBgPickerOpen(false);
+                                                }}
+                                            >
+                                                OK
+                                            </CompactModalButton>
+                                        </div>
                                     </div>
                                 )}
                             </div>
-                        )}
+                        )
+                        }
                     </>
                 )}
 
-                {item.type === 'color' && (
-                    <div style={{
-                        padding: '0 4px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        height: '28px'
-                    }}>
-                        <ColorButton
-                            $color={availableColors[item.colorIndex!]}
-                            $selected={color === availableColors[item.colorIndex!] && !activeTool.startsWith('eraser')}
-                            onClick={() => {
-                                const c = availableColors[item.colorIndex!];
-                                setColor(c);
-                                updateToolSetting(c, undefined);
-                                if (activeTool.startsWith('eraser')) {
-                                    setActiveTool('pen');
-                                }
-                            }}
-                            onDoubleClick={(e) => handleColorDoubleClick(e, item.colorIndex!)}
-                            onTouchStart={(e) => handleDoubleTap(e, `color - ${item.colorIndex} `, (ev) => handleColorDoubleClick(ev, item.colorIndex!))}
-                            title="Double-click to change color"
-                        />
-                    </div>
-                )}
-
-                {item.type === 'size' && (
-                    <ToolButton
-                        $active={brushSize === availableBrushSizes[item.sizeIndex!]}
-                        onClick={() => {
-                            const s = availableBrushSizes[item.sizeIndex!];
-                            setBrushSize(s);
-                            updateToolSetting(undefined, s);
-                        }}
-                        onDoubleClick={(e) => handleBrushSizeDoubleClick(e, item.sizeIndex!)}
-                        onTouchStart={(e) => handleDoubleTap(e, `size - ${item.sizeIndex} `, (ev) => handleBrushSizeDoubleClick(ev, item.sizeIndex!))}
-                        style={{ width: 30, fontSize: '0.8rem', padding: 0 }}
-                        title={`Size: ${availableBrushSizes[item.sizeIndex!]} px(Double - click to change)`}
-                    >
+                {
+                    item.type === 'color' && (
                         <div style={{
-                            width: Math.min(availableBrushSizes[item.sizeIndex!], 20),
-                            height: Math.min(availableBrushSizes[item.sizeIndex!], 20),
-                            borderRadius: '50%',
-                            background: '#333'
-                        }} />
-                    </ToolButton>
-                )}
-            </div>
+                            padding: '0 4px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            height: '28px'
+                        }}>
+                            <ColorButton
+                                $color={availableColors[item.colorIndex!]}
+                                $selected={color === availableColors[item.colorIndex!] && !activeTool.startsWith('eraser')}
+                                onClick={() => {
+                                    const c = availableColors[item.colorIndex!];
+                                    setColor(c);
+                                    updateToolSetting(c, undefined);
+                                    if (activeTool.startsWith('eraser')) {
+                                        setActiveTool('pen');
+                                    }
+                                }}
+                                onDoubleClick={(e) => handleColorDoubleClick(e, item.colorIndex!)}
+                                onTouchStart={(e) => handleDoubleTap(e, `color - ${item.colorIndex} `, (ev) => handleColorDoubleClick(ev, item.colorIndex!))}
+                                title="Double-click to change color"
+                            />
+                        </div>
+                    )
+                }
+
+                {
+                    item.type === 'size' && (
+                        <ToolButton
+                            $active={brushSize === availableBrushSizes[item.sizeIndex!]}
+                            onClick={() => {
+                                const s = availableBrushSizes[item.sizeIndex!];
+                                setBrushSize(s);
+                                updateToolSetting(undefined, s);
+                            }}
+                            onDoubleClick={(e) => handleBrushSizeDoubleClick(e, item.sizeIndex!)}
+                            onTouchStart={(e) => handleDoubleTap(e, `size - ${item.sizeIndex} `, (ev) => handleBrushSizeDoubleClick(ev, item.sizeIndex!))}
+                            style={{ width: 30, fontSize: '0.8rem', padding: 0 }}
+                            title={`Size: ${availableBrushSizes[item.sizeIndex!]} px(Double - click to change)`}
+                        >
+                            <div style={{
+                                width: Math.min(availableBrushSizes[item.sizeIndex!], 20),
+                                height: Math.min(availableBrushSizes[item.sizeIndex!], 20),
+                                borderRadius: '50%',
+                                background: '#333'
+                            }} />
+                        </ToolButton>
+                    )
+                }
+            </div >
         );
     };
 
@@ -2158,403 +2378,427 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
     }, [color, brushSize, brushType, shapeStyles, saveHistory]);
 
     // Handle background change
+    // Handle background change
     useEffect(() => {
         const canvas = fabricCanvasRef.current;
         if (!canvas) return;
 
-        const pattern = createBackgroundPattern(background);
+        const pattern = createBackgroundPattern(background, backgroundColor, lineOpacity);
         canvas.setBackgroundColor(pattern, () => {
             canvas.renderAll();
         });
-    }, [background]);
+    }, [background, backgroundColor, lineOpacity]);
 
     return (
-        <ModalOverlay onClick={(e) => {
-            if (e.target === e.currentTarget) {
-                // If any settings modal is open (Level 1)
-                if (isColorEditOpen || isSizeEditOpen || isShapeSettingsOpen || isPenEditOpen || isFontEditOpen) {
-                    // If we just interacted with an input (like the native color picker),
-                    // ignore the first backdrop click so the user stays in the sub-modal.
-                    if (Date.now() - lastInteractionTimeRef.current > 500) {
-                        handleColorOk();
-                        handleSizeOk();
-                        handleShapeSettingsOk();
-                        handlePenOk();
-                        handleFontOk();
-                    }
-                } else {
-                    // Only close the main modal (Level 0) if no settings are open
-                    // and some time has passed since the last interaction
-                    if (Date.now() - lastInteractionTimeRef.current > 300) {
-                        handleCancelWrapped();
+        <>
+            <ModalOverlay onClick={(e) => {
+                if (e.target === e.currentTarget) {
+                    // If any settings modal is open (Level 1)
+                    if (isColorEditOpen || isSizeEditOpen || isShapeSettingsOpen || isPenEditOpen || isFontEditOpen) {
+                        // If we just interacted with an input (like the native color picker),
+                        // ignore the first backdrop click so the user stays in the sub-modal.
+                        if (Date.now() - lastInteractionTimeRef.current > 500) {
+                            handleColorOk();
+                            handleSizeOk();
+                            handleShapeSettingsOk();
+                            handlePenOk();
+                            handleFontOk();
+                        }
+                    } else {
+                        // Only close the main modal (Level 0) if no settings are open
+                        // and some time has passed since the last interaction
+                        if (Date.now() - lastInteractionTimeRef.current > 300) {
+                            handleCancelWrapped();
+                        }
                     }
                 }
-            }
-        }}>
-            <ModalContainer>
-                <Toolbar>
-                    <ToolGroup>
-                        {toolbarItems.map((item) => renderToolbarItem(item))}
-                    </ToolGroup>
-                </Toolbar>
-                {isColorEditOpen && (
-                    <Backdrop
-                        $centered={!settingsAnchor}
-                        onClick={(e) => {
-                            const now = Date.now();
-                            if (now - openedTimeRef.current < 400) return; // Ignore ghost clicks
-                            if (e.target === e.currentTarget) handleColorOk();
-                        }}>
-                        <CompactModal
-                            $anchor={settingsAnchor || undefined}
-                            onClick={e => e.stopPropagation()}
+            }}>
+                <ModalContainer>
+                    <Toolbar>
+                        <ToolGroup>
+                            {toolbarItems.map((item) => renderToolbarItem(item))}
+                        </ToolGroup>
+                        <ToolButton
+                            onClick={() => setIsConfigOpen(true)}
+                            style={{ marginLeft: 'auto', border: 'none', background: 'transparent' }}
+                            title="Customize Toolbar"
                         >
-                            <ColorInputWrapper>
-                                <HexColorPicker
-                                    color={tempColor}
-                                    onChange={(newColor) => {
-                                        setTempColor(newColor);
-                                        lastInteractionTimeRef.current = Date.now();
-                                    }}
-                                    style={{ width: '100%', height: '180px' }}
-                                />
-                                <div style={{ fontSize: '0.75rem', color: '#888', fontWeight: 500, marginTop: '8px' }}>
-                                    {tempColor.toUpperCase()}
-                                </div>
-                            </ColorInputWrapper>
-                            <CompactModalFooter>
-                                <CompactModalButton onClick={handleColorReset}>
-                                    {t.drawing?.reset || 'Reset'}
-                                </CompactModalButton>
-                                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                    <CompactModalButton onClick={handleColorCancel}>
-                                        {t.drawing?.cancel || 'Cancel'}
+                            <FiSettings size={18} />
+                        </ToolButton>
+                    </Toolbar>
+                    {isColorEditOpen && (
+                        <Backdrop
+                            $centered={!settingsAnchor}
+                            onClick={(e) => {
+                                const now = Date.now();
+                                if (now - openedTimeRef.current < 400) return; // Ignore ghost clicks
+                                if (e.target === e.currentTarget) handleColorOk();
+                            }}>
+                            <CompactModal
+                                $anchor={settingsAnchor || undefined}
+                                onClick={e => e.stopPropagation()}
+                            >
+                                <ColorInputWrapper>
+                                    <HexColorPicker
+                                        color={tempColor}
+                                        onChange={(newColor) => {
+                                            setTempColor(newColor);
+                                            lastInteractionTimeRef.current = Date.now();
+                                        }}
+                                        style={{ width: '100%', height: '180px' }}
+                                    />
+                                    <div style={{ fontSize: '0.75rem', color: '#888', fontWeight: 500, marginTop: '8px' }}>
+                                        {tempColor.toUpperCase()}
+                                    </div>
+                                </ColorInputWrapper>
+                                <CompactModalFooter>
+                                    <CompactModalButton onClick={handleColorReset}>
+                                        {t.drawing?.reset || 'Reset'}
                                     </CompactModalButton>
-                                    <CompactModalButton onClick={handleColorOk} $variant="primary">
-                                        {t.drawing?.ok || 'OK'}
-                                    </CompactModalButton>
-                                </div>
-                            </CompactModalFooter>
-                        </CompactModal>
-                    </Backdrop>
-                )}
+                                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                        <CompactModalButton onClick={handleColorCancel}>
+                                            {t.drawing?.cancel || 'Cancel'}
+                                        </CompactModalButton>
+                                        <CompactModalButton onClick={handleColorOk} $variant="primary">
+                                            {t.drawing?.ok || 'OK'}
+                                        </CompactModalButton>
+                                    </div>
+                                </CompactModalFooter>
+                            </CompactModal>
+                        </Backdrop>
+                    )}
 
-                {isSizeEditOpen && (
-                    <Backdrop
-                        $centered={!settingsAnchor}
-                        onClick={(e) => {
-                            const now = Date.now();
-                            if (now - openedTimeRef.current < 400) return; // Ignore ghost clicks
-                            if (e.target === e.currentTarget) handleSizeOk();
-                        }}>
-                        <CompactModal
-                            $anchor={settingsAnchor || undefined}
-                            onClick={e => e.stopPropagation()}
-                        >
-                            <ColorInputWrapper>
-                                <CustomRangeInput
-                                    type="range"
-                                    min="1"
-                                    max="100"
-                                    $size={tempSize}
-                                    value={tempSize}
-                                    onChange={(e) => setTempSize(parseInt(e.target.value))}
-                                />
-                                <CustomNumberInput
-                                    type="number"
-                                    min="1"
-                                    max="500"
-                                    value={tempSize}
-                                    onChange={(e) => setTempSize(parseInt(e.target.value) || 1)}
-                                />
-                            </ColorInputWrapper>
-                            <CompactModalFooter>
-                                <CompactModalButton onClick={handleSizeReset}>
-                                    {t.drawing?.reset || 'Reset'}
-                                </CompactModalButton>
-                                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                    <CompactModalButton onClick={handleSizeCancel}>
-                                        {t.drawing?.cancel || 'Cancel'}
+                    {isSizeEditOpen && (
+                        <Backdrop
+                            $centered={!settingsAnchor}
+                            onClick={(e) => {
+                                const now = Date.now();
+                                if (now - openedTimeRef.current < 400) return; // Ignore ghost clicks
+                                if (e.target === e.currentTarget) handleSizeOk();
+                            }}>
+                            <CompactModal
+                                $anchor={settingsAnchor || undefined}
+                                onClick={e => e.stopPropagation()}
+                            >
+                                <ColorInputWrapper>
+                                    <CustomRangeInput
+                                        type="range"
+                                        min="1"
+                                        max="100"
+                                        $size={tempSize}
+                                        value={tempSize}
+                                        onChange={(e) => setTempSize(parseInt(e.target.value))}
+                                    />
+                                    <CustomNumberInput
+                                        type="number"
+                                        min="1"
+                                        max="500"
+                                        value={tempSize}
+                                        onChange={(e) => setTempSize(parseInt(e.target.value) || 1)}
+                                    />
+                                </ColorInputWrapper>
+                                <CompactModalFooter>
+                                    <CompactModalButton onClick={handleSizeReset}>
+                                        {t.drawing?.reset || 'Reset'}
                                     </CompactModalButton>
-                                    <CompactModalButton onClick={handleSizeOk} $variant="primary">
-                                        {t.drawing?.ok || 'OK'}
-                                    </CompactModalButton>
+                                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                        <CompactModalButton onClick={handleSizeCancel}>
+                                            {t.drawing?.cancel || 'Cancel'}
+                                        </CompactModalButton>
+                                        <CompactModalButton onClick={handleSizeOk} $variant="primary">
+                                            {t.drawing?.ok || 'OK'}
+                                        </CompactModalButton>
+                                    </div>
+                                </CompactModalFooter>
+                            </CompactModal>
+                        </Backdrop>
+                    )}
+                    {isShapeSettingsOpen && (
+                        <Backdrop
+                            $centered={!settingsAnchor}
+                            onClick={(e) => {
+                                const now = Date.now();
+                                if (now - openedTimeRef.current < 400) return; // Ignore ghost clicks
+                                if (e.target === e.currentTarget) handleShapeSettingsOk();
+                            }}>
+                            <CompactModal
+                                $anchor={settingsAnchor || undefined}
+                                onClick={e => e.stopPropagation()}
+                                style={{ minWidth: '160px' }}
+                            >
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                    {DASH_OPTIONS.map((dash, index) => (
+                                        <DashOption
+                                            key={index}
+                                            $active={tempDashIndex === index}
+                                            onClick={() => setTempDashIndex(index)}
+                                        >
+                                            <DashPreview $dash={dash || null} />
+                                        </DashOption>
+                                    ))}
                                 </div>
-                            </CompactModalFooter>
-                        </CompactModal>
-                    </Backdrop>
-                )}
-                {isShapeSettingsOpen && (
-                    <Backdrop
-                        $centered={!settingsAnchor}
-                        onClick={(e) => {
-                            const now = Date.now();
-                            if (now - openedTimeRef.current < 400) return; // Ignore ghost clicks
-                            if (e.target === e.currentTarget) handleShapeSettingsOk();
-                        }}>
-                        <CompactModal
-                            $anchor={settingsAnchor || undefined}
-                            onClick={e => e.stopPropagation()}
-                            style={{ minWidth: '160px' }}
-                        >
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                {DASH_OPTIONS.map((dash, index) => (
-                                    <DashOption
-                                        key={index}
-                                        $active={tempDashIndex === index}
-                                        onClick={() => setTempDashIndex(index)}
-                                    >
-                                        <DashPreview $dash={dash || null} />
-                                    </DashOption>
-                                ))}
-                            </div>
-                            <div style={{ borderTop: '1px solid #eee', margin: '4px 0' }}></div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '0 4px' }}>
-                                <div style={{ fontSize: '0.7rem', color: '#666', fontWeight: 600, minWidth: '35px' }}>
-                                    {t.drawing?.opacity || 'Opacity'}
-                                </div>
-                                <CustomRangeInput
-                                    type="range"
-                                    min="10"
-                                    max="100"
-                                    $size={6}
-                                    $opacityValue={tempShapeOpacity}
-                                    value={tempShapeOpacity}
-                                    onChange={(e) => setTempShapeOpacity(parseInt(e.target.value))}
-                                    style={{ margin: 0, flex: 1 }}
-                                />
-                                <div style={{ fontSize: '0.7rem', color: '#666', fontWeight: 500, minWidth: '30px', textAlign: 'right' }}>
-                                    {tempShapeOpacity}%
-                                </div>
-                            </div>
-
-                            {activeTool === 'arrow' && (
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '4px', borderTop: '1px solid #eee' }}>
+                                <div style={{ borderTop: '1px solid #eee', margin: '4px 0' }}></div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '0 4px' }}>
                                     <div style={{ fontSize: '0.7rem', color: '#666', fontWeight: 600, minWidth: '35px' }}>
-                                        {t.drawing?.head_size || 'Head'}
+                                        {t.drawing?.opacity || 'Opacity'}
                                     </div>
                                     <CustomRangeInput
                                         type="range"
-                                        min="5"
+                                        min="10"
                                         max="100"
                                         $size={6}
-                                        value={tempHeadSize}
-                                        onChange={(e) => setTempHeadSize(parseInt(e.target.value))}
+                                        $opacityValue={tempShapeOpacity}
+                                        value={tempShapeOpacity}
+                                        onChange={(e) => setTempShapeOpacity(parseInt(e.target.value))}
                                         style={{ margin: 0, flex: 1 }}
                                     />
                                     <div style={{ fontSize: '0.7rem', color: '#666', fontWeight: 500, minWidth: '30px', textAlign: 'right' }}>
-                                        {tempHeadSize}px
+                                        {tempShapeOpacity}%
                                     </div>
                                 </div>
-                            )}
 
-                            <CompactModalFooter>
-                                <CompactModalButton onClick={handleShapeSettingsReset}>
-                                    {t.drawing?.reset || 'Reset'}
-                                </CompactModalButton>
-                                <div style={{ display: 'flex', gap: '0.4rem' }}>
-                                    <CompactModalButton onClick={handleShapeSettingsCancel}>
-                                        {t.drawing?.cancel || 'Cancel'}
-                                    </CompactModalButton>
-                                    <CompactModalButton onClick={handleShapeSettingsOk} $variant="primary">
-                                        {t.drawing?.ok || 'OK'}
-                                    </CompactModalButton>
-                                </div>
-                            </CompactModalFooter>
-                        </CompactModal>
-                    </Backdrop>
-                )}
-
-                {isPenEditOpen && (
-                    <Backdrop
-                        $centered={!settingsAnchor}
-                        onClick={(e) => {
-                            const now = Date.now();
-                            if (now - openedTimeRef.current < 400) return; // Ignore ghost clicks
-                            if (e.target === e.currentTarget) handlePenOk();
-                        }}>
-                        <CompactModal
-                            $anchor={settingsAnchor || undefined}
-                            onClick={e => e.stopPropagation()}
-                            style={{ minWidth: '240px' }}
-                        >
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                <DashOption
-                                    $active={tempBrushType === 'pen'}
-                                    onClick={() => setTempBrushType('pen')}
-                                    style={{ height: '36px', justifyContent: 'flex-start', padding: '0 12px', gap: '12px' }}
-                                >
-                                    <FiMinus size={18} />
-                                    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                                    <span style={{ fontSize: '0.85rem', minWidth: '70px' }}>{(t.drawing as any)?.pen_pen || 'Pen'}</span>
-                                    <BrushSample
-                                        $type="pen"
-                                        $color={toolSettings['pen']?.color || color}
-                                        $size={toolSettings['pen']?.size || brushSize}
-                                    />
-                                </DashOption>
-                                <DashOption
-                                    $active={tempBrushType === 'pencil'}
-                                    onClick={() => setTempBrushType('pencil')}
-                                    style={{ height: '36px', justifyContent: 'flex-start', padding: '0 12px', gap: '12px' }}
-                                >
-                                    <FiEdit2 size={18} />
-                                    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                                    <span style={{ fontSize: '0.85rem', minWidth: '70px' }}>{(t.drawing as any)?.pen_pencil || 'Pencil'}</span>
-                                    <BrushSample
-                                        $type="pencil"
-                                        $color={toolSettings['pencil']?.color || color}
-                                        $size={toolSettings['pencil']?.size || brushSize}
-                                    />
-                                </DashOption>
-                                <DashOption
-                                    $active={tempBrushType === 'highlighter'}
-                                    onClick={() => setTempBrushType('highlighter')}
-                                    style={{ height: '36px', justifyContent: 'flex-start', padding: '0 12px', gap: '12px' }}
-                                >
-                                    <HighlighterIcon />
-                                    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                                    <span style={{ fontSize: '0.85rem', minWidth: '70px' }}>{(t.drawing as any)?.pen_highlighter || 'Highlight'}</span>
-                                    <BrushSample
-                                        $type="highlighter"
-                                        $color={toolSettings['highlighter']?.color || color}
-                                        $size={(toolSettings['highlighter']?.size || brushSize) * 2}
-                                    />
-                                </DashOption>
-                                <DashOption
-                                    $active={tempBrushType === 'glow'}
-                                    onClick={() => setTempBrushType('glow')}
-                                    style={{ height: '36px', justifyContent: 'flex-start', padding: '0 12px', gap: '12px' }}
-                                >
-                                    <GlowIcon />
-                                    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                                    <span style={{ fontSize: '0.85rem', minWidth: '70px' }}>{(t.drawing as any)?.pen_glow || 'Glow'}</span>
-                                    <BrushSample
-                                        $type="glow"
-                                        $color={toolSettings['glow']?.color || color}
-                                        $size={toolSettings['glow']?.size || brushSize}
-                                    />
-                                </DashOption>
-                                <DashOption
-                                    $active={tempBrushType === 'spray'}
-                                    onClick={() => setTempBrushType('spray')}
-                                    style={{ height: '36px', justifyContent: 'flex-start', padding: '0 12px', gap: '12px' }}
-                                >
-                                    <SprayBrushIcon />
-                                    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                                    <span style={{ fontSize: '0.85rem', minWidth: '70px' }}>{(t.drawing as any)?.pen_spray || 'Spray'}</span>
-                                    <BrushSample
-                                        $type="spray"
-                                        $color={toolSettings['spray']?.color || color}
-                                        $size={toolSettings['spray']?.size || brushSize}
-                                    />
-                                </DashOption>
-                                <DashOption
-                                    $active={tempBrushType === 'circle'}
-                                    onClick={() => setTempBrushType('circle')}
-                                    style={{ height: '36px', justifyContent: 'flex-start', padding: '0 12px', gap: '12px' }}
-                                >
-                                    <CircleBrushIcon />
-                                    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                                    <span style={{ fontSize: '0.85rem', minWidth: '70px' }}>{(t.drawing as any)?.pen_circle || 'Bubble'}</span>
-                                    <BrushSample
-                                        $type="circle"
-                                        $color={toolSettings['circle']?.color || color}
-                                        $size={toolSettings['circle']?.size || brushSize}
-                                    />
-                                </DashOption>
-
-                                <div style={{ borderTop: '1px solid #eee', margin: '4px 0' }}></div>
-
-                                <DashOption
-                                    $active={tempPalmRejection}
-                                    onClick={() => setTempPalmRejection(!tempPalmRejection)}
-                                    style={{ height: '36px', justifyContent: 'flex-start', padding: '0 12px', gap: '12px' }}
-                                >
-                                    <div style={{
-                                        width: '18px',
-                                        height: '18px',
-                                        borderRadius: '4px',
-                                        border: '2px solid #333',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        background: tempPalmRejection ? '#333' : 'transparent'
-                                    }}>
-                                        {tempPalmRejection && <div style={{ width: '8px', height: '8px', background: 'white', borderRadius: '1px' }} />}
+                                {activeTool === 'arrow' && (
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '4px', borderTop: '1px solid #eee' }}>
+                                        <div style={{ fontSize: '0.7rem', color: '#666', fontWeight: 600, minWidth: '35px' }}>
+                                            {t.drawing?.head_size || 'Head'}
+                                        </div>
+                                        <CustomRangeInput
+                                            type="range"
+                                            min="5"
+                                            max="100"
+                                            $size={6}
+                                            value={tempHeadSize}
+                                            onChange={(e) => setTempHeadSize(parseInt(e.target.value))}
+                                            style={{ margin: 0, flex: 1 }}
+                                        />
+                                        <div style={{ fontSize: '0.7rem', color: '#666', fontWeight: 500, minWidth: '30px', textAlign: 'right' }}>
+                                            {tempHeadSize}px
+                                        </div>
                                     </div>
-                                    <span style={{ fontSize: '0.85rem' }}>{(t.drawing as any)?.palm_rejection || 'Palm Rejection'}</span>
-                                </DashOption>
-                            </div>
-                            <CompactModalFooter>
-                                <CompactModalButton onClick={handlePenReset}>
-                                    {t.drawing?.reset || 'Reset'}
-                                </CompactModalButton>
-                                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                    <CompactModalButton onClick={handlePenCancel}>
-                                        {t.drawing?.cancel || 'Cancel'}
-                                    </CompactModalButton>
-                                    <CompactModalButton onClick={handlePenOk} $variant="primary">
-                                        {t.drawing?.ok || 'OK'}
-                                    </CompactModalButton>
-                                </div>
-                            </CompactModalFooter>
-                        </CompactModal>
-                    </Backdrop>
-                )}
+                                )}
 
-                {isFontEditOpen && (
-                    <Backdrop
-                        $centered={!settingsAnchor}
-                        onClick={(e) => {
-                            const now = Date.now();
-                            if (now - openedTimeRef.current < 400) return; // Ignore ghost clicks
-                            if (e.target === e.currentTarget) handleFontOk();
-                        }}>
-                        <CompactModal
-                            $anchor={settingsAnchor || undefined}
-                            onClick={e => e.stopPropagation()}
-                            style={{ minWidth: '180px' }}
-                        >
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                {INITIAL_FONTS.map((font) => (
+                                <CompactModalFooter>
+                                    <CompactModalButton onClick={handleShapeSettingsReset}>
+                                        {t.drawing?.reset || 'Reset'}
+                                    </CompactModalButton>
+                                    <div style={{ display: 'flex', gap: '0.4rem' }}>
+                                        <CompactModalButton onClick={handleShapeSettingsCancel}>
+                                            {t.drawing?.cancel || 'Cancel'}
+                                        </CompactModalButton>
+                                        <CompactModalButton onClick={handleShapeSettingsOk} $variant="primary">
+                                            {t.drawing?.ok || 'OK'}
+                                        </CompactModalButton>
+                                    </div>
+                                </CompactModalFooter>
+                            </CompactModal>
+                        </Backdrop>
+                    )}
+
+                    {isPenEditOpen && (
+                        <Backdrop
+                            $centered={!settingsAnchor}
+                            onClick={(e) => {
+                                const now = Date.now();
+                                if (now - openedTimeRef.current < 400) return; // Ignore ghost clicks
+                                if (e.target === e.currentTarget) handlePenOk();
+                            }}>
+                            <CompactModal
+                                $anchor={settingsAnchor || undefined}
+                                onClick={e => e.stopPropagation()}
+                                style={{ minWidth: '240px' }}
+                            >
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                                     <DashOption
-                                        key={font}
-                                        $active={tempFontFamily === font}
-                                        onClick={() => setTempFontFamily(font)}
-                                        style={{ fontFamily: font, height: '32px', justifyContent: 'flex-start', padding: '0 12px' }}
+                                        $active={tempBrushType === 'pen'}
+                                        onClick={() => setTempBrushType('pen')}
+                                        style={{ height: '36px', justifyContent: 'flex-start', padding: '0 12px', gap: '12px' }}
                                     >
-                                        {font}
+                                        <FiMinus size={18} />
+                                        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                                        <span style={{ fontSize: '0.85rem', minWidth: '70px' }}>{(t.drawing as any)?.pen_pen || 'Pen'}</span>
+                                        <BrushSample
+                                            $type="pen"
+                                            $color={toolSettings['pen']?.color || color}
+                                            $size={toolSettings['pen']?.size || brushSize}
+                                        />
                                     </DashOption>
-                                ))}
-                            </div>
-                            <CompactModalFooter>
-                                <div />
-                                <div style={{ display: 'flex', gap: '0.4rem' }}>
-                                    <CompactModalButton onClick={handleFontCancel}>
-                                        {t.drawing?.cancel || 'Cancel'}
-                                    </CompactModalButton>
-                                    <CompactModalButton onClick={handleFontOk} $variant="primary">
-                                        {t.drawing?.ok || 'OK'}
-                                    </CompactModalButton>
-                                </div>
-                            </CompactModalFooter>
-                        </CompactModal>
-                    </Backdrop>
-                )}
+                                    <DashOption
+                                        $active={tempBrushType === 'pencil'}
+                                        onClick={() => setTempBrushType('pencil')}
+                                        style={{ height: '36px', justifyContent: 'flex-start', padding: '0 12px', gap: '12px' }}
+                                    >
+                                        <FiEdit2 size={18} />
+                                        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                                        <span style={{ fontSize: '0.85rem', minWidth: '70px' }}>{(t.drawing as any)?.pen_pencil || 'Pencil'}</span>
+                                        <BrushSample
+                                            $type="pencil"
+                                            $color={toolSettings['pencil']?.color || color}
+                                            $size={toolSettings['pencil']?.size || brushSize}
+                                        />
+                                    </DashOption>
+                                    <DashOption
+                                        $active={tempBrushType === 'highlighter'}
+                                        onClick={() => setTempBrushType('highlighter')}
+                                        style={{ height: '36px', justifyContent: 'flex-start', padding: '0 12px', gap: '12px' }}
+                                    >
+                                        <HighlighterIcon />
+                                        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                                        <span style={{ fontSize: '0.85rem', minWidth: '70px' }}>{(t.drawing as any)?.pen_highlighter || 'Highlight'}</span>
+                                        <BrushSample
+                                            $type="highlighter"
+                                            $color={toolSettings['highlighter']?.color || color}
+                                            $size={(toolSettings['highlighter']?.size || brushSize) * 2}
+                                        />
+                                    </DashOption>
+                                    <DashOption
+                                        $active={tempBrushType === 'glow'}
+                                        onClick={() => setTempBrushType('glow')}
+                                        style={{ height: '36px', justifyContent: 'flex-start', padding: '0 12px', gap: '12px' }}
+                                    >
+                                        <GlowIcon />
+                                        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                                        <span style={{ fontSize: '0.85rem', minWidth: '70px' }}>{(t.drawing as any)?.pen_glow || 'Glow'}</span>
+                                        <BrushSample
+                                            $type="glow"
+                                            $color={toolSettings['glow']?.color || color}
+                                            $size={toolSettings['glow']?.size || brushSize}
+                                        />
+                                    </DashOption>
+                                    <DashOption
+                                        $active={tempBrushType === 'spray'}
+                                        onClick={() => setTempBrushType('spray')}
+                                        style={{ height: '36px', justifyContent: 'flex-start', padding: '0 12px', gap: '12px' }}
+                                    >
+                                        <SprayBrushIcon />
+                                        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                                        <span style={{ fontSize: '0.85rem', minWidth: '70px' }}>{(t.drawing as any)?.pen_spray || 'Spray'}</span>
+                                        <BrushSample
+                                            $type="spray"
+                                            $color={toolSettings['spray']?.color || color}
+                                            $size={toolSettings['spray']?.size || brushSize}
+                                        />
+                                    </DashOption>
+                                    <DashOption
+                                        $active={tempBrushType === 'circle'}
+                                        onClick={() => setTempBrushType('circle')}
+                                        style={{ height: '36px', justifyContent: 'flex-start', padding: '0 12px', gap: '12px' }}
+                                    >
+                                        <CircleBrushIcon />
+                                        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                                        <span style={{ fontSize: '0.85rem', minWidth: '70px' }}>{(t.drawing as any)?.pen_circle || 'Bubble'}</span>
+                                        <BrushSample
+                                            $type="circle"
+                                            $color={toolSettings['circle']?.color || color}
+                                            $size={toolSettings['circle']?.size || brushSize}
+                                        />
+                                    </DashOption>
 
-                <CanvasWrapper ref={containerRef}>
-                    <canvas ref={canvasRef} />
-                    <FloatingActionButtons>
-                        <CompactActionButton onClick={handleCancelWrapped} title={t.drawing?.cancel || 'Cancel'}>
-                            <FiX size={24} />
-                        </CompactActionButton>
-                        <CompactActionButton $primary onClick={handleSave} title={t.drawing?.insert || 'Insert'}>
-                            <FiCheck size={24} />
-                        </CompactActionButton>
-                    </FloatingActionButtons>
-                </CanvasWrapper>
-            </ModalContainer>
-        </ModalOverlay >
+                                    <div style={{ borderTop: '1px solid #eee', margin: '4px 0' }}></div>
+
+                                    <DashOption
+                                        $active={tempPalmRejection}
+                                        onClick={() => setTempPalmRejection(!tempPalmRejection)}
+                                        style={{ height: '36px', justifyContent: 'flex-start', padding: '0 12px', gap: '12px' }}
+                                    >
+                                        <div style={{
+                                            width: '18px',
+                                            height: '18px',
+                                            borderRadius: '4px',
+                                            border: '2px solid #333',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            background: tempPalmRejection ? '#333' : 'transparent'
+                                        }}>
+                                            {tempPalmRejection && <div style={{ width: '8px', height: '8px', background: 'white', borderRadius: '1px' }} />}
+                                        </div>
+                                        <span style={{ fontSize: '0.85rem' }}>{(t.drawing as any)?.palm_rejection || 'Palm Rejection'}</span>
+                                    </DashOption>
+                                </div>
+                                <CompactModalFooter>
+                                    <CompactModalButton onClick={handlePenReset}>
+                                        {t.drawing?.reset || 'Reset'}
+                                    </CompactModalButton>
+                                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                        <CompactModalButton onClick={handlePenCancel}>
+                                            {t.drawing?.cancel || 'Cancel'}
+                                        </CompactModalButton>
+                                        <CompactModalButton onClick={handlePenOk} $variant="primary">
+                                            {t.drawing?.ok || 'OK'}
+                                        </CompactModalButton>
+                                    </div>
+                                </CompactModalFooter>
+                            </CompactModal>
+                        </Backdrop>
+                    )}
+
+                    {isFontEditOpen && (
+                        <Backdrop
+                            $centered={!settingsAnchor}
+                            onClick={(e) => {
+                                const now = Date.now();
+                                if (now - openedTimeRef.current < 400) return; // Ignore ghost clicks
+                                if (e.target === e.currentTarget) handleFontOk();
+                            }}>
+                            <CompactModal
+                                $anchor={settingsAnchor || undefined}
+                                onClick={e => e.stopPropagation()}
+                                style={{ minWidth: '180px' }}
+                            >
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                    {INITIAL_FONTS.map((font) => (
+                                        <DashOption
+                                            key={font}
+                                            $active={tempFontFamily === font}
+                                            onClick={() => setTempFontFamily(font)}
+                                            style={{ fontFamily: font, height: '32px', justifyContent: 'flex-start', padding: '0 12px' }}
+                                        >
+                                            {font}
+                                        </DashOption>
+                                    ))}
+                                </div>
+                                <CompactModalFooter>
+                                    <div />
+                                    <div style={{ display: 'flex', gap: '0.4rem' }}>
+                                        <CompactModalButton onClick={handleFontCancel}>
+                                            {t.drawing?.cancel || 'Cancel'}
+                                        </CompactModalButton>
+                                        <CompactModalButton onClick={handleFontOk} $variant="primary">
+                                            {t.drawing?.ok || 'OK'}
+                                        </CompactModalButton>
+                                    </div>
+                                </CompactModalFooter>
+                            </CompactModal>
+                        </Backdrop>
+                    )}
+
+                    <CanvasWrapper ref={containerRef}>
+                        <canvas ref={canvasRef} />
+                        <FloatingActionButtons>
+                            <CompactActionButton onClick={handleCancelWrapped} title={t.drawing?.cancel || 'Cancel'}>
+                                <FiX size={24} />
+                            </CompactActionButton>
+                            <CompactActionButton $primary onClick={handleSave} title={t.drawing?.insert || 'Insert'}>
+                                <FiCheck size={24} />
+                            </CompactActionButton>
+                        </FloatingActionButtons>
+                    </CanvasWrapper>
+                </ModalContainer>
+            </ModalOverlay >
+            {isConfigOpen && (
+                <ToolbarConfigurator
+                    currentItems={toolbarItems}
+                    allItems={INITIAL_TOOLBAR_ITEMS}
+                    colors={availableColors}
+                    brushSizes={availableBrushSizes}
+                    onSave={(newItems) => {
+                        setToolbarItems(newItems);
+                        setIsConfigOpen(false);
+                    }}
+                    onClose={() => setIsConfigOpen(false)}
+                />
+            )}
+        </>
     );
 };
+
