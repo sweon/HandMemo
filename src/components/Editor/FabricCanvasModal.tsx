@@ -1759,6 +1759,14 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
         saveHistory();
     };
 
+    const handleCancelWrapped = React.useCallback(() => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const msg = (t.drawing as any)?.cancel_confirm || 'Are you sure you want to discard your changes?';
+        if (window.confirm(msg)) {
+            onClose();
+        }
+    }, [onClose, t.drawing]);
+
     const handleSave = () => {
         if (!fabricCanvasRef.current) return;
         // Ensure dimensions are saved in JSON
@@ -1819,7 +1827,7 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                     }
                     break;
                 case 'escape': // Close modal
-                    onClose();
+                    handleCancelWrapped();
                     break;
                 case 'delete':
                 case 'backspace': {
@@ -1867,7 +1875,7 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [onClose, availableBrushSizes, handleUndo, handleRedo, setBrushSize, updateToolSetting, saveHistory]);
+    }, [onClose, availableBrushSizes, handleUndo, handleRedo, setBrushSize, updateToolSetting, saveHistory, handleCancelWrapped]);
 
     // Tool Switching Logic
     useEffect(() => {
@@ -2178,7 +2186,7 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                     // Only close the main modal (Level 0) if no settings are open
                     // and some time has passed since the last interaction
                     if (Date.now() - lastInteractionTimeRef.current > 300) {
-                        onClose();
+                        handleCancelWrapped();
                     }
                 }
             }
@@ -2538,7 +2546,7 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                 <CanvasWrapper ref={containerRef}>
                     <canvas ref={canvasRef} />
                     <FloatingActionButtons>
-                        <CompactActionButton onClick={onClose} title={t.drawing?.cancel || 'Cancel'}>
+                        <CompactActionButton onClick={handleCancelWrapped} title={t.drawing?.cancel || 'Cancel'}>
                             <FiX size={24} />
                         </CompactActionButton>
                         <CompactActionButton $primary onClick={handleSave} title={t.drawing?.insert || 'Insert'}>
