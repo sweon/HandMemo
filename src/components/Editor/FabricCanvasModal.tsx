@@ -901,6 +901,8 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
     const [tempSize, setTempSize] = useState(2);
     const [editingSizeIndex, setEditingSizeIndex] = useState<number | null>(null);
 
+    const [isExitConfirmOpen, setIsExitConfirmOpen] = useState(false);
+
     const [penSlotSettings, setPenSlotSettings] = useState<Record<string, { brushType: string, color: string, size: number }>>(() => {
         const saved = localStorage.getItem('fabric_pen_slot_settings');
         return saved ? JSON.parse(saved) : {
@@ -2123,12 +2125,15 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
     };
 
     const handleCancelWrapped = React.useCallback(() => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const msg = (t.drawing as any)?.cancel_confirm || 'Are you sure you want to discard your changes?';
-        if (window.confirm(msg)) {
-            onClose();
-        }
-    }, [onClose, t.drawing]);
+        setIsExitConfirmOpen(true);
+    }, []);
+
+    const handleConfirmExit = () => {
+        setIsExitConfirmOpen(false);
+        // Explicitly mark as closing to bypass guard warning
+        isClosingRef.current = true;
+        onClose();
+    };
 
     const handleSave = () => {
         if (!fabricCanvasRef.current) return;
@@ -2138,6 +2143,11 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
         const json = JSON.stringify(jsonObj);
         onSave(json);
     };
+
+    // ... (omitted intermediate lines if tool allows or do separate calls, but seeing replace_file_content limitation)
+    // Actually I need to replace separate chunks.
+
+
     // Keyboard Shortcuts
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
@@ -2946,10 +2956,33 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                     onClose={() => setIsConfigOpen(false)}
                 />
             )}
+            {isExitConfirmOpen && (
+                <ModalOverlay style={{ zIndex: 12000 }}>
+                    <CompactModal onClick={e => e.stopPropagation()} style={{ padding: '20px', minWidth: '300px', maxWidth: '90vw' }}>
+                        <h3 style={{ marginTop: 0, fontSize: '1.2rem', color: '#333' }}>
+                            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                            {(t.drawing as any)?.exit_title || 'Exit Drawing?'}
+                        </h3>
+                        <p style={{ color: '#555', lineHeight: '1.5', margin: '10px 0 20px 0' }}>
+                            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                            {(t.drawing as any)?.cancel_confirm || 'Are you sure you want to discard your changes?'}
+                        </p>
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
+                            <CompactModalButton onClick={() => setIsExitConfirmOpen(false)} style={{ padding: '8px 16px' }}>
+                                {t.drawing?.cancel || 'Cancel'}
+                            </CompactModalButton>
+                            <CompactModalButton $variant="danger" onClick={handleConfirmExit} style={{ padding: '8px 16px', background: '#e03131', color: 'white', border: 'none' }}>
+                                {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                                {(t.drawing as any)?.discard || 'Discard'}
+                            </CompactModalButton>
+                        </div>
+                    </CompactModal>
+                </ModalOverlay>
+            )}
             {showExitToast && (
                 <Toast
                     variant="warning"
-                    position="bottom"
+                    position="centered"
                     icon={<FiAlertTriangle size={14} />}
                     message={t.android?.exit_warning || "Press back again to close."}
                     onClose={() => setShowExitToast(false)}
