@@ -14,7 +14,7 @@ export const AndroidExitHandler: React.FC = () => {
 
     const isAtRoot = location.pathname === '/' || location.pathname === '';
 
-    const { checkGuards, registerGuard, unregisterGuard } = useExitGuard();
+    const { checkGuards } = useExitGuard();
     // Re-declare ExitGuardResult locally or import it. We should import it.
     // However, for cleaner code in this tool block, I'll rely on string matching or proper import in next step.
     // Wait, I can't import inside the tool block easily without adding line 1 import.
