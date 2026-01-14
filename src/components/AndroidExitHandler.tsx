@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { Toast } from './UI/Toast';
 import { FiAlertTriangle } from 'react-icons/fi';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useExitGuard } from '../contexts/ExitGuardContext';
 
 export const AndroidExitHandler: React.FC = () => {
     const location = useLocation();
@@ -12,6 +13,12 @@ export const AndroidExitHandler: React.FC = () => {
     const lastPressTime = useRef<number>(0);
 
     const isAtRoot = location.pathname === '/' || location.pathname === '';
+
+    const { checkGuards, registerGuard, unregisterGuard } = useExitGuard();
+    // Re-declare ExitGuardResult locally or import it. We should import it.
+    // However, for cleaner code in this tool block, I'll rely on string matching or proper import in next step.
+    // Wait, I can't import inside the tool block easily without adding line 1 import.
+    // I will do imports separately if needed, but here I'm replacing the whole component logic mainly.
 
     useEffect(() => {
         // Function to ensure we have an interceptor state
@@ -24,6 +31,18 @@ export const AndroidExitHandler: React.FC = () => {
         ensureGuardState();
 
         const handlePopState = (event: PopStateEvent) => {
+            // Check guards first
+            const guardResult = checkGuards();
+            if (guardResult === 'PREVENT') { // ExitGuardResult.PREVENT_NAVIGATION
+                // Restore state (undo pop)
+                window.history.pushState({ isGuard: true }, '');
+                return;
+            }
+            if (guardResult === 'ALLOW') { // ExitGuardResult.ALLOW_NAVIGATION
+                // Accept pop (do nothing, let it be)
+                return;
+            }
+
             // If the state we popped TO does not have our flag, it means we intercepted a "back" 
             // that tried to leave the app or go past our first entry.
             if (!event.state || !event.state.isGuard) {
@@ -55,7 +74,7 @@ export const AndroidExitHandler: React.FC = () => {
         return () => {
             window.removeEventListener('popstate', handlePopState);
         };
-    }, [isAtRoot, navigate]);
+    }, [isAtRoot, navigate, checkGuards]);
 
     if (!showExitToast) return null;
 

@@ -5,6 +5,9 @@ import { FiX, FiCheck, FiTrash2, FiRotateCcw, FiRotateCw, FiSquare, FiCircle, Fi
 import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd';
 import { HexColorPicker } from 'react-colorful';
 import { useLanguage } from '../../contexts/LanguageContext';
+import { useExitGuard, ExitGuardResult } from '../../contexts/ExitGuardContext';
+import { Toast } from '../UI/Toast';
+import { FiAlertTriangle } from 'react-icons/fi';
 
 // Pixel Eraser Icon - 3D pink block eraser
 const PixelEraserIcon = () => (
@@ -796,11 +799,57 @@ const ToolbarConfigurator: React.FC<ToolbarConfiguratorProps> = ({ currentItems,
     );
 };
 
-export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialData, onSave, onClose }) => {
+export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialData, onSave, onClose: propsOnClose }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const fabricCanvasRef = useRef<fabric.Canvas | null>(null);
     const { t } = useLanguage();
+
+    // Guard State
+    const { registerGuard, unregisterGuard } = useExitGuard();
+    const [showExitToast, setShowExitToast] = useState(false);
+    const lastBackPress = useRef(0);
+    const isClosingRef = useRef(false);
+
+    const handleActualClose = useRef(propsOnClose);
+    handleActualClose.current = propsOnClose;
+
+    // Wrapper for onClose to handle history safe closing
+    const onClose = () => {
+        if (isClosingRef.current) {
+            propsOnClose();
+        } else {
+            isClosingRef.current = true;
+            window.history.back();
+        }
+    };
+
+    useEffect(() => {
+        // Push state to enable back button trapping
+        window.history.pushState({ fabricOpen: true }, '');
+
+        const guardId = 'fabric-canvas-guard';
+        registerGuard(guardId, () => {
+            if (isClosingRef.current) {
+                handleActualClose.current();
+                return ExitGuardResult.ALLOW_NAVIGATION;
+            }
+
+            const now = Date.now();
+            if (now - lastBackPress.current < 2000) {
+                isClosingRef.current = true;
+                handleActualClose.current();
+                return ExitGuardResult.ALLOW_NAVIGATION;
+            } else {
+                lastBackPress.current = now;
+                setShowExitToast(true);
+                return ExitGuardResult.PREVENT_NAVIGATION;
+            }
+        });
+
+        return () => unregisterGuard(guardId);
+    }, [registerGuard, unregisterGuard]);
+
 
     const [availableColors, setAvailableColors] = useState<string[]>(() => {
         const saved = localStorage.getItem('fabric_colors');
@@ -2895,6 +2944,15 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                         setIsConfigOpen(false);
                     }}
                     onClose={() => setIsConfigOpen(false)}
+                />
+            )}
+            {showExitToast && (
+                <Toast
+                    variant="warning"
+                    position="bottom"
+                    icon={<FiAlertTriangle size={14} />}
+                    message={t.android?.exit_warning || "Press back again to close."}
+                    onClose={() => setShowExitToast(false)}
                 />
             )}
         </>

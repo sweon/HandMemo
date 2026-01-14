@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import styled from 'styled-components';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
@@ -165,6 +165,10 @@ const formatDateForInput = (date: Date) => {
     return `${y}-${m}-${d}`;
 };
 
+import { useExitGuard, ExitGuardResult } from '../../contexts/ExitGuardContext';
+import { Toast } from '../UI/Toast';
+import { FiAlertTriangle } from 'react-icons/fi';
+
 export const MemoDetail: React.FC = () => {
     const { id, bookId } = useParams<{ id: string, bookId: string }>();
     const navigate = useNavigate();
@@ -173,7 +177,70 @@ export const MemoDetail: React.FC = () => {
     const { t, language } = useLanguage();
     const isNew = !id;
 
-    const [isEditing, setIsEditing] = useState(isNew);
+    // Guard Hook
+    const { registerGuard, unregisterGuard } = useExitGuard();
+    const [showExitToast, setShowExitToast] = useState(false);
+    const lastBackPress = useRef(0);
+    const isClosingRef = useRef(false);
+
+    // Internal editing state
+    const [isEditingInternal, setIsEditingInternal] = useState(isNew);
+
+    // Wrapper to expose the state but intercept "clean" setIsEditing calls if needed.
+    // Actually, we can just use set editing and side effects.
+
+    // Helpers to manage editing transitions
+    const startEditing = () => {
+        setIsEditingInternal(true);
+        window.history.pushState({ editing: true }, '');
+    };
+
+    const stopEditing = () => {
+        isClosingRef.current = true;
+        window.history.back(); // Trigger guard -> allow
+    };
+
+    // Need to handle initial "edit mode" from URL too.
+    useEffect(() => {
+        if (isEditingInternal) {
+            const guardId = 'memo-edit-guard';
+
+            // If we entered edit mode directly (not via startEditing), we might need to push state?
+            // But useEffect runs on mount. 
+            // Ideally we push state whenever edit mode becomes active.
+            // But care: if we re-render, don't push duplicate states.
+
+            // Simple Logic: Registers guard always when editing.
+            registerGuard(guardId, () => {
+                if (isClosingRef.current) {
+                    setIsEditingInternal(false);
+                    return ExitGuardResult.ALLOW_NAVIGATION;
+                }
+
+                const now = Date.now();
+                if (now - lastBackPress.current < 2000) {
+                    isClosingRef.current = true;
+                    setIsEditingInternal(false);
+                    return ExitGuardResult.ALLOW_NAVIGATION;
+                } else {
+                    lastBackPress.current = now;
+                    setShowExitToast(true);
+                    return ExitGuardResult.PREVENT_NAVIGATION;
+                }
+            });
+
+            return () => unregisterGuard(guardId);
+        }
+    }, [isEditingInternal, registerGuard, unregisterGuard]);
+
+    const isEditing = isEditingInternal;
+    const setIsEditing = (val: boolean) => {
+        if (val) startEditing();
+        else stopEditing();
+    };
+
+    // Original Logic uses setTitle etc...
+
     const [title, setTitle] = useState('');
     const [content, setContent] = useState('');
     const [tags, setTags] = useState('');
@@ -575,6 +642,16 @@ export const MemoDetail: React.FC = () => {
                     onDeleteMemoOnly={performDeleteMemoOnly}
                     onDeleteThread={() => performDeleteMemoOnly()} // No threads strictly here
                     isThreadHead={false}
+                />
+            )}
+
+            {showExitToast && (
+                <Toast
+                    variant="warning"
+                    position="bottom"
+                    icon={<FiAlertTriangle size={14} />}
+                    message={t.android?.exit_warning || "Press back again to exit editing."}
+                    onClose={() => setShowExitToast(false)}
                 />
             )}
         </Container>
