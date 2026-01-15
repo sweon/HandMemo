@@ -272,15 +272,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
     needRefresh: [needRefresh],
     updateServiceWorker,
   } = useRegisterSW({
-    immediate: true, // Let it check on load, but we also check manually
+    immediate: false,
     onRegistered(r) {
       console.log('SW Registered');
-      if (r) {
-        // Periodic check every 10 minutes
-        setInterval(() => {
-          r.update();
-        }, 10 * 60 * 1000);
-      }
     },
     onRegisterError(error) {
       console.log('SW registration error', error);
