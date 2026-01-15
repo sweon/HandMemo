@@ -233,7 +233,13 @@ const AppVersion = styled.span`
 export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
   const { searchQuery, setSearchQuery } = useSearch();
   const { t, language } = useLanguage();
-  const [sortBy, setSortBy] = useState<'date-desc' | 'date-asc' | 'title-asc'>('date-desc');
+  const [sortBy, setSortBy] = useState<'date-desc' | 'date-asc' | 'title-asc' | 'last-edited' | 'last-commented'>(() => {
+    return (localStorage.getItem('sidebar_sortBy') as any) || 'last-edited';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('sidebar_sortBy', sortBy);
+  }, [sortBy]);
 
   const { mode, toggleTheme, increaseFontSize, decreaseFontSize, theme } = useTheme();
   const navigate = useNavigate();
@@ -339,6 +345,19 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
   };
 
   const allMemos = useLiveQuery(() => db.memos.toArray());
+  const allComments = useLiveQuery(() => db.comments.toArray());
+
+  const lastCommentMap = React.useMemo(() => {
+    const map: Record<number, number> = {};
+    if (!allComments) return map;
+    allComments.forEach(c => {
+      const time = c.updatedAt?.getTime() || c.createdAt.getTime();
+      if (!map[c.memoId] || time > map[c.memoId]) {
+        map[c.memoId] = time;
+      }
+    });
+    return map;
+  }, [allComments]);
 
   const sortedMemos = React.useMemo(() => {
     if (!allMemos) return [];
@@ -363,9 +382,16 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
     }
 
     return memos.sort((a, b) => {
-      if (sortBy === 'date-desc') return b.updatedAt.getTime() - a.updatedAt.getTime();
-      if (sortBy === 'date-asc') return a.updatedAt.getTime() - b.updatedAt.getTime();
+      if (sortBy === 'date-desc') return b.createdAt.getTime() - a.createdAt.getTime();
+      if (sortBy === 'date-asc') return a.createdAt.getTime() - b.createdAt.getTime();
       if (sortBy === 'title-asc') return (a.title || '').localeCompare(b.title || '');
+      if (sortBy === 'last-edited') return b.updatedAt.getTime() - a.updatedAt.getTime();
+      if (sortBy === 'last-commented') {
+        const aLast = lastCommentMap[a.id!] || 0;
+        const bLast = lastCommentMap[b.id!] || 0;
+        if (aLast !== bLast) return bLast - aLast;
+        return b.updatedAt.getTime() - a.updatedAt.getTime();
+      }
       return b.updatedAt.getTime() - a.updatedAt.getTime();
     });
   }, [allMemos, searchQuery, sortBy]);
@@ -659,6 +685,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
               color: theme.colors.text
             }}
           >
+            <option value="last-edited">{t.sidebar.last_memoed}</option>
+            <option value="last-commented">{t.sidebar.last_commented}</option>
             <option value="date-desc">{t.sidebar.newest}</option>
             <option value="date-asc">{t.sidebar.oldest}</option>
             <option value="title-asc">Title (A-Z)</option>
