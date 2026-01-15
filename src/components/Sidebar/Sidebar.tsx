@@ -273,7 +273,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
     updateServiceWorker,
   } = useRegisterSW({
     immediate: false,
-    onRegistered(r) {
+    onRegistered() {
       console.log('SW Registered');
     },
     onRegisterError(error) {
