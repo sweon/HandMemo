@@ -11,7 +11,7 @@ export default defineConfig({
       registerType: 'prompt',
       // Disable automatic update checking - updates only when user manually checks
       selfDestroying: false,
-      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
+      includeAssets: ['favicon.ico', 'apple-touch-icon.png'],
       manifest: {
         name: 'HandMemo',
         short_name: 'HandMemo',
@@ -33,8 +33,8 @@ export default defineConfig({
       workbox: {
         maximumFileSizeToCacheInBytes: 5000000, // 5MB
         // Disable automatic updates on navigation
-        skipWaiting: false,
-        clientsClaim: false
+        skipWaiting: true,
+        clientsClaim: true
       }
     })
   ],

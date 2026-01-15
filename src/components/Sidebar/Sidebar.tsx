@@ -313,15 +313,18 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
         const registration = await navigator.serviceWorker.ready;
         await registration.update();
 
+        // Give it a moment to detect and update hook state
         setTimeout(() => {
           setIsCheckingUpdate(false);
           setUpdateCheckedManually(true);
-          if (needRefreshRef.current) {
+
+          // Check if there's a waiting worker even if hook didn't catch it yet
+          if (needRefreshRef.current || registration.waiting) {
             setToastMessage(t.sidebar.update_found);
           } else {
             setToastMessage(t.sidebar.up_to_date);
           }
-        }, 1500);
+        }, 2000);
       } catch (error) {
         console.error('Error checking for updates:', error);
         setIsCheckingUpdate(false);
