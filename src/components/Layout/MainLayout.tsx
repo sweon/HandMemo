@@ -107,19 +107,22 @@ const Overlay = styled.div<{ $isOpen: boolean }>`
 `;
 
 const STORAGE_KEY = 'handmemo-sidebar-width';
-const DEFAULT_WIDTH = 360;
-const MIN_WIDTH_DESKTOP = 360;
+const DEFAULT_WIDTH_DESKTOP = 360;
+const DEFAULT_WIDTH_MOBILE = 280;
+const MIN_WIDTH_DESKTOP = 340;
 const MAX_WIDTH_DESKTOP = 600;
-const MIN_WIDTH_MOBILE = 300;
+const MIN_WIDTH_MOBILE = 260;
 const MAX_WIDTH_MOBILE = Math.min(450, window.innerWidth * 0.95);
 
 export const MainLayout: React.FC = () => {
   const [isSidebarOpen, setSidebarOpen] = useState(() => /Android/i.test(navigator.userAgent));
   const [sidebarWidth, setSidebarWidth] = useState(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
-    const parsed = saved ? parseInt(saved, 10) : DEFAULT_WIDTH;
     const isMobileInitial = window.innerWidth <= 768;
+    const defaultW = isMobileInitial ? DEFAULT_WIDTH_MOBILE : DEFAULT_WIDTH_DESKTOP;
     const minW = isMobileInitial ? MIN_WIDTH_MOBILE : MIN_WIDTH_DESKTOP;
+
+    const parsed = saved ? parseInt(saved, 10) : defaultW;
     return Math.max(minW, parsed);
   });
   const [isResizing, setIsResizing] = useState(false);
