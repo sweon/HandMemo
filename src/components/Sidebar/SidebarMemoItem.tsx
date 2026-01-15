@@ -1,7 +1,8 @@
 import React from 'react';
 import type { Memo } from '../../db';
-import { MemoItemLink, MemoTitle, MemoDate } from './itemStyles';
+import { MemoItemLink, MemoTitle, MemoDate, ThreadToggleBtn } from './itemStyles';
 import { TouchDelayDraggable } from './TouchDelayDraggable';
+import { FiCornerDownRight } from 'react-icons/fi';
 
 interface Props {
     memo: Memo;
@@ -11,7 +12,13 @@ interface Props {
     formatDate: (date: Date) => string;
     inThread?: boolean;
     untitledText: string;
-    isCombineTarget?: boolean;
+    isThreadHead?: boolean;
+    childCount?: number;
+    collapsed?: boolean;
+    onToggle?: (id: string) => void;
+    threadId?: string;
+    collapseText?: string;
+    moreText?: string;
 }
 
 export const SidebarMemoItem: React.FC<Props> = ({
@@ -22,9 +29,16 @@ export const SidebarMemoItem: React.FC<Props> = ({
     formatDate,
     inThread,
     untitledText,
-    isCombineTarget
+    isThreadHead,
+    childCount,
+    collapsed,
+    onToggle,
+    threadId,
+    collapseText,
+    moreText
 }) => {
-    const draggableId = inThread ? `thread-child-${memo.id}` : String(memo.id);
+    // We always use the numeric memo ID as the draggable key for stability in flat lists
+    const draggableId = String(memo.id);
 
     return (
         <TouchDelayDraggable draggableId={draggableId} index={index}>
@@ -38,9 +52,9 @@ export const SidebarMemoItem: React.FC<Props> = ({
                         marginBottom: '2px',
                         opacity: snapshot.isDragging ? 0.8 : 1,
                         transition: 'background-color 0.1s ease-out, border-color 0.1s ease-out',
-                        borderRadius: '6px',
-                        border: isCombineTarget ? `2px solid #3b82f6` : '2px solid transparent',
-                        backgroundColor: isCombineTarget ? 'rgba(59, 130, 246, 0.05)' : 'transparent',
+                        borderRadius: '8px',
+                        border: snapshot.combineTargetFor ? `2px solid #3b82f6` : '2px solid transparent',
+                        backgroundColor: snapshot.combineTargetFor ? 'rgba(59, 130, 246, 0.05)' : 'transparent',
                     }}
                 >
                     <MemoItemLink
@@ -56,9 +70,23 @@ export const SidebarMemoItem: React.FC<Props> = ({
                             {formatDate(memo.createdAt)}
                         </MemoDate>
                     </MemoItemLink>
+
+                    {isThreadHead && childCount && childCount > 0 && onToggle && threadId && (
+                        <div style={{ paddingLeft: '0.5rem' }}>
+                            <ThreadToggleBtn onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                onToggle(threadId);
+                            }}>
+                                <FiCornerDownRight />
+                                {collapsed ?
+                                    (moreText || 'More').replace('{count}', String(childCount)) :
+                                    (collapseText || 'Collapse')}
+                            </ThreadToggleBtn>
+                        </div>
+                    )}
                 </div>
             )}
         </TouchDelayDraggable>
     );
 };
-

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import styled from 'styled-components';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { db } from '../../db';
+import { db, type Memo } from '../../db';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { FiPlus, FiMinus, FiSettings, FiSun, FiMoon, FiSearch, FiX, FiRefreshCw, FiArrowUpCircle, FiPenTool } from 'react-icons/fi';
 import { BsKeyboard } from 'react-icons/bs';
@@ -13,7 +13,8 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { useSearch } from '../../contexts/SearchContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { SidebarMemoItem } from './SidebarMemoItem';
-import { DragDropContext, Droppable } from '@hello-pangea/dnd';
+import { DragDropContext, Droppable, type DropResult } from '@hello-pangea/dnd';
+import { v4 as uuidv4 } from 'uuid';
 import { format } from 'date-fns';
 import { ConfirmModal } from '../UI/ConfirmModal';
 import pkg from '../../../package.json';
@@ -247,6 +248,17 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
     message: string;
     onConfirm: () => void;
   }>({ isOpen: false, message: '', onConfirm: () => { } });
+  const [collapsedThreads, setCollapsedThreads] = useState<Set<string>>(new Set());
+
+  const toggleThread = (id: string) => {
+    setCollapsedThreads(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
   const needRefreshRef = useRef(false);
 
   const handleSafeNavigation = (action: () => void) => {
@@ -352,6 +364,179 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
       return b.updatedAt.getTime() - a.updatedAt.getTime();
     });
   }, [allMemos, searchQuery, sortBy]);
+
+  const groupedItems = React.useMemo(() => {
+    if (!sortedMemos || !allMemos) return [];
+
+    const items: Array<{
+      type: 'memo';
+      memo: Memo;
+      isThreadHead?: boolean;
+      isThreadChild?: boolean;
+      threadId?: string;
+      childCount?: number;
+    }> = [];
+    const processedMemos = new Set<number>();
+
+    sortedMemos.forEach(memo => {
+      if (processedMemos.has(memo.id!)) return;
+
+      if (memo.threadId) {
+        // Find all memos in this thread
+        const threadMemos = allMemos.filter(m => m.threadId === memo.threadId)
+          .sort((a, b) => (a.threadOrder || 0) - (b.threadOrder || 0));
+
+        if (threadMemos.length > 1) {
+          const isCollapsed = collapsedThreads.has(memo.threadId);
+          // Header
+          items.push({
+            type: 'memo',
+            memo: threadMemos[0],
+            isThreadHead: true,
+            threadId: memo.threadId,
+            childCount: threadMemos.length - 1
+          });
+          processedMemos.add(threadMemos[0].id!);
+
+          if (!isCollapsed) {
+            // Children
+            for (let i = 1; i < threadMemos.length; i++) {
+              items.push({
+                type: 'memo',
+                memo: threadMemos[i],
+                isThreadChild: true,
+                threadId: memo.threadId
+              });
+              processedMemos.add(threadMemos[i].id!);
+            }
+          } else {
+            // Skip children in processed set so we don't render them separately
+            threadMemos.slice(1).forEach(tm => processedMemos.add(tm.id!));
+          }
+        } else {
+          items.push({ type: 'memo', memo });
+          processedMemos.add(memo.id!);
+        }
+      } else {
+        items.push({ type: 'memo', memo });
+        processedMemos.add(memo.id!);
+      }
+    });
+
+    return items;
+  }, [sortedMemos, allMemos, collapsedThreads]);
+
+  const onDragEnd = async (result: DropResult) => {
+    const { combine, draggableId, destination } = result;
+
+    // Handle Combining (Joining Threads)
+    if (combine) {
+      const sourceId = parseInt(draggableId);
+      const targetId = parseInt(combine.draggableId);
+
+      if (isNaN(sourceId) || isNaN(targetId)) return;
+      if (sourceId === targetId) return;
+
+      const sourceMemo = await db.memos.get(sourceId);
+      const targetMemo = await db.memos.get(targetId);
+
+      if (!sourceMemo || !targetMemo) return;
+
+      const newThreadId = targetMemo.threadId || uuidv4();
+
+      if (!targetMemo.threadId) {
+        await db.memos.update(targetId, {
+          threadId: newThreadId,
+          threadOrder: 0
+        });
+      }
+
+      if (sourceMemo.threadId && sourceMemo.threadId !== newThreadId) {
+        const sourceThreadMemos = await db.memos.where('threadId').equals(sourceMemo.threadId).toArray();
+        const targetThreadMemos = await db.memos.where('threadId').equals(newThreadId).toArray();
+        let maxOrder = Math.max(...targetThreadMemos.map(m => m.threadOrder || 0), -1);
+
+        for (const sm of sourceThreadMemos) {
+          maxOrder++;
+          await db.memos.update(sm.id!, {
+            threadId: newThreadId,
+            threadOrder: maxOrder
+          });
+        }
+      } else {
+        const targetThreadMemos = await db.memos.where('threadId').equals(newThreadId).toArray();
+        const maxOrder = Math.max(...targetThreadMemos.map(m => m.threadOrder || 0), -1);
+        await db.memos.update(sourceId, {
+          threadId: newThreadId,
+          threadOrder: maxOrder + 1
+        });
+      }
+      return;
+    }
+
+    // Handle Reordering / Extraction
+    if (!destination) return;
+
+    const sourceMemoId = parseInt(draggableId);
+    if (isNaN(sourceMemoId)) return;
+
+    const sourceMemo = await db.memos.get(sourceMemoId);
+    if (!sourceMemo) return;
+
+    const sourceIndex = result.source.index;
+    const destIndex = destination.index;
+    if (sourceIndex === destIndex) return;
+
+    const items = groupedItems;
+    const targetItem = items[destIndex];
+    if (!targetItem) return;
+
+    // Generic "Sort Reordering" using updatedAt calculation
+    let newTime: number;
+    if (destIndex === 0) {
+      newTime = items[0].memo.updatedAt.getTime() + 60000; // 1 min later
+    } else if (destIndex === items.length - 1) {
+      newTime = items[items.length - 1].memo.updatedAt.getTime() - 60000;
+    } else {
+      const beforeIndex = destIndex < sourceIndex ? destIndex - 1 : destIndex;
+      const afterIndex = destIndex < sourceIndex ? destIndex : destIndex + 1;
+
+      const t1 = items[beforeIndex].memo.updatedAt.getTime();
+      const t2 = items[afterIndex].memo.updatedAt.getTime();
+      newTime = (t1 + t2) / 2;
+    }
+
+    // Pattern: Drag child and drop ABOVE its own header or BELOW its own thread block -> Extract
+    if (sourceMemo.threadId) {
+      const headerItem = items.find(it => it.isThreadHead && it.threadId === sourceMemo.threadId);
+      if (headerItem) {
+        const headerIdx = items.indexOf(headerItem);
+        // If moved above the header, extract
+        if (destIndex <= headerIdx) {
+          await db.memos.update(sourceMemoId, {
+            threadId: undefined,
+            threadOrder: undefined,
+            updatedAt: new Date(newTime)
+          });
+          return;
+        }
+
+        // If moved far below the thread (past all siblings), extract
+        const threadMemos = items.filter(it => it.threadId === sourceMemo.threadId);
+        const lastThreadIdx = items.indexOf(threadMemos[threadMemos.length - 1]);
+        if (destIndex > lastThreadIdx) {
+          await db.memos.update(sourceMemoId, {
+            threadId: undefined,
+            threadOrder: undefined,
+            updatedAt: new Date(newTime)
+          });
+          return;
+        }
+      }
+    }
+
+    await db.memos.update(sourceMemoId, { updatedAt: new Date(newTime) });
+  };
 
   const showUpdateIndicator = needRefresh && updateCheckedManually;
 
@@ -477,23 +662,31 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
       </Header>
 
       <BookList>
-        <DragDropContext onDragEnd={() => { }}>
-          <Droppable droppableId="sidebar-memos">
+        <DragDropContext onDragEnd={onDragEnd}>
+          <Droppable droppableId="sidebar-memos" isCombineEnabled>
             {(provided) => (
               <div
                 {...provided.droppableProps}
                 ref={provided.innerRef}
                 style={{ display: 'flex', flexDirection: 'column' }}
               >
-                {sortedMemos?.map((memo, index) => (
+                {groupedItems.map((item, index) => (
                   <SidebarMemoItem
-                    key={memo.id}
+                    key={item.memo.id}
                     index={index}
-                    memo={memo}
-                    isActive={location.pathname.includes(`/memo/${memo.id}`)}
+                    memo={item.memo}
+                    isActive={location.pathname.includes(`/memo/${item.memo.id}`)}
                     onClick={onCloseMobile}
                     formatDate={(date) => format(date, language === 'ko' ? 'yyyy.MM.dd' : 'MMM d, yyyy')}
                     untitledText={t.sidebar.untitled}
+                    inThread={item.isThreadChild}
+                    isThreadHead={item.isThreadHead}
+                    childCount={item.childCount}
+                    collapsed={collapsedThreads.has(item.threadId || '')}
+                    onToggle={toggleThread}
+                    threadId={item.threadId}
+                    collapseText={t.sidebar.collapse}
+                    moreText={t.sidebar.more_memos}
                   />
                 ))}
                 {provided.placeholder}
