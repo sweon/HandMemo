@@ -272,12 +272,18 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
     needRefresh: [needRefresh],
     updateServiceWorker,
   } = useRegisterSW({
-    immediate: false,
+    immediate: true, // Let it check on load, but we also check manually
     onRegistered(r) {
-      console.log('SW Registered: ' + r)
+      console.log('SW Registered');
+      if (r) {
+        // Periodic check every 10 minutes
+        setInterval(() => {
+          r.update();
+        }, 10 * 60 * 1000);
+      }
     },
     onRegisterError(error) {
-      console.log('SW registration error', error)
+      console.log('SW registration error', error);
     },
   });
 
@@ -310,21 +316,23 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
     setIsCheckingUpdate(true);
     if ('serviceWorker' in navigator) {
       try {
-        const registration = await navigator.serviceWorker.ready;
-        await registration.update();
+        const registration = await navigator.serviceWorker.getRegistration();
+        if (registration) {
+          await registration.update();
 
-        // Give it a moment to detect and update hook state
-        setTimeout(() => {
-          setIsCheckingUpdate(false);
-          setUpdateCheckedManually(true);
+          // Small delay to let the hook catch up
+          await new Promise(resolve => setTimeout(resolve, 1500));
 
-          // Check if there's a waiting worker even if hook didn't catch it yet
-          if (needRefreshRef.current || registration.waiting) {
+          if (registration.waiting || needRefreshRef.current) {
             setToastMessage(t.sidebar.update_found);
           } else {
             setToastMessage(t.sidebar.up_to_date);
           }
-        }, 2000);
+        } else {
+          setToastMessage(t.sidebar.check_failed);
+        }
+        setIsCheckingUpdate(false);
+        setUpdateCheckedManually(true);
       } catch (error) {
         console.error('Error checking for updates:', error);
         setIsCheckingUpdate(false);
