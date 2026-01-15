@@ -15,7 +15,7 @@ export default defineConfig({
       manifest: {
         name: 'HandMemo',
         short_name: 'HandMemo',
-        description: 'Local-first Reading Tracker & Memo',
+        description: 'Local-first Note-taking & Drawing',
         theme_color: '#ffffff',
         icons: [
           {
