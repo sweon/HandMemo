@@ -3,7 +3,7 @@ import styled from 'styled-components';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, type Memo } from '../../db';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { FiPlus, FiMinus, FiSettings, FiSun, FiMoon, FiSearch, FiX, FiRefreshCw, FiArrowUpCircle, FiPenTool, FiRotateCcw } from 'react-icons/fi';
+import { FiPlus, FiMinus, FiSettings, FiSun, FiMoon, FiSearch, FiX, FiRefreshCw, FiArrowUpCircle, FiPenTool } from 'react-icons/fi';
 import { BsKeyboard } from 'react-icons/bs';
 import { useRegisterSW } from 'virtual:pwa-register/react';
 import { Tooltip } from '../UI/Tooltip';
@@ -241,7 +241,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
     localStorage.setItem('sidebar_sortBy', sortBy);
   }, [sortBy]);
 
-  const { mode, toggleTheme, fontSize, increaseFontSize, decreaseFontSize, resetFontSize, theme } = useTheme();
+  const { mode, toggleTheme, increaseFontSize, decreaseFontSize, theme } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -603,13 +603,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
                 <FiMinus size={16} />
               </IconButton>
             </Tooltip>
-            {fontSize !== 16 && (
-              <Tooltip content={t.sidebar.reset_font}>
-                <IconButton onClick={resetFontSize}>
-                  <FiRotateCcw size={14} />
-                </IconButton>
-              </Tooltip>
-            )}
             <Tooltip content={t.sidebar.increase_font}>
               <IconButton onClick={increaseFontSize}>
                 <FiPlus size={16} />
