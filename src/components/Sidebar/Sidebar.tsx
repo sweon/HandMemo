@@ -44,7 +44,7 @@ const Header = styled.div`
   overflow: hidden;
 
   @media (max-width: 768px) {
-    padding: 0.5rem 0.5rem;
+    padding: 0.5rem 0.75rem;
   }
 `;
 
@@ -122,17 +122,17 @@ const Button = styled.button`
   }
 
   @media (max-width: 768px) {
-    padding: 4px 8px;
-    font-size: 13px !important;
-    max-height: 32px;
-    min-width: 32px;
+    padding: 6px 10px;
+    font-size: 14px !important;
+    max-height: 36px;
+    min-width: 36px;
   }
 `;
 
 const TopActions = styled.div`
   display: flex;
   align-items: center;
-  justify-content: flex-start;
+  justify-content: space-between;
   gap: 0.25rem;
   margin-bottom: 0.5rem;
   overflow: hidden;
@@ -186,16 +186,16 @@ const IconButton = styled.button`
   }
 
   @media (max-width: 768px) {
-    padding: 2px;
+    padding: 4px;
     /* Limit icon button size on mobile regardless of font size */
-    width: 28px !important;
-    height: 28px !important;
-    max-width: 28px;
-    max-height: 28px;
+    width: 32px !important;
+    height: 32px !important;
+    max-width: 32px;
+    max-height: 32px;
     
     svg {
-      width: 16px !important;
-      height: 16px !important;
+      width: 18px !important;
+      height: 18px !important;
     }
   }
 `;
@@ -597,7 +597,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
               <BsKeyboard size={16} />
             </Button>
           </div>
-          <div style={{ display: 'flex', gap: '0.25rem', alignItems: 'center', flexShrink: 1, minWidth: 0, overflow: 'hidden' }}>
+          <div style={{ display: 'flex', gap: '0rem', alignItems: 'center', flexShrink: 1, minWidth: 0, overflow: 'hidden' }}>
             <Tooltip content={t.sidebar.decrease_font}>
               <IconButton onClick={decreaseFontSize}>
                 <FiMinus size={16} />
