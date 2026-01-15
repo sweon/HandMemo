@@ -4,9 +4,7 @@ import { SearchProvider } from './contexts/SearchContext';
 import { LanguageProvider } from './contexts/LanguageContext';
 import { ExitGuardProvider } from './contexts/ExitGuardContext';
 import { MainLayout } from './components/Layout/MainLayout';
-import { BookDetail } from './components/BookView/BookDetail';
-import { AddBookPage } from './components/BookView/AddBookPage';
-import { EditBookPage } from './components/BookView/EditBookPage';
+
 import { MemoDetail } from './components/LogView/MemoDetail';
 import { EmptyState } from './components/LogView/EmptyState';
 import { SettingsPage } from './pages/SettingsPage';
@@ -23,12 +21,8 @@ function App() {
               <Routes>
                 <Route path="/" element={<MainLayout />}>
                   <Route index element={<EmptyState />} />
-                  <Route path="book/new" element={<AddBookPage />} />
-                  <Route path="book/:bookId" element={<BookDetail />}>
-                    <Route path="edit" element={<EditBookPage />} />
-                    <Route path="memo/:id" element={<MemoDetail />} />
-                    <Route path="new" element={<MemoDetail />} />
-                  </Route>
+                  <Route path="memo/new" element={<MemoDetail />} />
+                  <Route path="memo/:id" element={<MemoDetail />} />
                   <Route path="settings" element={<SettingsPage />} />
                   <Route path="*" element={<Navigate to="/" replace />} />
                 </Route>

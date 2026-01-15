@@ -16,21 +16,15 @@ const downloadFile = (content: string, fileName: string, contentType: string) =>
 export const getBackupData = async (memoIds?: number[]) => {
     let memos = await db.memos.toArray();
     let comments = await db.comments.toArray();
-    let books = await db.books.toArray();
 
     if (memoIds && memoIds.length > 0) {
         memos = memos.filter(l => l.id !== undefined && memoIds.includes(l.id));
         comments = comments.filter(c => memoIds.includes(c.memoId));
-
-        // For partial sync, we still might want associated books
-        const bookIds = new Set(memos.map(m => m.bookId).filter(Boolean));
-        books = books.filter(b => bookIds.has(b.id));
     }
 
     return {
         version: 1,
         timestamp: new Date().toISOString(),
-        books,
         memos,
         comments
     };
@@ -42,8 +36,8 @@ export const exportData = async (selectedMemoIds?: number[], customFileName?: st
     let fileName = customFileName;
     if (!fileName) {
         fileName = selectedMemoIds && selectedMemoIds.length > 0
-            ? `bookmemo-partial-${new Date().toISOString().slice(0, 10)}.json`
-            : `bookmemo-backup-${new Date().toISOString().slice(0, 10)}.json`;
+            ? `handmemo-partial-${new Date().toISOString().slice(0, 10)}.json`
+            : `handmemo-backup-${new Date().toISOString().slice(0, 10)}.json`;
     }
 
     if (!fileName.toLowerCase().endsWith('.json')) {
@@ -77,54 +71,12 @@ export const mergeBackupData = async (data: any) => {
         throw new Error('Invalid backup file format');
     }
 
-    const books = data.books || [];
     const memos = data.memos || data.logs || []; // Support legacy migration if needed, but primarily memos
 
-    await db.transaction('rw', db.books, db.memos, db.comments, async () => {
-        const bookIdMap = new Map<number, number>();
+    await db.transaction('rw', db.memos, db.comments, async () => {
         const memoIdMap = new Map<number, number>();
 
-        // 1. Merge Books first
-        for (const b of books) {
-            const oldBookId = b.id;
-
-            // Find match by title and author
-            const existingBook = await db.books
-                .where('title').equals(b.title)
-                .filter(eb => eb.author === b.author)
-                .first();
-
-            if (existingBook) {
-                bookIdMap.set(oldBookId, existingBook.id!);
-
-                // Update progress if incoming is further?
-                const updates: any = {};
-                if ((b.currentPage || 0) > (existingBook.currentPage || 0)) {
-                    updates.currentPage = b.currentPage;
-                }
-                if (b.status === 'completed' && existingBook.status !== 'completed') {
-                    updates.status = 'completed';
-                    updates.completedDate = typeof b.completedDate === 'string' ? new Date(b.completedDate) : b.completedDate;
-                }
-
-                if (Object.keys(updates).length > 0) {
-                    await db.books.update(existingBook.id!, updates);
-                }
-            } else {
-                const { id, ...bookData } = b;
-                bookData.startDate = typeof b.startDate === 'string' ? new Date(b.startDate) : b.startDate;
-                bookData.createdAt = typeof b.createdAt === 'string' ? new Date(b.createdAt) : b.createdAt;
-                bookData.updatedAt = typeof b.updatedAt === 'string' ? new Date(b.updatedAt) : b.updatedAt;
-                if (b.completedDate) {
-                    bookData.completedDate = typeof b.completedDate === 'string' ? new Date(b.completedDate) : b.completedDate;
-                }
-
-                const newBookId = await db.books.add(bookData);
-                bookIdMap.set(oldBookId, newBookId as number);
-            }
-        }
-
-        // 2. Merge Memos
+        // Merge Memos
         for (const l of memos) {
             const oldId = l.id;
             const createdAt = typeof l.createdAt === 'string' ? new Date(l.createdAt) : l.createdAt;
@@ -140,17 +92,15 @@ export const mergeBackupData = async (data: any) => {
                 memoData.createdAt = createdAt;
                 memoData.updatedAt = typeof l.updatedAt === 'string' ? new Date(l.updatedAt) : l.updatedAt;
 
-                // Map bookId if it was changed during book merge
-                if (l.bookId && bookIdMap.has(l.bookId)) {
-                    memoData.bookId = bookIdMap.get(l.bookId);
-                }
+                // Remove bookId if present as we are detaching from books
+                delete memoData.bookId;
 
                 const newId = await db.memos.add(memoData);
                 memoIdMap.set(oldId, newId as number);
             }
         }
 
-        // 3. Merge Comments
+        // Merge Comments
         if (data.comments) {
             for (const c of data.comments) {
                 const { id, ...commentData } = c;

@@ -2,8 +2,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import styled from 'styled-components';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../../db';
-import { useNavigate } from 'react-router-dom';
-import { FiPlus, FiMinus, FiSettings, FiSun, FiMoon, FiSearch, FiX, FiRefreshCw, FiArrowUpCircle } from 'react-icons/fi';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { FiPlus, FiMinus, FiSettings, FiSun, FiMoon, FiSearch, FiX, FiRefreshCw, FiArrowUpCircle, FiPenTool } from 'react-icons/fi';
+import { BsKeyboard } from 'react-icons/bs';
 import { useRegisterSW } from 'virtual:pwa-register/react';
 import { Tooltip } from '../UI/Tooltip';
 import { SyncModal } from '../Sync/SyncModal';
@@ -11,12 +12,10 @@ import { Toast } from '../UI/Toast';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useSearch } from '../../contexts/SearchContext';
 import { useLanguage } from '../../contexts/LanguageContext';
-import { SidebarBookItem } from './SidebarBookItem';
-
-
-
+import { SidebarMemoItem } from './SidebarMemoItem';
+import { DragDropContext, Droppable } from '@hello-pangea/dnd';
+import { format } from 'date-fns';
 import { ConfirmModal } from '../UI/ConfirmModal';
-
 import pkg from '../../../package.json';
 
 const SidebarContainer = styled.div`
@@ -100,8 +99,6 @@ const ClearButton = styled.button`
     background-color: ${({ theme }) => theme.colors.surface};
   }
 `;
-
-
 
 const Button = styled.button`
   display: flex;
@@ -235,11 +232,11 @@ const AppVersion = styled.span`
 export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
   const { searchQuery, setSearchQuery } = useSearch();
   const { t, language } = useLanguage();
-  const [sortBy, setSortBy] = useState<'date-desc' | 'date-asc' | 'title-asc' | 'last-memo-desc' | 'last-comment-desc'>('date-desc');
-
+  const [sortBy, setSortBy] = useState<'date-desc' | 'date-asc' | 'title-asc'>('date-desc');
 
   const { mode, toggleTheme, increaseFontSize, decreaseFontSize, theme } = useTheme();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
   const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
@@ -253,25 +250,16 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
   const needRefreshRef = useRef(false);
 
   const handleSafeNavigation = (action: () => void) => {
-    if (location.pathname === '/book/new') {
-      setConfirmModal({
-        isOpen: true,
-        message: language === 'ko' ? '작성 중인 내용이 저장되지 않았습니다. 이동하시겠습니까?' : 'Unsaved changes will be lost. Continue?',
-        onConfirm: () => {
-          action();
-          setConfirmModal(prev => ({ ...prev, isOpen: false }));
-        }
-      });
-    } else {
-      action();
-    }
+    // With memo-first approach, we rarely need confirmation to switch unless we are in complex state.
+    // Logic for unsaved changes is mostly in MemoDetail/Layout guard.
+    // So we can simplify this or keep generic check.
+    action();
   };
 
   const {
     needRefresh: [needRefresh],
     updateServiceWorker,
   } = useRegisterSW({
-    // No automatic update interval - updates only when user manually checks
     immediate: false,
     onRegistered(r) {
       console.log('SW Registered: ' + r)
@@ -333,93 +321,66 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
     }
   };
 
-  const allBooks = useLiveQuery(() => db.books.toArray());
   const allMemos = useLiveQuery(() => db.memos.toArray());
-  const allComments = useLiveQuery(() => db.comments.toArray());
 
-  const sortedBooks = React.useMemo(() => {
-    if (!allBooks) return [];
-    let books = [...allBooks];
+  const sortedMemos = React.useMemo(() => {
+    if (!allMemos) return [];
+    let memos = [...allMemos];
 
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
-      books = books.filter(b => {
-        const bookMatches = b.title.toLowerCase().includes(q) || b.author?.toLowerCase().includes(q);
-        if (bookMatches) return true;
-
-        // Check if any memo of this book matches
-        const memos = allMemos?.filter(m => m.bookId === b.id) || [];
-        return memos.some(m =>
+      if (q.startsWith('tag:')) {
+        const tagToSearch = q.slice(4).trim();
+        if (tagToSearch) {
+          memos = memos.filter(m =>
+            m.tags && m.tags.some(t => t.toLowerCase().includes(tagToSearch))
+          );
+        }
+      } else {
+        memos = memos.filter(m =>
           m.title.toLowerCase().includes(q) ||
           m.content.toLowerCase().includes(q) ||
-          m.tags.some(t => t.toLowerCase().includes(q))
+          (m.tags && m.tags.some(t => t.toLowerCase().includes(q)))
         );
-      });
+      }
     }
 
-    if (sortBy === 'last-memo-desc') {
-      const lastMemoMap = new Map<number, number>();
-      allMemos?.forEach(m => {
-        if (m.bookId === undefined) return;
-        const current = lastMemoMap.get(m.bookId) || 0;
-        const mTime = new Date(m.updatedAt).getTime();
-        if (mTime > current) lastMemoMap.set(m.bookId, mTime);
-      });
-      return books.sort((a, b) => (lastMemoMap.get(b.id!) || 0) - (lastMemoMap.get(a.id!) || 0));
-    }
-
-    if (sortBy === 'last-comment-desc') {
-      const memoToBookMap = new Map<number, number>();
-      allMemos?.forEach(m => {
-        if (m.id !== undefined && m.bookId !== undefined) {
-          memoToBookMap.set(m.id, m.bookId);
-        }
-      });
-
-      const lastCommentMap = new Map<number, number>();
-      allComments?.forEach(c => {
-        const bookId = memoToBookMap.get(c.memoId);
-        if (bookId !== undefined) {
-          const current = lastCommentMap.get(bookId) || 0;
-          const cTime = new Date(c.updatedAt).getTime();
-          if (cTime > current) lastCommentMap.set(bookId, cTime);
-        }
-      });
-      return books.sort((a, b) => (lastCommentMap.get(b.id!) || 0) - (lastCommentMap.get(a.id!) || 0));
-    }
-
-    return books.sort((a, b) => {
+    return memos.sort((a, b) => {
       if (sortBy === 'date-desc') return b.updatedAt.getTime() - a.updatedAt.getTime();
       if (sortBy === 'date-asc') return a.updatedAt.getTime() - b.updatedAt.getTime();
-      if (sortBy === 'title-asc') return a.title.localeCompare(b.title);
-      return 0;
+      if (sortBy === 'title-asc') return (a.title || '').localeCompare(b.title || '');
+      return b.updatedAt.getTime() - a.updatedAt.getTime();
     });
-  }, [allBooks, allMemos, allComments, searchQuery, sortBy]);
+  }, [allMemos, searchQuery, sortBy]);
 
   const showUpdateIndicator = needRefresh && updateCheckedManually;
 
   return (
     <SidebarContainer>
       <BrandHeader>
-        <AppTitle>BookMemo</AppTitle>
+        <AppTitle>HandMemo</AppTitle>
         <AppVersion>v{pkg.version}</AppVersion>
       </BrandHeader>
       <Header>
         <TopActions>
-          <Button onClick={() => {
-            handleSafeNavigation(() => {
-              navigate('/book/new', { replace: true, state: { isGuard: true } });
-              onCloseMobile(true);
-            });
-          }}>
-            <FiPlus />
-            <span className="add-book-text">{t.sidebar.add_book || "New Book"}</span>
-            <style>{`
-              @media (max-width: 768px) {
-                .add-book-text { display: none !important; }
-              }
-            `}</style>
-          </Button>
+          <div style={{ display: 'flex', gap: '0.25rem' }}>
+            <Button onClick={() => {
+              handleSafeNavigation(() => {
+                navigate(`/memo/new?drawing=true&t=${Date.now()}`, { replace: true, state: { isGuard: true } });
+                onCloseMobile(true);
+              });
+            }} title={t.sidebar.add_memo || "Drawing Memo"}>
+              <FiPenTool size={16} />
+            </Button>
+            <Button onClick={() => {
+              handleSafeNavigation(() => {
+                navigate(`/memo/new?t=${Date.now()}`, { replace: true, state: { isGuard: true } });
+                onCloseMobile(true);
+              });
+            }} title="Text Memo">
+              <BsKeyboard size={16} />
+            </Button>
+          </div>
           <div style={{ display: 'flex', gap: '0rem', alignItems: 'center', flexShrink: 1, minWidth: 0, overflow: 'hidden' }}>
             <Tooltip content={t.sidebar.decrease_font}>
               <IconButton onClick={decreaseFontSize}>
@@ -510,23 +471,36 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
           >
             <option value="date-desc">{t.sidebar.newest}</option>
             <option value="date-asc">{t.sidebar.oldest}</option>
-            <option value="last-memo-desc">{t.sidebar.last_memoed}</option>
-            <option value="last-comment-desc">{t.sidebar.last_commented}</option>
             <option value="title-asc">Title (A-Z)</option>
           </select>
         </div>
       </Header>
 
       <BookList>
-        {sortedBooks?.map(book => (
-          <SidebarBookItem
-            key={book.id}
-            book={book}
-            memos={allMemos?.filter(m => m.bookId === book.id) || []}
-            onClick={onCloseMobile}
-            onSafeNavigate={handleSafeNavigation}
-          />
-        ))}
+        <DragDropContext onDragEnd={() => { }}>
+          <Droppable droppableId="sidebar-memos">
+            {(provided) => (
+              <div
+                {...provided.droppableProps}
+                ref={provided.innerRef}
+                style={{ display: 'flex', flexDirection: 'column' }}
+              >
+                {sortedMemos?.map((memo, index) => (
+                  <SidebarMemoItem
+                    key={memo.id}
+                    index={index}
+                    memo={memo}
+                    isActive={location.pathname.includes(`/memo/${memo.id}`)}
+                    onClick={onCloseMobile}
+                    formatDate={(date) => format(date, language === 'ko' ? 'yyyy.MM.dd' : 'MMM d, yyyy')}
+                    untitledText={t.sidebar.untitled}
+                  />
+                ))}
+                {provided.placeholder}
+              </div>
+            )}
+          </Droppable>
+        </DragDropContext>
       </BookList>
 
       <ConfirmModal

@@ -4,7 +4,7 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 // https://vite.dev/config/
 export default defineConfig({
-  base: '/BookMemo/',
+  base: '/HandMemo/',
   plugins: [
     react(),
     VitePWA({
@@ -13,8 +13,8 @@ export default defineConfig({
       selfDestroying: false,
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
       manifest: {
-        name: 'BookMemo',
-        short_name: 'BookMemo',
+        name: 'HandMemo',
+        short_name: 'HandMemo',
         description: 'Local-first Reading Tracker & Memo',
         theme_color: '#ffffff',
         icons: [

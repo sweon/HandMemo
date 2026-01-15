@@ -1,27 +1,9 @@
 import Dexie, { type Table } from 'dexie';
 
-export type BookStatus = 'reading' | 'completed' | 'on_hold';
-
-export interface Book {
-    id?: number;
-    title: string;
-    author?: string;
-    totalPages: number;
-    startPage?: number; // If starting from middle? usually 0.
-    currentPage?: number; // Progress
-    startDate: Date;
-    completedDate?: Date;
-    status: BookStatus;
-    coverImage?: string; // Base64 or URL
-    createdAt: Date;
-    updatedAt: Date;
-}
-
 export interface Memo {
     id?: number;
-    bookId?: number; // Associated Book
-    pageNumber?: number; // Page context
-    quote?: string; // Selected text from book
+    // bookId was removed in v7
+    bookId?: number;
     title: string;
     content: string; // Markdown content
     tags: string[];
@@ -40,13 +22,12 @@ export interface Comment {
     updatedAt: Date;
 }
 
-export class BookMemoDatabase extends Dexie {
-    books!: Table<Book>;
+export class HandMemoDatabase extends Dexie {
     memos!: Table<Memo>;
     comments!: Table<Comment>;
 
     constructor() {
-        super('BookMemoDB');
+        super('HandMemoDB');
         this.version(1).stores({
             memos: '++id, title, *tags, modelId, createdAt, updatedAt',
             models: '++id, name',
@@ -63,19 +44,23 @@ export class BookMemoDatabase extends Dexie {
 
         this.version(4).stores({
             books: '++id, title, status, createdAt',
-            memos: '++id, bookId, pageNumber, title, *tags, modelId, createdAt, updatedAt, threadId'
+            memos: '++id, bookId, title, *tags, modelId, createdAt, updatedAt, threadId'
         });
 
         this.version(5).stores({
-            memos: '++id, bookId, pageNumber, title, *tags, modelId, createdAt, updatedAt, threadId, type'
+            memos: '++id, bookId, title, *tags, modelId, createdAt, updatedAt, threadId, type'
         });
 
         this.version(6).stores({
-            memos: '++id, bookId, pageNumber, title, *tags, createdAt, updatedAt, threadId, type',
+            memos: '++id, bookId, title, *tags, createdAt, updatedAt, threadId, type',
             models: null // Delete the table
+        });
+
+        this.version(7).stores({
+            books: null
         });
     }
 }
 
-export const db = new BookMemoDatabase();
+export const db = new HandMemoDatabase();
 

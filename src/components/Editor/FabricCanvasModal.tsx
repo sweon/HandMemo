@@ -220,17 +220,17 @@ const CanvasWrapper = styled.div`
 
 const FloatingActionButtons = styled.div`
   position: absolute;
-  bottom: 20px;
-  right: 20px;
+  bottom: 8px;
+  right: 8px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
   z-index: 100;
 `;
 
 const CompactActionButton = styled.button<{ $primary?: boolean }>`
-  width: 48px;
-  height: 48px;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -2982,10 +2982,10 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                         <canvas ref={canvasRef} />
                         <FloatingActionButtons>
                             <CompactActionButton onClick={handleCancelWrapped} title={t.drawing?.cancel || 'Cancel'}>
-                                <FiX size={24} />
+                                <FiX size={12} />
                             </CompactActionButton>
                             <CompactActionButton $primary onClick={handleSave} title={t.drawing?.insert || 'Insert'}>
-                                <FiCheck size={24} />
+                                <FiCheck size={12} />
                             </CompactActionButton>
                         </FloatingActionButtons>
                     </CanvasWrapper>

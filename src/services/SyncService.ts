@@ -81,11 +81,10 @@ export class SyncService {
             }
 
             const totalMemos = await db.memos.count();
-            const totalBooks = await db.books.count();
             this.options.onSyncInfo({
                 type: 'full',
                 count: totalMemos,
-                label: `${totalBooks} Books, ${totalMemos} Memos`
+                label: `${totalMemos} Memos`
             });
         } catch (e) {
             console.error('Failed to analyze sync data', e);
@@ -266,7 +265,7 @@ export class SyncService {
             body: encryptedData,
             headers: {
                 'Filename': 'sync.enc',
-                'Title': 'BookMemo Sync Data',
+                'Title': 'HandMemo Sync Data',
                 'Tags': tags.join(',')
             }
         });

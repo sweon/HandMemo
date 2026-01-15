@@ -1,4 +1,4 @@
-# 📖 BookMemo (Local Reading Tracker & Memo)
+# 📖 HandMemo (Local Reading Tracker & Memo)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![React](https://img.shields.io/badge/React-20232A?style=flat&logo=react&logoColor=61DAFB)](https://reactjs.org/)
@@ -6,7 +6,7 @@
 [![Dexie](https://img.shields.io/badge/Dexie.js-local--first-blue)](https://dexie.org/)
 [![PWA](https://img.shields.io/badge/PWA-Installable-hotpink)](https://web.dev/progressive-web-apps/)
 
-**BookMemo** is a Local-first Progressive Web App (PWA) designed to track your reading progress and store your book-related memos. All data is kept securely within your own browser with threading support and seamless device-to-device synchronization.
+**HandMemo** is a Local-first Progressive Web App (PWA) designed to track your reading progress and store your book-related memos. All data is kept securely within your own browser with threading support and seamless device-to-device synchronization.
 
 ---
 
@@ -38,8 +38,8 @@
 ### Installation
 1.  **Clone the repository:**
     ```bash
-    git clone https://github.com/sweon/BookMemo.git
-    cd BookMemo
+    git clone https://github.com/sweon/HandMemo.git
+    cd HandMemo
     ```
 
 2.  **Install dependencies:**

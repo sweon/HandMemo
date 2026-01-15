@@ -339,7 +339,7 @@ export const SettingsPage: React.FC = () => {
     setShowExportModal(true);
     setExportMode('all');
     setSelectedMemos(new Set());
-    setExportFileName(`bookmemo-backup-${new Date().toISOString().slice(0, 10)}`);
+    setExportFileName(`handmemo-backup-${new Date().toISOString().slice(0, 10)}`);
   };
 
   const confirmExport = async () => {
@@ -374,7 +374,7 @@ export const SettingsPage: React.FC = () => {
 
   const handleShare = async () => {
     const shareData = {
-      title: 'BookMemo',
+      title: 'HandMemo',
       text: t.settings.help_desc,
       url: window.location.origin + window.location.pathname
     };
@@ -628,7 +628,7 @@ export const SettingsPage: React.FC = () => {
           </div>
 
           <div style={{ marginTop: '2rem', padding: '1rem', background: 'var(--surface-color)', borderRadius: '8px', fontSize: '0.85rem', color: 'var(--text-secondary)', textAlign: 'center' }}>
-            BookMemo v1.3.0 • Local-First Reading Tracker & Memo
+            HandMemo v1.3.0 • Local-First Reading Tracker & Memo
           </div>
         </Section>
       )}

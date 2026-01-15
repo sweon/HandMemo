@@ -11,10 +11,12 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 
 const Section = styled.div`
-  margin-top: 4rem;
+  margin-top: 0;
   border-top: 2px solid ${({ theme }) => theme.colors.border};
   padding-top: 2.5rem;
   padding-bottom: 2.5rem;
+  padding-left: 32px;
+  padding-right: 32px;
 `;
 
 const SectionHeader = styled.div`

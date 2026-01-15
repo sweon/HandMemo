@@ -1,11 +1,11 @@
 {
-  "name": "bookmemo",
+  "name": "handmemo",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/sweon/BookMemo.git"
+    "url": "git+https://github.com/sweon/HandMemo.git"
   },
   "private": true,
-  "version": "1.3.31",
+  "version": "1.2.0",
   "type": "module",
   "scripts": {
     "dev": "vite",

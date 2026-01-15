@@ -44,7 +44,7 @@ export const SidebarMemoItem: React.FC<Props> = ({
                     }}
                 >
                     <MemoItemLink
-                        to={`/book/${memo.bookId}/memo/${memo.id}`}
+                        to={`/memo/${memo.id}`}
                         $isActive={isActive}
                         $inThread={inThread}
                         onClick={() => onClick?.(true)}

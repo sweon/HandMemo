@@ -106,7 +106,7 @@ const Overlay = styled.div<{ $isOpen: boolean }>`
   }
 `;
 
-const STORAGE_KEY = 'bookmemo-sidebar-width';
+const STORAGE_KEY = 'handmemo-sidebar-width';
 const DEFAULT_WIDTH = 300;
 const MIN_WIDTH_DESKTOP = 340;
 const MAX_WIDTH_DESKTOP = 600;
@@ -244,7 +244,7 @@ export const MainLayout: React.FC = () => {
       <ContentWrapper>
         <MobileHeader>
           {!isSidebarOpen && <FiMenu size={24} onClick={() => toggleSidebar(true)} />}
-          <h3>BookMemo</h3>
+          <h3>HandMemo</h3>
         </MobileHeader>
         <Outlet />
       </ContentWrapper>

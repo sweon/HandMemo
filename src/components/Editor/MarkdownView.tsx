@@ -135,8 +135,9 @@ const FabricPreview = ({ json }: { json: string }) => {
           const containerWidth = containerRef.current.clientWidth;
           if (containerWidth === 0) return;
 
-          // Scale down if container is smaller than content
-          const scale = containerWidth < originalWidth ? containerWidth / originalWidth : 1;
+          // Use full container width
+          const maxAllowedWidth = containerWidth;
+          const scale = Math.min(1, maxAllowedWidth / originalWidth);
 
           fabricCanvasRef.current.setDimensions({
             width: originalWidth * scale,
@@ -176,13 +177,8 @@ const FabricPreview = ({ json }: { json: string }) => {
     <div
       ref={containerRef}
       style={{
-        width: 'auto',
-        margin: '1.5rem -24px',
         overflow: 'hidden',
         background: '#fff',
-        border: '1px solid #eee',
-        borderLeft: 'none',
-        borderRight: 'none',
         display: 'flex',
         justifyContent: 'center'
       }}
@@ -199,6 +195,14 @@ export const MarkdownView: React.FC<{ content: string; tableHeaderBg?: string }>
         remarkPlugins={[remarkMath, remarkGfm, remarkBreaks]}
         rehypePlugins={[rehypeKatex]}
         components={{
+          pre: ({ children, ...props }: any) => {
+            const child = Array.isArray(children) ? children[0] : children;
+            if (React.isValidElement(child) &&
+              (child.props as any).className?.includes('language-fabric')) {
+              return <>{children}</>;
+            }
+            return <pre {...props}>{children}</pre>;
+          },
           code({ node, className, children, ...props }: any) {
             const match = /language-(\w+)/.exec(className || '');
             // Check if it's a fabric block
