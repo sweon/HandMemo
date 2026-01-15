@@ -108,10 +108,10 @@ const Overlay = styled.div<{ $isOpen: boolean }>`
 
 const STORAGE_KEY = 'handmemo-sidebar-width';
 const DEFAULT_WIDTH_DESKTOP = 360;
-const DEFAULT_WIDTH_MOBILE = 280;
+const DEFAULT_WIDTH_MOBILE = 320;
 const MIN_WIDTH_DESKTOP = 340;
 const MAX_WIDTH_DESKTOP = 600;
-const MIN_WIDTH_MOBILE = 260;
+const MIN_WIDTH_MOBILE = 280;
 const MAX_WIDTH_MOBILE = Math.min(450, window.innerWidth * 0.95);
 
 export const MainLayout: React.FC = () => {
