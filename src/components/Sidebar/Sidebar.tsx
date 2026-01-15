@@ -132,13 +132,13 @@ const Button = styled.button`
 const TopActions = styled.div`
   display: flex;
   align-items: center;
-  justify-content: flex-start;
+  justify-content: space-between;
   gap: 0.25rem;
   margin-bottom: 0.5rem;
   overflow: hidden;
 
   @media (max-width: 768px) {
-    gap: 0.25rem;
+    gap: 2px;
     flex-wrap: nowrap;
     max-height: 44px;
   }
@@ -579,80 +579,83 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
       </BrandHeader>
       <Header>
         <TopActions>
-          <Button onClick={() => {
-            handleSafeNavigation(() => {
-              navigate(`/memo/new?drawing=true&t=${Date.now()}`, { replace: true, state: { isGuard: true } });
-              onCloseMobile(true);
-            });
-          }} title={t.sidebar.add_memo || "Drawing Memo"}>
-            <FiPenTool size={16} />
-          </Button>
-          <Button onClick={() => {
-            handleSafeNavigation(() => {
-              navigate(`/memo/new?t=${Date.now()}`, { replace: true, state: { isGuard: true } });
-              onCloseMobile(true);
-            });
-          }} title="Text Memo">
-            <BsKeyboard size={16} />
-          </Button>
-
-          <Tooltip content={t.sidebar.decrease_font}>
-            <IconButton onClick={decreaseFontSize}>
-              <FiMinus size={16} />
-            </IconButton>
-          </Tooltip>
-          <Tooltip content={t.sidebar.increase_font}>
-            <IconButton onClick={increaseFontSize}>
-              <FiPlus size={16} />
-            </IconButton>
-          </Tooltip>
-
-          <Tooltip content={t.sidebar.sync_data}>
-            <IconButton onClick={() => {
-              setIsSyncModalOpen(true);
-              onCloseMobile(true);
-            }}>
-              <FiRefreshCw size={18} />
-            </IconButton>
-          </Tooltip>
-
-          <Tooltip content={showUpdateIndicator ? t.sidebar.install_update : t.sidebar.check_updates}>
-            <IconButton
-              onClick={handleUpdateCheck}
-              style={{ position: 'relative' }}
-            >
-              <FiArrowUpCircle size={18} className={isCheckingUpdate ? 'spin' : ''} />
-              {showUpdateIndicator && (
-                <span style={{
-                  position: 'absolute',
-                  top: '4px',
-                  right: '4px',
-                  width: '8px',
-                  height: '8px',
-                  borderRadius: '50%',
-                  backgroundColor: '#ef4444',
-                  border: '1px solid white'
-                }} />
-              )}
-            </IconButton>
-          </Tooltip>
-
-          <Tooltip content={mode === 'light' ? t.sidebar.switch_dark : t.sidebar.switch_light}>
-            <IconButton onClick={toggleTheme}>
-              {mode === 'light' ? <FiMoon size={18} /> : <FiSun size={18} />}
-            </IconButton>
-          </Tooltip>
-
-          <Tooltip content={t.sidebar.settings}>
-            <IconButton onClick={() => {
+          <div style={{ display: 'flex', gap: '0.25rem' }}>
+            <Button onClick={() => {
               handleSafeNavigation(() => {
-                navigate('/settings', { replace: true, state: { isGuard: true } });
+                navigate(`/memo/new?drawing=true&t=${Date.now()}`, { replace: true, state: { isGuard: true } });
                 onCloseMobile(true);
               });
-            }}>
-              <FiSettings size={18} />
-            </IconButton>
-          </Tooltip>
+            }} title={t.sidebar.add_memo || "Drawing Memo"}>
+              <FiPenTool size={16} />
+            </Button>
+            <Button onClick={() => {
+              handleSafeNavigation(() => {
+                navigate(`/memo/new?t=${Date.now()}`, { replace: true, state: { isGuard: true } });
+                onCloseMobile(true);
+              });
+            }} title="Text Memo">
+              <BsKeyboard size={16} />
+            </Button>
+          </div>
+          <div style={{ display: 'flex', gap: '0rem', alignItems: 'center', flexShrink: 1, minWidth: 0, overflow: 'hidden' }}>
+            <Tooltip content={t.sidebar.decrease_font}>
+              <IconButton onClick={decreaseFontSize}>
+                <FiMinus size={16} />
+              </IconButton>
+            </Tooltip>
+            <Tooltip content={t.sidebar.increase_font}>
+              <IconButton onClick={increaseFontSize}>
+                <FiPlus size={16} />
+              </IconButton>
+            </Tooltip>
+
+            <Tooltip content={t.sidebar.sync_data}>
+              <IconButton onClick={() => {
+                setIsSyncModalOpen(true);
+                onCloseMobile(true);
+              }}>
+                <FiRefreshCw size={18} />
+              </IconButton>
+            </Tooltip>
+
+            <Tooltip content={showUpdateIndicator ? t.sidebar.install_update : t.sidebar.check_updates}>
+              <IconButton
+                onClick={handleUpdateCheck}
+                style={{ position: 'relative' }}
+              >
+                <FiArrowUpCircle size={18} className={isCheckingUpdate ? 'spin' : ''} />
+                {showUpdateIndicator && (
+                  <span style={{
+                    position: 'absolute',
+                    top: '4px',
+                    right: '4px',
+                    width: '8px',
+                    height: '8px',
+                    borderRadius: '50%',
+                    backgroundColor: '#ef4444',
+                    border: '1px solid white'
+                  }} />
+                )}
+              </IconButton>
+            </Tooltip>
+
+            <Tooltip content={mode === 'light' ? t.sidebar.switch_dark : t.sidebar.switch_light}>
+              <IconButton onClick={toggleTheme}>
+                {mode === 'light' ? <FiMoon size={18} /> : <FiSun size={18} />}
+              </IconButton>
+            </Tooltip>
+
+            <Tooltip content={t.sidebar.settings}>
+              <IconButton onClick={() => {
+                handleSafeNavigation(() => {
+                  navigate('/settings', { replace: true, state: { isGuard: true } });
+                  onCloseMobile(true);
+                });
+              }}>
+                <FiSettings size={18} />
+              </IconButton>
+            </Tooltip>
+          </div>
         </TopActions>
 
         <SearchInputWrapper>
