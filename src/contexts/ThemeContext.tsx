@@ -13,6 +13,7 @@ interface ThemeContextType {
     fontSize: number;
     increaseFontSize: () => void;
     decreaseFontSize: () => void;
+    resetFontSize: () => void;
     theme: DefaultTheme;
     setThemeByName: (name: string) => void;
 }
@@ -92,6 +93,10 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         setFontSize(prev => Math.max(prev - 1, 12));
     };
 
+    const resetFontSize = () => {
+        setFontSize(16);
+    };
+
     const setThemeByName = (name: string) => {
         setThemeName(name);
         const preset = themePresets[name];
@@ -108,7 +113,7 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     };
 
     return (
-        <ThemeContext.Provider value={{ mode, toggleTheme, fontSize, increaseFontSize, decreaseFontSize, theme: currentTheme, setThemeByName }}>
+        <ThemeContext.Provider value={{ mode, toggleTheme, fontSize, increaseFontSize, decreaseFontSize, resetFontSize, theme: currentTheme, setThemeByName }}>
             <StyledThemeProvider theme={currentTheme}>
                 <GlobalStyle />
                 {children}
