@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState, useLayoutEffect } from 'react';
 import styled from 'styled-components';
 import { fabric } from 'fabric';
-import { FiX, FiCheck, FiMousePointer, FiMinus, FiSquare, FiCircle, FiTriangle, FiType, FiArrowDown, FiSettings, FiRotateCcw, FiRotateCw, FiDownload, FiTrash2 } from 'react-icons/fi';
+import { FiX, FiCheck, FiMousePointer, FiMinus, FiSquare, FiCircle, FiTriangle, FiType, FiArrowDown, FiSettings, FiRotateCcw, FiRotateCw, FiDownload, FiTrash2, FiHelpCircle } from 'react-icons/fi';
 import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd';
 import { HexColorPicker } from 'react-colorful';
 import { useLanguage } from '../../contexts/LanguageContext';
@@ -984,6 +984,7 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
 
     const [isPenEditOpen, setIsPenEditOpen] = useState(false);
     const [isConfigOpen, setIsConfigOpen] = useState(false);
+    const [isHelpOpen, setIsHelpOpen] = useState(false);
     const lastInteractionTimeRef = useRef(0);
 
 
@@ -2273,6 +2274,10 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                     setBrushSize(availableBrushSizes[3]);
                     updateToolSetting(undefined, availableBrushSizes[3]);
                     break;
+                case '5':
+                    setBrushSize(availableBrushSizes[4]);
+                    updateToolSetting(undefined, availableBrushSizes[4]);
+                    break;
             }
         };
 
@@ -2597,7 +2602,14 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                     <Toolbar>
                         <ToolGroup style={{ flex: 1 }}>
                             {toolbarItems.map((item) => renderToolbarItem(item))}
-                            <div style={{ flex: 1 }} /> {/* Spacer to push settings button to right */}
+                            <div style={{ flex: 1 }} /> {/* Spacer to push buttons to right */}
+                            <ToolButton
+                                onClick={() => setIsHelpOpen(true)}
+                                style={{ border: 'none', background: 'transparent' }}
+                                title="Help"
+                            >
+                                <FiHelpCircle size={18} />
+                            </ToolButton>
                             <ToolButton
                                 onClick={() => setIsConfigOpen(true)}
                                 style={{ border: 'none', background: 'transparent' }}
@@ -3113,6 +3125,61 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                     </ModalOverlay>
                 )
             }
+
+            {isHelpOpen && (
+                <Backdrop $centered onClick={(e) => { if (e.target === e.currentTarget) setIsHelpOpen(false); }}>
+                    <CompactModal onClick={e => e.stopPropagation()} style={{ maxWidth: '360px', maxHeight: '80vh', overflowY: 'auto' }}>
+                        <div style={{ padding: '4px 0' }}>
+                            <h3 style={{ margin: '0 0 12px 0', fontSize: '1rem', fontWeight: 600, color: '#333', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <FiHelpCircle size={18} /> 도움말
+                            </h3>
+
+                            <div style={{ marginBottom: '16px' }}>
+                                <h4 style={{ margin: '0 0 8px 0', fontSize: '0.8rem', fontWeight: 600, color: '#495057' }}>⌨️ 단축키</h4>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 16px', fontSize: '0.75rem' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><span style={{ color: '#495057' }}>펜</span><kbd style={{ background: '#f8f9fa', padding: '2px 8px', borderRadius: '4px', fontFamily: 'monospace', fontSize: '0.7rem', border: '1px solid #dee2e6', boxShadow: '0 1px 0 #dee2e6', color: '#333' }}>P</kbd></div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><span style={{ color: '#495057' }}>선</span><kbd style={{ background: '#f8f9fa', padding: '2px 8px', borderRadius: '4px', fontFamily: 'monospace', fontSize: '0.7rem', border: '1px solid #dee2e6', boxShadow: '0 1px 0 #dee2e6', color: '#333' }}>L</kbd></div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><span style={{ color: '#495057' }}>화살표</span><kbd style={{ background: '#f8f9fa', padding: '2px 8px', borderRadius: '4px', fontFamily: 'monospace', fontSize: '0.7rem', border: '1px solid #dee2e6', boxShadow: '0 1px 0 #dee2e6', color: '#333' }}>A</kbd></div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><span style={{ color: '#495057' }}>사각형</span><kbd style={{ background: '#f8f9fa', padding: '2px 8px', borderRadius: '4px', fontFamily: 'monospace', fontSize: '0.7rem', border: '1px solid #dee2e6', boxShadow: '0 1px 0 #dee2e6', color: '#333' }}>R</kbd></div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><span style={{ color: '#495057' }}>원</span><kbd style={{ background: '#f8f9fa', padding: '2px 8px', borderRadius: '4px', fontFamily: 'monospace', fontSize: '0.7rem', border: '1px solid #dee2e6', boxShadow: '0 1px 0 #dee2e6', color: '#333' }}>C</kbd></div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><span style={{ color: '#495057' }}>텍스트</span><kbd style={{ background: '#f8f9fa', padding: '2px 8px', borderRadius: '4px', fontFamily: 'monospace', fontSize: '0.7rem', border: '1px solid #dee2e6', boxShadow: '0 1px 0 #dee2e6', color: '#333' }}>T</kbd></div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><span style={{ color: '#495057' }}>지우개</span><kbd style={{ background: '#f8f9fa', padding: '2px 8px', borderRadius: '4px', fontFamily: 'monospace', fontSize: '0.7rem', border: '1px solid #dee2e6', boxShadow: '0 1px 0 #dee2e6', color: '#333' }}>E</kbd></div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><span style={{ color: '#495057' }}>삭제</span><kbd style={{ background: '#f8f9fa', padding: '2px 8px', borderRadius: '4px', fontFamily: 'monospace', fontSize: '0.7rem', border: '1px solid #dee2e6', boxShadow: '0 1px 0 #dee2e6', color: '#333' }}>D</kbd></div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><span style={{ color: '#495057' }}>실행취소</span><kbd style={{ background: '#f8f9fa', padding: '2px 8px', borderRadius: '4px', fontFamily: 'monospace', fontSize: '0.7rem', border: '1px solid #dee2e6', boxShadow: '0 1px 0 #dee2e6', color: '#333' }}>⌘Z</kbd></div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><span style={{ color: '#495057' }}>다시실행</span><kbd style={{ background: '#f8f9fa', padding: '2px 8px', borderRadius: '4px', fontFamily: 'monospace', fontSize: '0.7rem', border: '1px solid #dee2e6', boxShadow: '0 1px 0 #dee2e6', color: '#333' }}>⌘⇧Z</kbd></div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><span style={{ color: '#495057' }}>굵기 1~5</span><kbd style={{ background: '#f8f9fa', padding: '2px 8px', borderRadius: '4px', fontFamily: 'monospace', fontSize: '0.7rem', border: '1px solid #dee2e6', boxShadow: '0 1px 0 #dee2e6', color: '#333' }}>1-5</kbd></div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><span style={{ color: '#495057' }}>선택삭제</span><kbd style={{ background: '#f8f9fa', padding: '2px 8px', borderRadius: '4px', fontFamily: 'monospace', fontSize: '0.7rem', border: '1px solid #dee2e6', boxShadow: '0 1px 0 #dee2e6', color: '#333' }}>Del</kbd></div>
+                                </div>
+                            </div>
+
+                            <div style={{ marginBottom: '16px' }}>
+                                <h4 style={{ margin: '0 0 8px 0', fontSize: '0.8rem', fontWeight: 600, color: '#2f9e44', textTransform: 'uppercase', letterSpacing: '0.5px' }}>💡 기능 및 팁</h4>
+                                <ul style={{ margin: 0, paddingLeft: '16px', fontSize: '0.75rem', lineHeight: 1.6, color: '#495057', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                    <li><b>상세 설정</b>: 펜/도형/텍스트/색상 도구를 <b>더블클릭</b>하여 설정 변경</li>
+                                    <li><b>두 가지 지우개</b>: 픽셀(부분 지우기) 및 오브젝트(통째로 삭제) 지원</li>
+                                    <li><b>배경 변경</b>: <span style={{ display: 'inline-flex', verticalAlign: 'text-bottom' }}><BackgroundIcon /></span> 아이콘으로 모눈/줄무늬 및 배경색상 변경</li>
+                                    <li><b>길이 확장</b>: <span style={{ display: 'inline-flex', verticalAlign: 'text-bottom' }}><VerticalExpandIcon /></span> 버튼을 눌러 메모 공간을 아래로 계속 확장</li>
+                                    <li><b>이미지 저장</b>: <FiDownload size={14} style={{ verticalAlign: 'text-bottom' }} /> 버튼으로 배경 투명 PNG 파일로 다운로드</li>
+                                    <li><b>전체 지우기</b>: <FiTrash2 size={14} style={{ verticalAlign: 'text-bottom' }} /> 버튼으로 캔버스의 모든 내용 삭제</li>
+                                </ul>
+                            </div>
+
+                            <div>
+                                <h4 style={{ margin: '0 0 8px 0', fontSize: '0.8rem', fontWeight: 600, color: '#f08c00', textTransform: 'uppercase', letterSpacing: '0.5px' }}>🎨 펜 종류</h4>
+                                <div style={{ fontSize: '0.75rem', color: '#495057', lineHeight: 1.5 }}>
+                                    펜, 형광펜, 글로우, 스프레이, 원형, 카본, 해치 등 다양한 브러시 스타일 지원
+                                </div>
+                            </div>
+                        </div>
+                        <CompactModalFooter>
+                            <div />
+                            <CompactModalButton onClick={() => setIsHelpOpen(false)} $variant="primary">
+                                닫기
+                            </CompactModalButton>
+                        </CompactModalFooter>
+                    </CompactModal>
+                </Backdrop>
+            )}
 
         </>
     );
