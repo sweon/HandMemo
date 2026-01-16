@@ -6,7 +6,7 @@ import { ExitGuardProvider } from './contexts/ExitGuardContext';
 import { MainLayout } from './components/Layout/MainLayout';
 
 import { MemoDetail } from './components/LogView/MemoDetail';
-import { EmptyState } from './components/LogView/EmptyState';
+import { SmartRedirect } from './components/LogView/SmartRedirect';
 import { SettingsPage } from './pages/SettingsPage';
 import { AndroidExitHandler } from './components/AndroidExitHandler';
 
@@ -20,7 +20,7 @@ function App() {
               <AndroidExitHandler />
               <Routes>
                 <Route path="/" element={<MainLayout />}>
-                  <Route index element={<EmptyState />} />
+                  <Route index element={<SmartRedirect />} />
                   <Route path="memo/new" element={<MemoDetail />} />
                   <Route path="memo/:id" element={<MemoDetail />} />
                   <Route path="settings" element={<SettingsPage />} />
