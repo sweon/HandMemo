@@ -450,7 +450,8 @@ const DASH_OPTIONS: (number[] | undefined)[] = [
     [20, 10],
     [5, 10]
 ];
-const INITIAL_FONTS = ['Arial', 'Times New Roman', 'Courier New', 'Georgia', 'Verdana', 'Impact', 'Comic Sans MS'];
+const ENGLISH_FONTS = ['Arial', 'Times New Roman', 'Courier New', 'Georgia', 'Verdana', 'Impact', 'Comic Sans MS'];
+const KOREAN_FONTS = ['Noto Sans KR', 'Nanum Gothic', 'Nanum Myeongjo', 'Malgun Gothic', 'Apple SD Gothic Neo'];
 const INITIAL_SHAPE_OPACITY = 100;
 const INITIAL_SHAPE_DASH = 0; // Index in DASH_OPTIONS
 
@@ -801,7 +802,7 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const fabricCanvasRef = useRef<fabric.Canvas | null>(null);
-    const { t } = useLanguage();
+    const { t, language } = useLanguage();
 
     // Guard State
     const { registerGuard, unregisterGuard } = useExitGuard();
@@ -936,6 +937,10 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
     const [fontFamily, setFontFamily] = useState(() => localStorage.getItem('fabric_font_family') || 'Arial');
     const [isFontEditOpen, setIsFontEditOpen] = useState(false);
     const [tempFontFamily, setTempFontFamily] = useState(fontFamily);
+
+    const availableFonts = React.useMemo(() => {
+        return language === 'ko' ? [...KOREAN_FONTS, ...ENGLISH_FONTS] : ENGLISH_FONTS;
+    }, [language]);
 
     // Save customized settings
     useEffect(() => {
@@ -2951,7 +2956,7 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                                 style={{ minWidth: '180px' }}
                             >
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                    {INITIAL_FONTS.map((font) => (
+                                    {availableFonts.map((font) => (
                                         <DashOption
                                             key={font}
                                             $active={tempFontFamily === font}
