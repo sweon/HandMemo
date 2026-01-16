@@ -133,16 +133,12 @@ const ModalOverlay = styled.div`
 `;
 
 const ModalContainer = styled.div`
-  width: 95vw;
-  height: 90vh;
-  max-width: 1280px;
-  max-height: 1000px;
+  width: 100vw;
+  height: 100vh;
   background: #ffffff;
-  border-radius: 12px;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
 `;
 
 
@@ -204,23 +200,21 @@ const CanvasWrapper = styled.div`
   flex: 1;
   width: 100%;
   height: 100%;
-  background: #f8f9fa;
-  overflow-y: auto; /* Allow vertical scrolling */
-  overflow-x: hidden;
+  background: #ffffff;
+  overflow: hidden;
   position: relative;
   display: flex;
   justify-content: center;
   
-  /* Fabric container centering */
+  /* Fabric container */
   .canvas-container {
-    margin: 0 auto;
-    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    margin: 0;
   }
 `;
 
 const FloatingActionButtons = styled.div`
   position: absolute;
-  bottom: 8px;
+  top: 8px;
   right: 8px;
   display: flex;
   flex-direction: column;
@@ -815,6 +809,8 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
     const handleActualClose = useRef(propsOnClose);
     handleActualClose.current = propsOnClose;
 
+    const [isExitConfirmOpen, setIsExitConfirmOpen] = useState(false);
+
     // Wrapper for onClose to handle history safe closing
     const onClose = () => {
         if (isClosingRef.current) {
@@ -836,7 +832,8 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                 return 'ALLOW' as any;
             }
 
-            // Disable back button for this modal
+            // Disable back button and show confirm
+            setIsExitConfirmOpen(true);
             return 'PREVENT' as any;
         });
 
@@ -847,6 +844,9 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
             // Re-push state to effectively cancel the back navigation
             e.preventDefault();
             window.history.pushState({ fabricOpen: true, isGuard: true }, '');
+
+            // Show confirm
+            setIsExitConfirmOpen(true);
         };
 
         window.addEventListener('popstate', handlePopState);
@@ -907,8 +907,6 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
     const [isSizeEditOpen, setIsSizeEditOpen] = useState(false);
     const [tempSize, setTempSize] = useState(2);
     const [editingSizeIndex, setEditingSizeIndex] = useState<number | null>(null);
-
-    const [isExitConfirmOpen, setIsExitConfirmOpen] = useState(false);
 
     const [penSlotSettings, setPenSlotSettings] = useState<Record<string, { brushType: string, color: string, size: number }>>(() => {
         const saved = localStorage.getItem('fabric_pen_slot_settings');
