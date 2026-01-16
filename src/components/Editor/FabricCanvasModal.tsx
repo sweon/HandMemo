@@ -202,7 +202,8 @@ const CanvasWrapper = styled.div`
   width: 100%;
   height: 100%;
   background: #ffffff;
-  overflow: auto;
+  overflow-y: auto;
+  overflow-x: hidden;
   position: relative;
   display: flex;
   justify-content: center;
@@ -1175,6 +1176,30 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
 
         fabricCanvasRef.current = canvas;
 
+        // Auto-resize canvas when container resizes (e.g. scrollbar appears)
+        const resizeObserver = new ResizeObserver(() => {
+            if (containerRef.current) {
+                const newWidth = containerRef.current.clientWidth;
+                const newHeight = containerRef.current.clientHeight;
+
+                // Only update if width changed to avoid infinite loop
+                // clientWidth excludes scrollbar width, ensuring no horizontal scroll
+                if (canvas.getWidth() !== newWidth) {
+                    canvas.setWidth(newWidth);
+
+                    // If container grew taller than canvas, match height.
+                    // But never shrink height to avoid hiding drawn content.
+                    if (canvas.getHeight() < newHeight) {
+                        canvas.setHeight(newHeight);
+                    }
+                    canvas.renderAll();
+                }
+            }
+        });
+        if (containerRef.current) {
+            resizeObserver.observe(containerRef.current);
+        }
+
         // Palm Rejection Filter
         const filterPointer = (e: any) => {
             if (!palmRejectionRef.current) return;
@@ -1285,6 +1310,7 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                 upperCanvas.removeEventListener('touchstart', filterPointer, true);
                 upperCanvas.removeEventListener('touchmove', filterPointer, true);
             }
+            resizeObserver.disconnect();
             canvas.off('object:added', saveHistory);
             canvas.off('object:modified', saveHistory);
             canvas.off('object:removed', saveHistory);
