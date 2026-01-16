@@ -197,11 +197,11 @@ const ColorButton = styled.div<{ $color: string; $selected?: boolean }>`
   }
 `;
 
-const CanvasWrapper = styled.div`
+const CanvasWrapper = styled.div<{ $bgColor?: string }>`
   flex: 1;
   width: 100%;
   height: 100%;
-  background: #ffffff;
+  background: ${({ $bgColor }) => $bgColor || '#ffffff'};
   overflow-y: auto;
   overflow-x: hidden;
   position: relative;
@@ -1182,16 +1182,21 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                 const newWidth = containerRef.current.clientWidth;
                 const newHeight = containerRef.current.clientHeight;
 
-                // Only update if width changed to avoid infinite loop
-                // clientWidth excludes scrollbar width, ensuring no horizontal scroll
+                // Update if either dimension changed to ensure background fills container
+                let changed = false;
                 if (canvas.getWidth() !== newWidth) {
                     canvas.setWidth(newWidth);
+                    changed = true;
+                }
 
-                    // If container grew taller than canvas, match height.
-                    // But never shrink height to avoid hiding drawn content.
-                    if (canvas.getHeight() < newHeight) {
-                        canvas.setHeight(newHeight);
-                    }
+                // If container grew taller than canvas, match height.
+                // But never shrink height to avoid hiding drawn content.
+                if (canvas.getHeight() < newHeight) {
+                    canvas.setHeight(newHeight);
+                    changed = true;
+                }
+
+                if (changed) {
                     canvas.renderAll();
                 }
             }
@@ -3127,7 +3132,7 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                         </Backdrop>
                     )}
 
-                    <CanvasWrapper ref={containerRef}>
+                    <CanvasWrapper ref={containerRef} $bgColor={backgroundColor}>
                         <canvas ref={canvasRef} />
                     </CanvasWrapper>
                 </ModalContainer>
