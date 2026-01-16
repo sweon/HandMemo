@@ -223,15 +223,6 @@ const CanvasWrapper = styled.div`
   }
 `;
 
-const FloatingActionButtons = styled.div`
-  position: absolute;
-  top: 50px;
-  right: 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  z-index: 100;
-`;
 
 const CompactActionButton = styled.button<{ $primary?: boolean }>`
   width: 24px;
@@ -2670,6 +2661,13 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                             >
                                 <FiSettings size={18} />
                             </ToolButton>
+                            <div style={{ width: '4px', height: '16px', borderLeft: '1px solid #dee2e6', margin: '0 4px' }} />
+                            <CompactActionButton onClick={handleCancelWrapped} title={t.drawing?.cancel || 'Cancel'}>
+                                <FiX size={14} />
+                            </CompactActionButton>
+                            <CompactActionButton $primary onClick={handleSave} title={t.drawing?.insert || 'Insert'}>
+                                <FiCheck size={14} />
+                            </CompactActionButton>
                         </ToolGroup>
                     </Toolbar>
                     {isColorEditOpen && (
@@ -3132,14 +3130,6 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                     <CanvasWrapper ref={containerRef}>
                         <canvas ref={canvasRef} />
                     </CanvasWrapper>
-                    <FloatingActionButtons>
-                        <CompactActionButton onClick={handleCancelWrapped} title={t.drawing?.cancel || 'Cancel'}>
-                            <FiX size={12} />
-                        </CompactActionButton>
-                        <CompactActionButton $primary onClick={handleSave} title={t.drawing?.insert || 'Insert'}>
-                            <FiCheck size={12} />
-                        </CompactActionButton>
-                    </FloatingActionButtons>
                 </ModalContainer>
             </ModalOverlay >
             {isConfigOpen && (
