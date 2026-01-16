@@ -3020,7 +3020,8 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                                 onClick={e => e.stopPropagation()}
                                 style={{ minWidth: '180px' }}
                             >
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', maxHeight: '300px', overflowY: 'auto' }}>
+
                                     {availableFonts.map((font) => (
                                         <DashOption
                                             key={font}
