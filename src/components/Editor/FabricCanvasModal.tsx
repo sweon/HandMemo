@@ -557,7 +557,7 @@ const INITIAL_TOOLBAR_ITEMS: ToolbarItem[] = [
 ];
 
 type ToolType = 'select' | 'pen' | 'eraser_pixel' | 'eraser_object' | 'line' | 'arrow' | 'rect' | 'circle' | 'text' | 'triangle' | 'ellipse' | 'diamond';
-type BackgroundType = 'none' | 'lines-xs' | 'lines-sm' | 'lines-md' | 'lines-lg' | 'lines-xl' | 'grid-xs' | 'grid-sm' | 'grid-md' | 'grid-lg' | 'grid-xl';
+type BackgroundType = 'none' | 'lines-xs' | 'lines-sm' | 'lines-md' | 'lines-lg' | 'lines-xl' | 'grid-xs' | 'grid-sm' | 'grid-md' | 'grid-lg' | 'grid-xl' | 'dots-xs' | 'dots-sm' | 'dots-md' | 'dots-lg' | 'dots-xl';
 
 const createBackgroundPattern = (type: BackgroundType, paperColor: string, opacity: number) => {
     const canvas = document.createElement('canvas');
@@ -604,6 +604,12 @@ const createBackgroundPattern = (type: BackgroundType, paperColor: string, opaci
         ctx.moveTo(size - 0.5, 0);
         ctx.lineTo(size - 0.5, size);
         ctx.stroke();
+    } else if (type.startsWith('dots')) {
+        ctx.fillStyle = `rgba(0, 0, 0, ${opacity})`;
+        ctx.beginPath();
+        // Draw dot at bottom right intersection
+        ctx.arc(size - 0.5, size - 0.5, 1, 0, Math.PI * 2);
+        ctx.fill();
     }
 
     return new fabric.Pattern({
@@ -1641,9 +1647,15 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                                             >
                                                 Grid
                                             </BackgroundOptionButton>
+                                            <BackgroundOptionButton
+                                                $active={background.startsWith('dots')}
+                                                onClick={() => setBackground('dots-sm')}
+                                            >
+                                                Dots
+                                            </BackgroundOptionButton>
                                         </div>
 
-                                        {(background.startsWith('lines') || background.startsWith('grid')) && (
+                                        {(background.startsWith('lines') || background.startsWith('grid') || background.startsWith('dots')) && (
                                             <>
                                                 <div style={{ fontSize: '0.75rem', color: '#888', marginTop: '4px' }}>Size</div>
                                                 <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
@@ -3157,10 +3169,12 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                                 <ul style={{ margin: 0, paddingLeft: '16px', fontSize: '0.75rem', lineHeight: 1.6, color: '#495057', display: 'flex', flexDirection: 'column', gap: '4px' }}>
                                     <li><b>상세 설정</b>: 펜/도형/텍스트/색상 도구를 <b>더블클릭</b>하여 설정 변경</li>
                                     <li><b>두 가지 지우개</b>: 픽셀(부분 지우기) 및 오브젝트(통째로 삭제) 지원</li>
-                                    <li><b>배경 변경</b>: <span style={{ display: 'inline-flex', verticalAlign: 'text-bottom' }}><BackgroundIcon /></span> 아이콘으로 모눈/줄무늬 및 배경색상 변경</li>
+                                    <li><b>배경 변경</b>: <span style={{ display: 'inline-flex', verticalAlign: 'text-bottom' }}><BackgroundIcon /></span> 버튼으로 줄/모눈/점 및 배경색상 변경</li>
                                     <li><b>길이 확장</b>: <span style={{ display: 'inline-flex', verticalAlign: 'text-bottom' }}><VerticalExpandIcon /></span> 버튼을 눌러 메모 공간을 아래로 계속 확장</li>
                                     <li><b>이미지 저장</b>: <FiDownload size={14} style={{ verticalAlign: 'text-bottom' }} /> 버튼으로 배경 투명 PNG 파일로 다운로드</li>
                                     <li><b>전체 지우기</b>: <FiTrash2 size={14} style={{ verticalAlign: 'text-bottom' }} /> 버튼으로 캔버스의 모든 내용 삭제</li>
+                                    <li><b>취소/나가기</b>: <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '18px', height: '18px', borderRadius: '50%', background: '#ffffff', border: '1px solid #ced4da', verticalAlign: 'text-bottom', margin: '0 2px' }}><FiX size={10} color="#333" /></span> 버튼으로 저장하지 않고 닫기</li>
+                                    <li><b>저장/완료</b>: <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '18px', height: '18px', borderRadius: '50%', background: '#333', border: '1px solid #333', verticalAlign: 'text-bottom', margin: '0 2px' }}><FiCheck size={10} color="#ffffff" /></span> 버튼으로 변경사항 저장하고 닫기</li>
                                 </ul>
                             </div>
 
