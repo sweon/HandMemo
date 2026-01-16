@@ -212,6 +212,15 @@ const CanvasWrapper = styled.div`
   .canvas-container {
     margin: 0;
   }
+
+  @media (max-width: 768px) {
+    &::-webkit-scrollbar {
+      width: 16px;
+    }
+    &::-webkit-scrollbar-thumb {
+      border-radius: 8px;
+    }
+  }
 `;
 
 const FloatingActionButtons = styled.div`
