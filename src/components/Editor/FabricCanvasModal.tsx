@@ -3,7 +3,7 @@ import styled from 'styled-components';
 import { fabric } from 'fabric';
 import { FiX, FiCheck, FiMousePointer, FiMinus, FiSquare, FiCircle, FiTriangle, FiType, FiArrowDown, FiSettings, FiRotateCcw, FiRotateCw, FiDownload, FiTrash2 } from 'react-icons/fi';
 import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd';
-import { HexColorPicker, HexColorInput } from 'react-colorful';
+import { HexColorPicker } from 'react-colorful';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useExitGuard } from '../../contexts/ExitGuardContext';
 
@@ -2631,9 +2631,9 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                                     <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                             <span style={{ fontSize: '0.7rem', color: '#888', fontVariantNumeric: 'tabular-nums', width: '30px' }}>HEX</span>
-                                            <HexColorInput
-                                                color={tempColor}
-                                                onChange={setTempColor}
+                                            <input
+                                                value={tempColor.toUpperCase()}
+                                                readOnly
                                                 style={{
                                                     flex: 1,
                                                     padding: '4px 8px',
@@ -2641,7 +2641,9 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                                                     borderRadius: '4px',
                                                     fontSize: '0.85rem',
                                                     fontFamily: 'monospace',
-                                                    textTransform: 'uppercase'
+                                                    textTransform: 'uppercase',
+                                                    background: '#f8f9fa',
+                                                    cursor: 'default'
                                                 }}
                                             />
                                         </div>
