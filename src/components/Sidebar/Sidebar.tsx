@@ -135,7 +135,12 @@ const TopActions = styled.div`
   justify-content: space-between;
   gap: 0.25rem;
   margin-bottom: 0.5rem;
-  overflow: hidden;
+  
+  overflow-x: auto;
+  overflow-y: hidden;
+  &::-webkit-scrollbar { display: none; }
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 
   @media (max-width: 768px) {
     gap: 2px;
@@ -597,7 +602,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
               <BsKeyboard size={16} />
             </Button>
           </div>
-          <div style={{ display: 'flex', gap: '0rem', alignItems: 'center', flexShrink: 1, minWidth: 0, overflow: 'hidden' }}>
+          <div style={{ display: 'flex', gap: '0rem', alignItems: 'center', flexShrink: 0, minWidth: 0 }}>
             <Tooltip content={t.sidebar.decrease_font}>
               <IconButton onClick={decreaseFontSize}>
                 <FiMinus size={16} />
