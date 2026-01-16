@@ -213,7 +213,7 @@ const CanvasWrapper = styled.div<{ $bgColor?: string }>`
     margin: 0;
   }
 
-  @media (max-width: 768px) {
+  @media (max-width: 1280px) {
     &::-webkit-scrollbar {
       width: 16px;
     }
