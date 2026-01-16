@@ -2776,7 +2776,7 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                                     >
                                         <PenIcon />
                                         {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                                        <span style={{ fontSize: '0.85rem', minWidth: '70px' }}>{(t.drawing as any)?.pen_pen || 'Pen'}</span>
+                                        <span style={{ fontSize: '0.85rem', minWidth: '70px' }}>{t.drawing.pen_pen}</span>
                                         <BrushSample
                                             $type="pen"
                                             $color={toolSettings['pen']?.color || color}
@@ -2794,7 +2794,7 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                                     >
                                         <CarbonIcon />
                                         {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                                        <span style={{ fontSize: '0.85rem', minWidth: '70px' }}>{(t.drawing as any)?.pen_carbon || 'Carbon'}</span>
+                                        <span style={{ fontSize: '0.85rem', minWidth: '70px' }}>{t.drawing.pen_carbon}</span>
                                         <BrushSample
                                             $type="carbon"
                                             $color={toolSettings['carbon']?.color || color}
@@ -2812,7 +2812,7 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                                     >
                                         <HatchIcon />
                                         {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                                        <span style={{ fontSize: '0.85rem', minWidth: '70px' }}>{(t.drawing as any)?.pen_hatch || 'Hatch'}</span>
+                                        <span style={{ fontSize: '0.85rem', minWidth: '70px' }}>{t.drawing.pen_hatch}</span>
                                         <BrushSample
                                             $type="hatch"
                                             $color={toolSettings['hatch']?.color || color}
@@ -2830,7 +2830,7 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                                     >
                                         <HighlighterIcon />
                                         {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                                        <span style={{ fontSize: '0.85rem', minWidth: '70px' }}>{(t.drawing as any)?.pen_highlighter || 'Highlight'}</span>
+                                        <span style={{ fontSize: '0.85rem', minWidth: '70px' }}>{t.drawing.pen_highlighter}</span>
                                         <BrushSample
                                             $type="highlighter"
                                             $color={toolSettings['highlighter']?.color || color}
@@ -2848,7 +2848,7 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                                     >
                                         <GlowIcon />
                                         {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                                        <span style={{ fontSize: '0.85rem', minWidth: '70px' }}>{(t.drawing as any)?.pen_glow || 'Glow'}</span>
+                                        <span style={{ fontSize: '0.85rem', minWidth: '70px' }}>{t.drawing.pen_glow}</span>
                                         <BrushSample
                                             $type="glow"
                                             $color={toolSettings['glow']?.color || color}
@@ -2866,7 +2866,7 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                                     >
                                         <SprayBrushIcon />
                                         {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                                        <span style={{ fontSize: '0.85rem', minWidth: '70px' }}>{(t.drawing as any)?.pen_spray || 'Spray'}</span>
+                                        <span style={{ fontSize: '0.85rem', minWidth: '70px' }}>{t.drawing.pen_spray}</span>
                                         <BrushSample
                                             $type="spray"
                                             $color={toolSettings['spray']?.color || color}
@@ -2884,7 +2884,7 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                                     >
                                         <CircleBrushIcon />
                                         {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                                        <span style={{ fontSize: '0.85rem', minWidth: '70px' }}>{(t.drawing as any)?.pen_circle || 'Bubble'}</span>
+                                        <span style={{ fontSize: '0.85rem', minWidth: '70px' }}>{t.drawing.pen_circle}</span>
                                         <BrushSample
                                             $type="circle"
                                             $color={toolSettings['circle']?.color || color}
@@ -3008,20 +3008,17 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                     <ModalOverlay style={{ zIndex: 12000 }}>
                         <CompactModal onClick={e => e.stopPropagation()} style={{ padding: '20px', minWidth: '300px', maxWidth: '90vw' }}>
                             <h3 style={{ marginTop: 0, fontSize: '1.2rem', color: '#333' }}>
-                                {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                                {(t.drawing as any)?.exit_title || 'Exit Drawing?'}
+                                {t.drawing.exit_title}
                             </h3>
                             <p style={{ color: '#555', lineHeight: '1.5', margin: '10px 0 20px 0' }}>
-                                {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                                {(t.drawing as any)?.cancel_confirm || 'Are you sure you want to discard your changes?'}
+                                {t.drawing.cancel_confirm}
                             </p>
                             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
                                 <CompactModalButton onClick={() => setIsExitConfirmOpen(false)} style={{ padding: '8px 16px' }}>
-                                    {t.drawing?.cancel || 'Cancel'}
+                                    {(t.drawing as any)?.exit_cancel || t.drawing.cancel}
                                 </CompactModalButton>
                                 <CompactModalButton $variant="danger" onClick={handleConfirmExit} style={{ padding: '8px 16px', background: '#e03131', color: 'white', border: 'none' }}>
-                                    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                                    {(t.drawing as any)?.discard || 'Discard'}
+                                    {t.drawing.discard}
                                 </CompactModalButton>
                             </div>
                         </CompactModal>

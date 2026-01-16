@@ -259,10 +259,15 @@ export const MemoDetail: React.FC = () => {
             const contentText = content.trim();
 
             if (contentText) {
-                if (contentText.startsWith('```fabric')) {
-                    finalTitle = t.memo_detail.untitled;
+                // Filter out markdown code blocks (like ```fabric ... ```) for title generation
+                const filteredText = contentText
+                    .replace(/```[\s\S]*?```/g, '') // Remove code blocks
+                    .trim();
+
+                if (filteredText) {
+                    finalTitle = filteredText.slice(0, 30) + (filteredText.length > 30 ? '...' : '');
                 } else {
-                    finalTitle = contentText.slice(0, 30) + (contentText.length > 30 ? '...' : '');
+                    finalTitle = t.memo_detail.untitled;
                 }
             } else {
                 finalTitle = t.memo_detail.untitled;

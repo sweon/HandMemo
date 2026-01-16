@@ -146,7 +146,17 @@ export const translations = {
             head_size: "Arrow Head Size",
             opacity: "Opacity",
             palm_rejection: "Palm Rejection (Pen Only)",
-            cancel_confirm: "Are you sure you want to discard your changes?"
+            cancel_confirm: "Are you sure you want to discard your changes?",
+            exit_title: "Exit Drawing?",
+            discard: "Discard",
+            exit_cancel: "Keep Editing",
+            pen_pen: "Pen",
+            pen_carbon: "Carbon",
+            pen_hatch: "Hatch",
+            pen_highlighter: "Highlight",
+            pen_glow: "Glow",
+            pen_spray: "Spray",
+            pen_circle: "Bubble"
         },
         android: {
             exit_warning: "Press back again to exit."
@@ -299,7 +309,17 @@ export const translations = {
             head_size: "화살표 머리 크기",
             opacity: "투명도",
             palm_rejection: "팜 리젝션 (펜 전용)",
-            cancel_confirm: "변경 사항을 취소하시겠습니까?"
+            cancel_confirm: "변경사항을 취소하시겠습니까?",
+            exit_title: "종료하시겠습니까?",
+            discard: "변경사항 취소",
+            exit_cancel: "계속 편집",
+            pen_pen: "펜",
+            pen_carbon: "연필",
+            pen_hatch: "해칭",
+            pen_highlighter: "형광펜",
+            pen_glow: "네온",
+            pen_spray: "스프레이",
+            pen_circle: "방울"
         },
         android: {
             exit_warning: "뒤로 가기 버튼을\n한 번 더 누르면 종료됩니다."
