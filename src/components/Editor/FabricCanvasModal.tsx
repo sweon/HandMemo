@@ -3,7 +3,7 @@ import styled from 'styled-components';
 import { fabric } from 'fabric';
 import { FiX, FiCheck, FiMousePointer, FiMinus, FiSquare, FiCircle, FiTriangle, FiType, FiArrowDown, FiSettings, FiRotateCcw, FiRotateCw, FiDownload, FiTrash2 } from 'react-icons/fi';
 import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd';
-import { HexColorPicker } from 'react-colorful';
+import { HexColorPicker, HexColorInput } from 'react-colorful';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useExitGuard } from '../../contexts/ExitGuardContext';
 
@@ -1413,10 +1413,28 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
             top: rect.bottom + 5
         });
         setTempBrushType(brushType);
-        // Ensure we are tracking the correct slot for the modal context if it matters
-        // For now relying on activePenSlot since clicking activates it.
         openedTimeRef.current = Date.now();
         setIsPenEditOpen(true);
+    };
+
+    /**
+     * RGB Parsing Helpers
+     */
+    const hexToRgb = (hex: string) => {
+        const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+        return result ? {
+            r: parseInt(result[1], 16),
+            g: parseInt(result[2], 16),
+            b: parseInt(result[3], 16)
+        } : { r: 0, g: 0, b: 0 };
+    };
+
+    const rgbToHex = (r: number, g: number, b: number) => {
+        const toHex = (c: number) => {
+            const hex = Math.max(0, Math.min(255, c)).toString(16);
+            return hex.length === 1 ? '0' + hex : hex;
+        };
+        return '#' + toHex(r) + toHex(g) + toHex(b);
     };
 
     const handlePenOk = () => {
@@ -2610,8 +2628,53 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                                         }}
                                         style={{ width: '100%', height: '180px' }}
                                     />
-                                    <div style={{ fontSize: '0.75rem', color: '#888', fontWeight: 500, marginTop: '8px' }}>
-                                        {tempColor.toUpperCase()}
+                                    <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            <span style={{ fontSize: '0.7rem', color: '#888', fontVariantNumeric: 'tabular-nums', width: '30px' }}>HEX</span>
+                                            <HexColorInput
+                                                color={tempColor}
+                                                onChange={setTempColor}
+                                                style={{
+                                                    flex: 1,
+                                                    padding: '4px 8px',
+                                                    border: '1px solid #ddd',
+                                                    borderRadius: '4px',
+                                                    fontSize: '0.85rem',
+                                                    fontFamily: 'monospace',
+                                                    textTransform: 'uppercase'
+                                                }}
+                                            />
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            <span style={{ fontSize: '0.7rem', color: '#888', fontVariantNumeric: 'tabular-nums', width: '30px' }}>RGB</span>
+                                            <div style={{ display: 'flex', gap: '4px', flex: 1 }}>
+                                                {['r', 'g', 'b'].map((key) => {
+                                                    const rgb = hexToRgb(tempColor);
+                                                    return (
+                                                        <input
+                                                            key={key}
+                                                            type="number"
+                                                            min="0"
+                                                            max="255"
+                                                            value={rgb[key as keyof typeof rgb]}
+                                                            onChange={(e) => {
+                                                                const val = parseInt(e.target.value) || 0;
+                                                                const newRgb = { ...rgb, [key]: val };
+                                                                setTempColor(rgbToHex(newRgb.r, newRgb.g, newRgb.b));
+                                                            }}
+                                                            style={{
+                                                                width: '33%',
+                                                                padding: '4px 2px',
+                                                                border: '1px solid #ddd',
+                                                                borderRadius: '4px',
+                                                                fontSize: '0.85rem',
+                                                                textAlign: 'center'
+                                                            }}
+                                                        />
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
                                     </div>
                                 </ColorInputWrapper>
                                 <CompactModalFooter>
