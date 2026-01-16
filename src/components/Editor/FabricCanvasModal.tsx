@@ -440,7 +440,7 @@ interface FabricCanvasModalProps {
 }
 
 const INITIAL_COLORS = ['#000000', '#e03131', '#2f9e44', '#1971c2', '#f08c00', '#9c36b5'];
-const INITIAL_BRUSH_SIZES = [2, 4, 8, 16];
+const INITIAL_BRUSH_SIZES = [1, 2, 4, 8, 16];
 const DASH_OPTIONS: (number[] | undefined)[] = [
     undefined,
     [5, 5],
@@ -552,6 +552,7 @@ const INITIAL_TOOLBAR_ITEMS: ToolbarItem[] = [
     { id: 'size-1', type: 'size', sizeIndex: 1 },
     { id: 'size-2', type: 'size', sizeIndex: 2 },
     { id: 'size-3', type: 'size', sizeIndex: 3 },
+    { id: 'size-4', type: 'size', sizeIndex: 4 },
 ];
 
 type ToolType = 'select' | 'pen' | 'eraser_pixel' | 'eraser_object' | 'line' | 'arrow' | 'rect' | 'circle' | 'text' | 'triangle' | 'ellipse' | 'diamond';
@@ -2503,7 +2504,7 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                         }
                     });
                 } else if (obj.type === 'i-text' || obj.type === 'text') {
-                    obj.set({ fill: color });
+                    (obj as fabric.IText).set({ fill: color, fontFamily: fontFamily });
                 } else {
                     obj.set({ stroke: color, strokeWidth: brushSize });
                 }
@@ -2531,7 +2532,7 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
             canvas.requestRenderAll();
             saveHistory();
         }
-    }, [color, brushSize, brushType, shapeStyles, saveHistory]);
+    }, [color, brushSize, brushType, shapeStyles, fontFamily, saveHistory]);
 
     // Handle background change
     // Handle background change
@@ -2955,6 +2956,22 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                                             key={font}
                                             $active={tempFontFamily === font}
                                             onClick={() => setTempFontFamily(font)}
+                                            onDoubleClick={() => {
+                                                setTempFontFamily(font);
+                                                setFontFamily(font);
+                                                setSettingsAnchor(null);
+                                                setIsFontEditOpen(false);
+                                                lastInteractionTimeRef.current = Date.now();
+                                            }}
+                                            onTouchStart={(e) => {
+                                                setTempFontFamily(font);
+                                                handleDoubleTap(e, `font-${font}`, () => {
+                                                    setFontFamily(font);
+                                                    setSettingsAnchor(null);
+                                                    setIsFontEditOpen(false);
+                                                    lastInteractionTimeRef.current = Date.now();
+                                                });
+                                            }}
                                             style={{ fontFamily: font, height: '32px', justifyContent: 'flex-start', padding: '0 12px' }}
                                         >
                                             {font}

@@ -23,7 +23,8 @@ export const translations = {
             pwa_not_supported: "PWA not supported",
             collapse: "Collapse",
             more_memos: "{count} more",
-            drop_to_extract: "Drop to Extract"
+            drop_to_extract: "Drop to Extract",
+            title_asc: "Title (A-Z)"
         },
         settings: {
             title: "Settings",
@@ -186,7 +187,8 @@ export const translations = {
             pwa_not_supported: "PWA를 지원하지 않습니다.",
             collapse: "접기",
             more_memos: "{count}개 더보기",
-            drop_to_extract: "여기 놓아 추출"
+            drop_to_extract: "여기 놓아 추출",
+            title_asc: "가나다순"
         },
         settings: {
             title: "설정",

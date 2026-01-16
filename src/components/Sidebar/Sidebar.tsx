@@ -689,7 +689,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
             <option value="last-commented">{t.sidebar.last_commented}</option>
             <option value="date-desc">{t.sidebar.newest}</option>
             <option value="date-asc">{t.sidebar.oldest}</option>
-            <option value="title-asc">Title (A-Z)</option>
+            <option value="title-asc">{t.sidebar.title_asc}</option>
           </select>
         </div>
       </Header>
