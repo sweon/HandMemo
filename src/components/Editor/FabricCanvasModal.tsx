@@ -227,20 +227,19 @@ const CanvasWrapper = styled.div`
 const CompactActionButton = styled.button<{ $primary?: boolean }>`
   width: 24px;
   height: 24px;
-  border-radius: 50%;
+  border-radius: 3px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: ${({ $primary }) => ($primary ? '#333' : '#ffffff')};
+  background: ${({ $primary }) => ($primary ? '#333' : 'transparent')};
   color: ${({ $primary }) => ($primary ? '#ffffff' : '#333')};
-  border: 1px solid ${({ $primary }) => ($primary ? '#333' : '#ced4da')};
-  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  border: 1px solid ${({ $primary }) => ($primary ? '#333' : 'transparent')};
   cursor: pointer;
   transition: all 0.2s ease;
 
   &:hover {
-    transform: scale(1.05);
-    box-shadow: 0 6px 8px rgba(0,0,0,0.15);
+    background: ${({ $primary }) => ($primary ? '#222' : '#e9ecef')};
+    ${({ $primary }) => !$primary && 'border-color: #adb5bd;'}
   }
 
   &:active {
@@ -2663,10 +2662,10 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                             </ToolButton>
                             <div style={{ width: '4px', height: '16px', borderLeft: '1px solid #dee2e6', margin: '0 4px' }} />
                             <CompactActionButton onClick={handleCancelWrapped} title={t.drawing?.cancel || 'Cancel'}>
-                                <FiX size={14} />
+                                <FiX size={16} />
                             </CompactActionButton>
                             <CompactActionButton $primary onClick={handleSave} title={t.drawing?.insert || 'Insert'}>
-                                <FiCheck size={14} />
+                                <FiCheck size={16} />
                             </CompactActionButton>
                         </ToolGroup>
                     </Toolbar>
