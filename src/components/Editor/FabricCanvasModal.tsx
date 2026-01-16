@@ -147,7 +147,7 @@ const Toolbar = styled.div`
   display: flex;
   flex-wrap: wrap;
   gap: 2px;
-  padding: 0.25rem 0.4rem;
+  padding: 1px 4px;
   background: #f1f3f5;
   border-bottom: 1px solid #e0e0e0;
   align-items: center;
@@ -157,15 +157,15 @@ const ToolButton = styled.button<{ $active?: boolean; disabled?: boolean }>`
   background: ${({ $active }) => $active ? '#e9ecef' : 'transparent'};
   border: 1px solid ${({ $active }) => $active ? '#adb5bd' : 'transparent'};
   color: #333;
-  padding: 4px;
+  padding: 2px;
   border-radius: 3px;
   cursor: ${({ disabled }) => disabled ? 'default' : 'pointer'};
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.9rem;
-  min-width: 24px;
-  height: 24px;
+  font-size: 0.85rem;
+  min-width: 22px;
+  height: 22px;
   touch-action: manipulation;
   opacity: ${({ disabled }) => disabled ? 0.3 : 1};
   pointer-events: ${({ disabled }) => disabled ? 'none' : 'auto'};
@@ -225,8 +225,8 @@ const CanvasWrapper = styled.div`
 
 
 const CompactActionButton = styled.button<{ $primary?: boolean }>`
-  width: 24px;
-  height: 24px;
+  width: 22px;
+  height: 22px;
   border-radius: 3px;
   display: flex;
   align-items: center;
