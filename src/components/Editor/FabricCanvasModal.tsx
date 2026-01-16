@@ -201,7 +201,7 @@ const CanvasWrapper = styled.div`
   width: 100%;
   height: 100%;
   background: #ffffff;
-  overflow: hidden;
+  overflow: auto;
   position: relative;
   display: flex;
   justify-content: center;
@@ -2163,8 +2163,13 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
         const newHeight = currentHeight + 400; // Add 400px
 
         canvas.setHeight(newHeight);
-        canvas.renderAll();
-        saveHistory();
+
+        // Re-apply background pattern to ensure it covers the new height
+        const pattern = createBackgroundPattern(background, backgroundColor, lineOpacity);
+        canvas.setBackgroundColor(pattern, () => {
+            canvas.renderAll();
+            saveHistory();
+        });
     };
 
     const handleCancelWrapped = React.useCallback(() => {
