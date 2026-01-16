@@ -139,6 +139,7 @@ const ModalContainer = styled.div`
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  position: relative;
 `;
 
 
@@ -214,8 +215,8 @@ const CanvasWrapper = styled.div`
 
 const FloatingActionButtons = styled.div`
   position: absolute;
-  top: 8px;
-  right: 8px;
+  top: 50px;
+  right: 20px;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -3095,15 +3096,15 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
 
                     <CanvasWrapper ref={containerRef}>
                         <canvas ref={canvasRef} />
-                        <FloatingActionButtons>
-                            <CompactActionButton onClick={handleCancelWrapped} title={t.drawing?.cancel || 'Cancel'}>
-                                <FiX size={12} />
-                            </CompactActionButton>
-                            <CompactActionButton $primary onClick={handleSave} title={t.drawing?.insert || 'Insert'}>
-                                <FiCheck size={12} />
-                            </CompactActionButton>
-                        </FloatingActionButtons>
                     </CanvasWrapper>
+                    <FloatingActionButtons>
+                        <CompactActionButton onClick={handleCancelWrapped} title={t.drawing?.cancel || 'Cancel'}>
+                            <FiX size={12} />
+                        </CompactActionButton>
+                        <CompactActionButton $primary onClick={handleSave} title={t.drawing?.insert || 'Insert'}>
+                            <FiCheck size={12} />
+                        </CompactActionButton>
+                    </FloatingActionButtons>
                 </ModalContainer>
             </ModalOverlay >
             {isConfigOpen && (
