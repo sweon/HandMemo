@@ -2413,12 +2413,22 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
         canvas.hoverCursor = 'default';
 
         // Disable selection on all objects by default
+        // But preserve pixel eraser marks' evented: false state
         canvas.forEachObject((obj) => {
-            obj.set({
-                selectable: false,
-                evented: true,
-                hoverCursor: 'default'
-            });
+            if ((obj as any).isPixelEraser) {
+                // Pixel eraser marks should always be non-interactive
+                obj.set({
+                    selectable: false,
+                    evented: false,
+                    hoverCursor: 'default'
+                });
+            } else {
+                obj.set({
+                    selectable: false,
+                    evented: true,
+                    hoverCursor: 'default'
+                });
+            }
         });
 
         // Remove object erasing listener if present (we'll re-add if needed)
@@ -2434,11 +2444,19 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                 canvas.selection = true;
                 canvas.defaultCursor = 'default';
                 canvas.forEachObject((obj) => {
-                    obj.set({
-                        selectable: true,
-                        evented: true,
-                        hoverCursor: 'move'
-                    });
+                    if ((obj as any).isPixelEraser) {
+                        obj.set({
+                            selectable: false,
+                            evented: false,
+                            hoverCursor: 'default'
+                        });
+                    } else {
+                        obj.set({
+                            selectable: true,
+                            evented: true,
+                            hoverCursor: 'move'
+                        });
+                    }
                 });
                 canvas.requestRenderAll();
                 break;
@@ -2556,12 +2574,21 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                 canvas.hoverCursor = 'not-allowed';
 
                 // Enable events on all objects so they can be detected
+                // But exclude pixel eraser marks - they should not be removable
                 canvas.forEachObject((obj) => {
-                    obj.set({
-                        selectable: false,
-                        evented: true,
-                        hoverCursor: 'not-allowed'
-                    });
+                    if ((obj as any).isPixelEraser) {
+                        obj.set({
+                            selectable: false,
+                            evented: false,
+                            hoverCursor: 'default'
+                        });
+                    } else {
+                        obj.set({
+                            selectable: false,
+                            evented: true,
+                            hoverCursor: 'not-allowed'
+                        });
+                    }
                 });
                 canvas.requestRenderAll();
 
