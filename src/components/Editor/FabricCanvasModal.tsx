@@ -27,8 +27,8 @@ const ObjectEraserIcon = () => (
     </svg>
 );
 
-const EllipseIcon = () => (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+const EllipseIcon = ({ size = 16 }: { size?: number }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <ellipse cx="12" cy="12" rx="9" ry="5" />
     </svg>
 );
@@ -68,9 +68,33 @@ const GlowIcon = () => (
     </svg>
 );
 
-const DiamondIcon = () => (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+const DiamondIcon = ({ size = 16 }: { size?: number }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M12 2L2 12L12 22L22 12L12 2Z" />
+    </svg>
+);
+
+const PentagonIcon = ({ size = 16 }: { size?: number }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 2L2 10L5 21H19L22 10L12 2Z" />
+    </svg>
+);
+
+const HexagonIcon = ({ size = 16 }: { size?: number }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 2L4 7V17L12 22L20 17V7L12 2Z" />
+    </svg>
+);
+
+const OctagonIcon = ({ size = 16 }: { size?: number }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M7 2L2 7V17L7 22H17L22 17V7L17 2H7Z" />
+    </svg>
+);
+
+const StarIcon = ({ size = 16 }: { size?: number }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" />
     </svg>
 );
 
@@ -503,6 +527,10 @@ const getToolbarItemIcon = (item: ToolbarItem, colors: string[], brushSizes: num
             case 'ellipse': return <EllipseIcon />;
             case 'triangle': return <FiTriangle size={16} />;
             case 'diamond': return <DiamondIcon />;
+            case 'pentagon': return <PentagonIcon />;
+            case 'hexagon': return <HexagonIcon />;
+            case 'octagon': return <OctagonIcon />;
+            case 'star': return <StarIcon />;
             case 'text': return <FiType size={16} />;
             case 'eraser_pixel': return <PixelEraserIcon />;
             case 'eraser_object': return <ObjectEraserIcon />;
@@ -554,10 +582,8 @@ const INITIAL_TOOLBAR_ITEMS: ToolbarItem[] = [
     { id: 'line', type: 'tool', toolId: 'line' },
     { id: 'arrow_v2', type: 'tool', toolId: 'arrow' },
     { id: 'rect', type: 'tool', toolId: 'rect' },
-    { id: 'circle', type: 'tool', toolId: 'circle' },
     { id: 'ellipse', type: 'tool', toolId: 'ellipse' },
     { id: 'triangle', type: 'tool', toolId: 'triangle' },
-    { id: 'diamond', type: 'tool', toolId: 'diamond' },
     { id: 'text', type: 'tool', toolId: 'text' },
     { id: 'eraser_pixel', type: 'tool', toolId: 'eraser_pixel' },
     { id: 'eraser_object', type: 'tool', toolId: 'eraser_object' },
@@ -581,7 +607,7 @@ const INITIAL_TOOLBAR_ITEMS: ToolbarItem[] = [
     { id: 'size-4', type: 'size', sizeIndex: 4 },
 ];
 
-type ToolType = 'select' | 'pen' | 'eraser_pixel' | 'eraser_object' | 'line' | 'arrow' | 'rect' | 'circle' | 'text' | 'triangle' | 'ellipse' | 'diamond';
+type ToolType = 'select' | 'pen' | 'eraser_pixel' | 'eraser_object' | 'line' | 'arrow' | 'rect' | 'circle' | 'text' | 'triangle' | 'ellipse' | 'diamond' | 'pentagon' | 'hexagon' | 'octagon' | 'star';
 type BackgroundType = 'none' | 'lines' | 'grid' | 'dots';
 
 const createBackgroundPattern = (type: BackgroundType, paperColor: string, opacity: number, patternSize: number) => {
@@ -931,6 +957,7 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
         return parsed;
     });
     const [activeTool, setActiveTool] = useState<ToolType>('pen');
+    const [activeToolItemId, setActiveToolItemId] = useState<string | null>('pen_1');
     const [color, setColor] = useState('#000000');
     const [brushSize, setBrushSize] = useState(2);
     const [background, setBackground] = useState<BackgroundType>('none');
@@ -970,6 +997,7 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
     const [tempDashIndex, setTempDashIndex] = useState(0);
     const [tempShapeOpacity, setTempShapeOpacity] = useState(100);
     const [tempHeadSize, setTempHeadSize] = useState(20);
+    const [editingShapeItemId, setEditingShapeItemId] = useState<string | null>(null);
 
     const [fontFamily, setFontFamily] = useState(() => localStorage.getItem('fabric_font_family') || 'Arial');
     const [isFontEditOpen, setIsFontEditOpen] = useState(false);
@@ -1108,6 +1136,7 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
 
     const handleToolSelect = React.useCallback((itemId: string, itemType: string, toolId?: ToolType) => {
         if (itemType === 'tool' && toolId) {
+            setActiveToolItemId(itemId);
             if (toolId === 'pen') {
                 const slotId = (itemId === 'pen' || itemId === 'pen_1') ? 'pen_1' : (itemId === 'pen_2' ? 'pen_2' : (itemId === 'pen_3' ? 'pen_3' : 'pen_1'));
                 setActivePenSlot(slotId);
@@ -1122,7 +1151,7 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                 setActiveTool(toolId);
             }
         }
-    }, [penSlotSettings, setActivePenSlot, setBrushType, setColor, setBrushSize, setActiveTool]);
+    }, [penSlotSettings, setActivePenSlot, setBrushType, setColor, setBrushSize, setActiveTool, setActiveToolItemId]);
 
     // Shape drawing refs
     const isDrawingRef = useRef(false);
@@ -1451,11 +1480,12 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
         setEditingSizeIndex(null);
     };
 
-    const handleShapeToolDoubleClick = (e: React.MouseEvent | React.TouchEvent, toolId: string) => {
+    const handleShapeToolDoubleClick = (e: React.MouseEvent | React.TouchEvent, itemId: string, toolId: string) => {
         const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
         setSettingsAnchor({
             top: rect.bottom + 5
         });
+        setEditingShapeItemId(itemId);
         const style = shapeStyles[toolId] || DEFAULT_SHAPE_STYLE;
         const currentIndex = DASH_OPTIONS.findIndex(d => JSON.stringify(d) === JSON.stringify(style.dashArray));
         setTempDashIndex(currentIndex === -1 ? 0 : currentIndex);
@@ -1475,8 +1505,18 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                     headSize: tempHeadSize
                 }
             }));
+
+            // Update toolbar item icon if we were editing a specific slot
+            if (editingShapeItemId) {
+                setToolbarItems(prev => prev.map(item =>
+                    item.id === editingShapeItemId
+                        ? { ...item, toolId: activeTool as any }
+                        : item
+                ));
+            }
         }
         setIsShapeSettingsOpen(false);
+        setEditingShapeItemId(null);
     };
 
     const handleShapeSettingsReset = () => {
@@ -1488,6 +1528,7 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
     const handleShapeSettingsCancel = () => {
         setSettingsAnchor(null);
         setIsShapeSettingsOpen(false);
+        setEditingShapeItemId(null);
     };
 
     const handlePenDoubleClick = (e: React.MouseEvent | React.TouchEvent) => {
@@ -1574,19 +1615,15 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
             >
                 {item.type === 'tool' && (
                     <ToolButton
-                        $active={
-                            item.toolId === 'pen'
-                                ? (activeTool === 'pen' && activePenSlot === (item.id === 'pen' ? 'pen_1' : item.id))
-                                : activeTool === item.toolId
-                        }
+                        $active={activeToolItemId === item.id}
                         onClick={() => handleToolSelect(item.id, item.type, item.toolId!)}
                         onDoubleClick={(e) => {
                             if (item.toolId === 'pen') {
                                 handlePenDoubleClick(e);
                             } else if (item.toolId === 'text') {
                                 handleTextDoubleClick(e);
-                            } else if (['line', 'arrow', 'rect', 'circle', 'ellipse', 'triangle', 'diamond'].includes(item.toolId!)) {
-                                handleShapeToolDoubleClick(e, item.toolId!);
+                            } else if (['line', 'arrow', 'rect', 'circle', 'ellipse', 'triangle', 'diamond', 'pentagon', 'hexagon', 'octagon', 'star'].includes(item.toolId!)) {
+                                handleShapeToolDoubleClick(e, item.id, item.toolId!);
                             }
                         }}
                         onTouchStart={(e) => {
@@ -1594,8 +1631,8 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                                 handleDoubleTap(e, `tool - ${item.toolId} `, (ev) => handlePenDoubleClick(ev));
                             } else if (item.toolId === 'text') {
                                 handleDoubleTap(e, `tool - ${item.toolId} `, (ev) => handleTextDoubleClick(ev));
-                            } else if (['line', 'arrow', 'rect', 'circle', 'ellipse', 'triangle', 'diamond'].includes(item.toolId!)) {
-                                handleDoubleTap(e, `tool - ${item.toolId} `, (ev) => handleShapeToolDoubleClick(ev, item.toolId!));
+                            } else if (['line', 'arrow', 'rect', 'circle', 'ellipse', 'triangle', 'diamond', 'pentagon', 'hexagon', 'octagon', 'star'].includes(item.toolId!)) {
+                                handleDoubleTap(e, `tool - ${item.toolId} `, (ev) => handleShapeToolDoubleClick(ev, item.id, item.toolId!));
                             }
                         }}
                         title={(item.toolId ?? '').charAt(0).toUpperCase() + (item.toolId ?? '').slice(1)}
@@ -1627,6 +1664,10 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                                 {item.toolId === 'ellipse' && <EllipseIcon />}
                                 {item.toolId === 'triangle' && <FiTriangle size={16} />}
                                 {item.toolId === 'diamond' && <DiamondIcon />}
+                                {item.toolId === 'pentagon' && <PentagonIcon />}
+                                {item.toolId === 'hexagon' && <HexagonIcon />}
+                                {item.toolId === 'octagon' && <OctagonIcon />}
+                                {item.toolId === 'star' && <StarIcon />}
                                 {item.toolId === 'text' && <FiType size={16} />}
                                 {item.toolId === 'eraser_pixel' && <PixelEraserIcon />}
                                 {item.toolId === 'eraser_object' && <ObjectEraserIcon />}
@@ -1986,7 +2027,7 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                 rx: 0,
                 ry: 0,
             });
-        } else if (activeTool === 'diamond') {
+        } else if (['diamond', 'pentagon', 'hexagon', 'octagon', 'star'].includes(activeTool)) {
             shape = new fabric.Polygon([
                 new fabric.Point(0, 0),
                 new fabric.Point(0, 0),
@@ -1996,7 +2037,8 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                 ...commonProps,
                 originX: 'center',
                 originY: 'center',
-                isDiamond: true,
+                isCustomPolygon: true,
+                polyType: activeTool
             } as any);
         }
 
@@ -2078,15 +2120,46 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                 left,
                 top
             });
-        } else if (activeTool === 'diamond') {
+        } else if ((shape as any).isCustomPolygon) {
             const hw = width / 2;
             const hh = height / 2;
-            const points = [
-                new fabric.Point(0, -hh), // Top
-                new fabric.Point(hw, 0),   // Right
-                new fabric.Point(0, hh),  // Bottom
-                new fabric.Point(-hw, 0)   // Left
-            ];
+            const polyType = (shape as any).polyType;
+            let points: fabric.Point[] = [];
+
+            if (polyType === 'diamond') {
+                points = [
+                    new fabric.Point(0, -hh), // Top
+                    new fabric.Point(hw, 0),   // Right
+                    new fabric.Point(0, hh),  // Bottom
+                    new fabric.Point(-hw, 0)   // Left
+                ];
+            } else if (polyType === 'pentagon') {
+                for (let i = 0; i < 5; i++) {
+                    const angle = (i * 2 * Math.PI / 5) - Math.PI / 2;
+                    points.push(new fabric.Point(hw * Math.cos(angle), hh * Math.sin(angle)));
+                }
+            } else if (polyType === 'hexagon') {
+                for (let i = 0; i < 6; i++) {
+                    const angle = (i * 2 * Math.PI / 6) - Math.PI / 2;
+                    points.push(new fabric.Point(hw * Math.cos(angle), hh * Math.sin(angle)));
+                }
+            } else if (polyType === 'octagon') {
+                for (let i = 0; i < 8; i++) {
+                    const angle = (i * 2 * Math.PI / 8) - Math.PI / 2;
+                    points.push(new fabric.Point(hw * Math.cos(angle), hh * Math.sin(angle)));
+                }
+            } else if (polyType === 'star') {
+                const outerRadiusX = hw;
+                const outerRadiusY = hh;
+                const innerRadiusX = hw * 0.4;
+                const innerRadiusY = hh * 0.4;
+                for (let i = 0; i < 10; i++) {
+                    const angle = (i * Math.PI / 5) - Math.PI / 2;
+                    const rx = i % 2 === 0 ? outerRadiusX : innerRadiusX;
+                    const ry = i % 2 === 0 ? outerRadiusY : innerRadiusY;
+                    points.push(new fabric.Point(rx * Math.cos(angle), ry * Math.sin(angle)));
+                }
+            }
 
             (shape as fabric.Polygon).set({
                 points,
@@ -2350,32 +2423,42 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
             const key = e.key.toLowerCase();
 
             // Tool shortcuts
+            const selectToolById = (toolId: ToolType) => {
+                const item = toolbarItems.find(i => i.toolId === toolId);
+                if (item) {
+                    handleToolSelect(item.id, item.type, item.toolId);
+                } else {
+                    setActiveTool(toolId);
+                    setActiveToolItemId(null);
+                }
+            };
+
             switch (key) {
                 case 'p': // Pen
                 case 'b': // Brush (alternative)
-                    setActiveTool('pen');
+                    selectToolById('pen');
                     break;
                 case 'l': // Line
-                    setActiveTool('line');
+                    selectToolById('line');
                     break;
                 case 'a': // Arrow
-                    setActiveTool('arrow');
+                    selectToolById('arrow');
                     break;
                 case 'r': // Rectangle
-                    setActiveTool('rect');
+                    selectToolById('rect');
                     break;
                 case 'c': // Circle
-                    setActiveTool('circle');
+                    selectToolById('circle');
                     break;
                 case 't': // Text
-                    setActiveTool('text');
+                    selectToolById('text');
                     break;
                 case 'e': // Eraser (pixel)
-                    setActiveTool('eraser_pixel');
+                    selectToolById('eraser_pixel');
                     break;
                 case 'd': // Delete eraser (object)
                 case 'x': // Alternative for object eraser
-                    setActiveTool('eraser_object');
+                    selectToolById('eraser_object');
                     break;
                 case 'z': // Undo / Redo
                     if ((e.ctrlKey || e.metaKey) && e.shiftKey) {
@@ -2663,6 +2746,10 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
             case 'triangle':
             case 'ellipse':
             case 'diamond':
+            case 'pentagon':
+            case 'hexagon':
+            case 'octagon':
+            case 'star':
                 canvas.defaultCursor = 'crosshair';
                 // Attach shape drawing handlers
                 canvas.on('mouse:down', handleShapeMouseDown);
@@ -2865,6 +2952,43 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                                 onClick={e => e.stopPropagation()}
                                 style={{ minWidth: '160px' }}
                             >
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', padding: '4px', background: '#f8f9fa', borderRadius: '8px', marginBottom: '8px' }}>
+                                    {(['line', 'arrow', 'rect', 'ellipse', 'triangle', 'circle', 'diamond', 'pentagon', 'hexagon', 'octagon', 'star'] as ToolType[]).map((tool) => (
+                                        <ToolButton
+                                            key={tool}
+                                            $active={activeTool === tool}
+                                            onClick={() => {
+                                                setActiveTool(tool);
+                                                lastInteractionTimeRef.current = Date.now();
+                                            }}
+                                            onDoubleClick={() => {
+                                                setActiveTool(tool);
+                                                handleShapeSettingsOk();
+                                            }}
+                                            style={{
+                                                width: '32px',
+                                                height: '32px',
+                                                borderRadius: '4px',
+                                                background: activeTool === tool ? '#333' : 'transparent',
+                                                color: activeTool === tool ? 'white' : '#555',
+                                                border: '1px solid',
+                                                borderColor: activeTool === tool ? '#333' : '#e9ecef',
+                                            }}
+                                        >
+                                            {tool === 'line' && <FiMinus size={16} style={{ transform: 'rotate(-45deg)' }} />}
+                                            {tool === 'arrow' && <FiArrowDown size={14} style={{ transform: 'rotate(-135deg)' }} />}
+                                            {tool === 'rect' && <FiSquare size={14} />}
+                                            {tool === 'circle' && <FiCircle size={14} />}
+                                            {tool === 'ellipse' && <EllipseIcon size={14} />}
+                                            {tool === 'triangle' && <FiTriangle size={14} />}
+                                            {tool === 'diamond' && <DiamondIcon size={14} />}
+                                            {tool === 'pentagon' && <PentagonIcon size={14} />}
+                                            {tool === 'hexagon' && <HexagonIcon size={14} />}
+                                            {tool === 'octagon' && <OctagonIcon size={14} />}
+                                            {tool === 'star' && <StarIcon size={14} />}
+                                        </ToolButton>
+                                    ))}
+                                </div>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                                     {DASH_OPTIONS.map((dash, index) => (
                                         <DashOption
