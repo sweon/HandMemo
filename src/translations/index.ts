@@ -213,7 +213,40 @@ export const translations = {
             active_toolbar: "Active Toolbar",
             available_tools: "Available Tools",
             save_palette: "Save Palette",
-            save: "Save"
+            save: "Save",
+            help_shortcuts: "Shortcuts",
+            help_tips: "Features & Tips",
+            close: "Close",
+
+            // Help Tips
+            help_tip_detail_title: "Detail Settings",
+            help_tip_detail_desc: "Double-click Pen/Shape/Text tools to customize",
+            help_tip_eraser_title: "Two Erasers",
+            help_tip_eraser_desc: "Supports Pixel (partial) and Object (whole) erasing",
+            help_tip_bg_title: "Background",
+            help_tip_bg_desc: "Use button to change style/color",
+            help_tip_image_title: "Save Image",
+            help_tip_image_desc: "Download as transparent PNG",
+            help_tip_clear_title: "Clear All",
+            help_tip_clear_desc: "Delete everything on canvas",
+            help_tip_cancel_title: "Cancel/Exit",
+            help_tip_cancel_desc: "Close without saving",
+            help_tip_save_title: "Save/Done",
+            help_tip_save_desc: "Save changes and close",
+
+            // Shortcut Labels
+            sc_pen: "Pen",
+            sc_line: "Line",
+            sc_arrow: "Arrow",
+            sc_rect: "Rect",
+            sc_circle: "Circle",
+            sc_text: "Text",
+            sc_eraser: "Eraser",
+            sc_delete: "Delete",
+            sc_undo: "Undo",
+            sc_redo: "Redo",
+            sc_size: "Size 1-5",
+            sc_del_sel: "Del Select"
         },
         android: {
             exit_warning: "Press back again to exit."
@@ -433,7 +466,40 @@ export const translations = {
             active_toolbar: "사용 중인 툴바",
             available_tools: "사용 가능한 도구",
             save_palette: "팔레트 저장",
-            save: "저장"
+            save: "저장",
+            help_shortcuts: "단축키",
+            help_tips: "기능 및 팁",
+            close: "닫기",
+
+            // Help Tips
+            help_tip_detail_title: "상세 설정",
+            help_tip_detail_desc: "펜/도형/텍스트 도구를 더블클릭하여 설정 변경",
+            help_tip_eraser_title: "두 가지 지우개",
+            help_tip_eraser_desc: "픽셀(부분 지우기) 및 오브젝트(통째로 삭제) 지원",
+            help_tip_bg_title: "배경 변경",
+            help_tip_bg_desc: "버튼으로 줄/모눈/점 및 배경색상 변경",
+            help_tip_image_title: "이미지 저장",
+            help_tip_image_desc: "버튼으로 투명 배경 PNG 파일로 다운로드",
+            help_tip_clear_title: "전체 지우기",
+            help_tip_clear_desc: "버튼으로 캔버스의 모든 내용 삭제",
+            help_tip_cancel_title: "취소/나가기",
+            help_tip_cancel_desc: "버튼으로 저장하지 않고 닫기",
+            help_tip_save_title: "저장/완료",
+            help_tip_save_desc: "버튼으로 변경사항 저장하고 닫기",
+
+            // Shortcut Labels
+            sc_pen: "펜",
+            sc_line: "선",
+            sc_arrow: "화살표",
+            sc_rect: "사각형",
+            sc_circle: "원",
+            sc_text: "텍스트",
+            sc_eraser: "지우개",
+            sc_delete: "삭제",
+            sc_undo: "실행취소",
+            sc_redo: "다시실행",
+            sc_size: "굵기 1~5",
+            sc_del_sel: "선택삭제"
         },
         android: {
             exit_warning: "뒤로 가기 버튼을\n한 번 더 누르면 종료됩니다."
