@@ -613,7 +613,12 @@ type BackgroundType = 'none' | 'lines' | 'grid' | 'dots';
 const createBackgroundPattern = (type: BackgroundType, paperColor: string, opacity: number, patternSize: number, transparent: boolean = false) => {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
-    if (!ctx) return '#ffffff';
+    if (!ctx) {
+        return new fabric.Pattern({
+            source: document.createElement('canvas') as any,
+            repeat: 'repeat'
+        });
+    }
 
     const size = patternSize;
     canvas.width = size;
@@ -656,11 +661,13 @@ const createBackgroundPattern = (type: BackgroundType, paperColor: string, opaci
         ctx.fill();
     }
 
-    return new fabric.Pattern({
+    const pattern = new fabric.Pattern({
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         source: canvas as any,
         repeat: 'repeat'
     });
+
+    return pattern;
 };
 
 const BackgroundOptionButton = styled.button<{ $active: boolean }>`
@@ -2397,9 +2404,19 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
 
         canvas.setHeight(newHeight);
 
-        // Re-apply background pattern to ensure it covers the new height
-        const pattern = createBackgroundPattern(background, backgroundColor, lineOpacity, backgroundSize);
-        canvas.setBackgroundColor(pattern, () => {
+        // Re-apply background
+        setBackgroundColor(backgroundColor);
+        canvas.setBackgroundColor(backgroundColor, () => { });
+
+        const gridPattern = createBackgroundPattern(background, backgroundColor, lineOpacity, backgroundSize, true);
+        canvas.setOverlayColor(gridPattern as any, () => {
+            // Sync existing eraser marks
+            const eraserPattern = createBackgroundPattern(background, backgroundColor, lineOpacity, backgroundSize);
+            canvas.getObjects().forEach(obj => {
+                if ((obj as any).isPixelEraser) {
+                    obj.set('stroke', eraserPattern as any);
+                }
+            });
             canvas.renderAll();
             saveHistory();
         });
@@ -2682,13 +2699,17 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                 canvas.defaultCursor = 'crosshair';
                 break;
 
-            case 'eraser_pixel':
+            case 'eraser_pixel': {
                 canvas.isDrawingMode = true;
-                canvas.freeDrawingBrush = new fabric.PencilBrush(canvas);
-                canvas.freeDrawingBrush.color = backgroundColor; // Use paper color to "erase"
-                canvas.freeDrawingBrush.width = brushSize * 4; // Wider
-                // canvas.defaultCursor = 'url("eraser_cursor")'; // if we had one
+                // Use PatternBrush for a flicker-free "erase" experience
+                // It draws a pattern that perfectly matches the background
+                const pattern = createBackgroundPattern(background, backgroundColor, lineOpacity, backgroundSize);
+                const brush = new (fabric as any).PatternBrush(canvas);
+                brush.source = (pattern as any).source;
+                brush.width = brushSize * 4;
+                canvas.freeDrawingBrush = brush;
                 break;
+            }
 
             case 'eraser_object': {
                 canvas.isDrawingMode = false;
@@ -2853,16 +2874,25 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
         // 1. Set solid background color
         canvas.setBackgroundColor(newBgColor, () => { });
 
-        // 2. Set pattern as overlay (drawn ON TOP of drawings and eraser marks)
-        // This ensures dots/lines never disappear.
+        // 2. Set pattern as overlay (Still used for baseline visibility)
         const gridPattern = createBackgroundPattern(background, newBgColor, lineOpacity, backgroundSize, true);
-        canvas.setOverlayColor(gridPattern, () => {
-            // 3. Sync existing eraser marks to new background color
+        canvas.setOverlayColor(gridPattern as any, () => {
+            // 3. Sync existing eraser marks
+            // Since they are now Pattern paths, we need to update their fill pattern
+            const newEraserPattern = createBackgroundPattern(background, newBgColor, lineOpacity, backgroundSize);
+
             canvas.getObjects().forEach(obj => {
                 if ((obj as any).isPixelEraser) {
-                    obj.set('stroke', newBgColor);
+                    // Update the stroke pattern to the new background pattern
+                    obj.set('stroke', newEraserPattern as any);
                 }
             });
+
+            // Also update the active brush if it's currently the pixel eraser
+            if (activeToolRef.current === 'eraser_pixel' && canvas.freeDrawingBrush) {
+                (canvas.freeDrawingBrush as any).source = (newEraserPattern as any).source;
+            }
+
             canvas.renderAll();
         });
     }, [background, backgroundColorType, backgroundColorIntensity, lineOpacity, backgroundSize]);
