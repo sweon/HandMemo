@@ -3401,22 +3401,15 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                             <div style={{ marginBottom: '16px' }}>
                                 <h4 style={{ margin: '0 0 8px 0', fontSize: '0.8rem', fontWeight: 600, color: '#2f9e44', textTransform: 'uppercase', letterSpacing: '0.5px' }}>💡 기능 및 팁</h4>
                                 <ul style={{ margin: 0, paddingLeft: '16px', fontSize: '0.75rem', lineHeight: 1.6, color: '#495057', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                    <li><b>상세 설정</b>: 펜/도형/텍스트/색상 도구를 <b>더블클릭</b>하여 설정 변경</li>
-                                    <li><b>두 가지 지우개</b>: 픽셀(부분 지우기) 및 오브젝트(통째로 삭제) 지원</li>
+                                    <li><b>상세 설정</b>: 펜/도형/텍스트 도구를 <b>더블클릭</b>하여 설정 변경</li>
+                                    <li><b>두 가지 지우개</b>: <span style={{ display: 'inline-flex', verticalAlign: 'text-bottom' }}><PixelEraserIcon /></span> 픽셀(부분 지우기) 및 <span style={{ display: 'inline-flex', verticalAlign: 'text-bottom' }}><ObjectEraserIcon /></span> 오브젝트(통째로 삭제) 지원</li>
                                     <li><b>배경 변경</b>: <span style={{ display: 'inline-flex', verticalAlign: 'text-bottom' }}><BackgroundIcon /></span> 버튼으로 줄/모눈/점 및 배경색상 변경</li>
                                     <li><b>길이 확장</b>: <span style={{ display: 'inline-flex', verticalAlign: 'text-bottom' }}><VerticalExpandIcon /></span> 버튼을 눌러 메모 공간을 아래로 계속 확장</li>
-                                    <li><b>이미지 저장</b>: <FiDownload size={14} style={{ verticalAlign: 'text-bottom' }} /> 버튼으로 배경 투명 PNG 파일로 다운로드</li>
+                                    <li><b>이미지 저장</b>: <FiDownload size={14} style={{ verticalAlign: 'text-bottom' }} /> 버튼으로 투명 배경 PNG 파일로 다운로드</li>
                                     <li><b>전체 지우기</b>: <FiTrash2 size={14} style={{ verticalAlign: 'text-bottom' }} /> 버튼으로 캔버스의 모든 내용 삭제</li>
                                     <li><b>취소/나가기</b>: <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '18px', height: '18px', borderRadius: '50%', background: '#ffffff', border: '1px solid #ced4da', verticalAlign: 'text-bottom', margin: '0 2px' }}><FiX size={10} color="#333" /></span> 버튼으로 저장하지 않고 닫기</li>
                                     <li><b>저장/완료</b>: <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '18px', height: '18px', borderRadius: '50%', background: '#333', border: '1px solid #333', verticalAlign: 'text-bottom', margin: '0 2px' }}><FiCheck size={10} color="#ffffff" /></span> 버튼으로 변경사항 저장하고 닫기</li>
                                 </ul>
-                            </div>
-
-                            <div>
-                                <h4 style={{ margin: '0 0 8px 0', fontSize: '0.8rem', fontWeight: 600, color: '#f08c00', textTransform: 'uppercase', letterSpacing: '0.5px' }}>🎨 펜 종류</h4>
-                                <div style={{ fontSize: '0.75rem', color: '#495057', lineHeight: 1.5 }}>
-                                    펜, 형광펜, 글로우, 스프레이, 원형, 카본, 해치 등 다양한 브러시 스타일 지원
-                                </div>
                             </div>
                         </div>
                         <CompactModalFooter>
