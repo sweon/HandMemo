@@ -1869,24 +1869,7 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
             if (activeTool === 'arrow') {
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 (shape as any).hasArrow = true;
-
-                // Add preview head
-                const head = new fabric.Polyline([
-                    new fabric.Point(pointer.x, pointer.y),
-                    new fabric.Point(pointer.x, pointer.y),
-                    new fabric.Point(pointer.x, pointer.y)
-                ], {
-                    stroke: color,
-                    strokeWidth: brushSize,
-                    fill: 'transparent',
-                    strokeLineCap: 'round',
-                    strokeLineJoin: 'round',
-                    selectable: false,
-                    evented: false,
-                    opacity: (currentStyle.opacity || 100) / 100
-                });
-                arrowHeadPreviewRef.current = head;
-                canvas.add(head);
+                // ArrowHead will be created on mouse up, not during preview
             }
         } else if (activeTool === 'rect') {
             shape = new fabric.Rect({
@@ -1950,34 +1933,20 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
             (shape as fabric.Line).set({ x2: pointer.x, y2: pointer.y });
 
             if (activeTool === 'arrow') {
-                // Re-calculate arrow head points
+                // Calculate arrow head points for final creation (not preview)
                 const x2 = Math.round(pointer.x);
                 const y2 = Math.round(pointer.y);
                 const headAngle = Math.PI / 6;
 
-                // Calculate angle from start to current pointer
                 const start = startPointRef.current!;
                 const angle = Math.atan2(y2 - Math.round(start.y), x2 - Math.round(start.x));
                 const currentStyle = shapeStyles['arrow'] || DEFAULT_SHAPE_STYLE;
                 const headLength = Math.round(currentStyle.headSize || Math.max(12, brushSize * 3));
 
-                // Arrow head points (pure mathematical symmetry, rounded for stability)
                 const x3 = Math.round(x2 - headLength * Math.cos(angle - headAngle));
                 const y3 = Math.round(y2 - headLength * Math.sin(angle - headAngle));
                 const x4 = Math.round(x2 - headLength * Math.cos(angle + headAngle));
                 const y4 = Math.round(y2 - headLength * Math.sin(angle + headAngle));
-
-                if (arrowHeadPreviewRef.current) {
-                    arrowHeadPreviewRef.current.set({
-                        points: [
-                            new fabric.Point(x3, y3),
-                            new fabric.Point(x2, y2),
-                            new fabric.Point(x4, y4)
-                        ]
-                    });
-                    arrowHeadPreviewRef.current.setCoords();
-                    canvas.requestRenderAll();
-                }
 
                 (shape as any).arrowHead = [new fabric.Point(x3, y3), new fabric.Point(x2, y2), new fabric.Point(x4, y4)];
 
