@@ -2191,11 +2191,16 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
     }, [activeTool, color, brushSize, shapeStyles]);
 
     const handleClear = () => {
-        if (!fabricCanvasRef.current) return;
-        fabricCanvasRef.current.clear();
-        fabricCanvasRef.current.setBackgroundColor('#ffffff', () => {
-            fabricCanvasRef.current?.renderAll();
-        });
+        const canvas = fabricCanvasRef.current;
+        if (!canvas) return;
+
+        // Remove all objects but preserve background
+        canvas.discardActiveObject();
+        const objects = canvas.getObjects();
+        canvas.remove(...objects);
+
+        canvas.renderAll();
+        saveHistory();
     };
 
     const handleDownloadPNG = async () => {
