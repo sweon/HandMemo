@@ -247,6 +247,14 @@ const CanvasWrapper = styled.div<{ $bgColor?: string }>`
     margin: 0;
   }
 
+  /* Default: larger screens */
+  &::-webkit-scrollbar {
+    width: 32px;
+  }
+  &::-webkit-scrollbar-thumb {
+    border-radius: 16px;
+  }
+
   @media (max-width: 1280px) {
     &::-webkit-scrollbar {
       width: 16px;
