@@ -2198,7 +2198,7 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
         });
     };
 
-    const handleDownloadPNG = () => {
+    const handleDownloadPNG = async () => {
         const canvas = fabricCanvasRef.current;
         if (!canvas) return;
 
@@ -2211,22 +2211,48 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
         const seconds = String(now.getSeconds()).padStart(2, '0');
 
         const timestamp = `${year}${month}${day}-${hours}${minutes}${seconds}`;
-        const defaultName = `drawing-${timestamp}`;
-        const fileName = window.prompt(t.drawing?.enter_filename || 'Enter filename:', defaultName);
-
-        if (fileName === null) return; // User cancelled
-
-        const finalFileName = fileName.trim() || defaultName;
+        const defaultBaseName = `drawing-${timestamp}`;
 
         // Get the data URL of the canvas
-        // This includes the background color/pattern
         const dataURL = canvas.toDataURL({
             format: 'png',
             quality: 1,
             enableRetinaScaling: true
         });
 
-        // Create a temporary link and trigger download
+        // Try modern File System Access API first (supported in modern Chrome/Edge/Safari)
+        if ('showSaveFilePicker' in window) {
+            try {
+                const handle = await (window as any).showSaveFilePicker({
+                    suggestedName: `${defaultBaseName}.png`,
+                    types: [{
+                        description: 'PNG Image',
+                        accept: { 'image/png': ['.png'] },
+                    }],
+                });
+
+                // Fetch the dataURL and convert to blob for writing
+                const response = await fetch(dataURL);
+                const blob = await response.blob();
+
+                const writable = await handle.createWritable();
+                await writable.write(blob);
+                await writable.close();
+                return;
+            } catch (err: any) {
+                // If user cancels, just return
+                if (err.name === 'AbortError') return;
+                console.error('File system access error:', err);
+                // Fallback to traditional method if picker failed for other reasons
+            }
+        }
+
+        // Fallback for browsers that don't support showSaveFilePicker or if it failed
+        const fileName = window.prompt(t.drawing?.enter_filename || 'Enter filename:', defaultBaseName);
+        if (fileName === null) return; // User cancelled
+
+        const finalFileName = fileName.trim() || defaultBaseName;
+
         const link = document.createElement('a');
         link.download = finalFileName.endsWith('.png') ? finalFileName : `${finalFileName}.png`;
         link.href = dataURL;
