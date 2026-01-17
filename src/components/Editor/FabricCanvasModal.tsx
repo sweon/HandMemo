@@ -2197,12 +2197,31 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
         if (!canvas) return;
 
         // Remove all objects but preserve background
-        canvas.discardActiveObject();
-        // Use a copy of the array to avoid modification during iteration issues
-        const objects = [...canvas.getObjects()];
-        canvas.remove(...objects);
+        // Use clear() to completely wipe the canvas (including off-screen/invisible objects)
+        canvas.clear();
 
-        canvas.renderAll();
+        // Restore Background Color
+        canvas.setBackgroundColor(backgroundColor, () => {
+            // Restore Overlay Pattern (Grid/Lines) if active
+            if (background !== 'none') {
+                const gridPattern = createBackgroundPattern(background, backgroundColor, lineOpacity, backgroundSize, true);
+                canvas.setOverlayColor(gridPattern as any, canvas.renderAll.bind(canvas));
+            } else {
+                canvas.renderAll();
+            }
+        });
+
+        // Restore drawing context settings
+        canvas.isDrawingMode = true;
+        if (canvas.freeDrawingBrush) {
+            canvas.freeDrawingBrush.color = color;
+            canvas.freeDrawingBrush.width = brushSize;
+            if (activeTool === 'eraser_pixel' || activeTool === 'eraser_object') {
+                // If eraser was active, ensure it's still configured or reset to pen if desired?
+                // Let's keep current tool active.
+            }
+        }
+
         saveHistory();
     };
 
