@@ -1029,8 +1029,16 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
     const [editingShapeItemId, setEditingShapeItemId] = useState<string | null>(null);
 
     const [fontFamily, setFontFamily] = useState(() => localStorage.getItem('fabric_font_family') || 'Arial');
+    const [fontWeight, setFontWeight] = useState<string | number>(() => {
+        const s = localStorage.getItem('fabric_font_weight');
+        return (s && !isNaN(Number(s))) ? Number(s) : (s || 'normal');
+    });
+    const [fontStyle, setFontStyle] = useState<'normal' | 'italic'>(() => (localStorage.getItem('fabric_font_style') as any) || 'normal');
+
     const [isFontEditOpen, setIsFontEditOpen] = useState(false);
     const [tempFontFamily, setTempFontFamily] = useState(fontFamily);
+    const [tempFontWeight, setTempFontWeight] = useState(fontWeight);
+    const [tempFontStyle, setTempFontStyle] = useState(fontStyle);
 
     const availableFonts = React.useMemo(() => {
         return language === 'ko' ? [...KOREAN_FONTS, ...ENGLISH_FONTS] : ENGLISH_FONTS;
@@ -1039,7 +1047,9 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
     // Save customized settings
     useEffect(() => {
         localStorage.setItem('fabric_font_family', fontFamily);
-    }, [fontFamily]);
+        localStorage.setItem('fabric_font_weight', String(fontWeight));
+        localStorage.setItem('fabric_font_style', fontStyle);
+    }, [fontFamily, fontWeight, fontStyle]);
 
     // Save customized settings
     useEffect(() => {
@@ -1391,6 +1401,11 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                 let objectColor = '';
                 if (activeObject.type === 'i-text' || activeObject.type === 'text') {
                     objectColor = activeObject.fill as string;
+                    // Sync font properties
+                    const textObj = activeObject as fabric.IText;
+                    if (textObj.fontFamily) setFontFamily(textObj.fontFamily);
+                    if (textObj.fontWeight) setFontWeight(textObj.fontWeight as string | number);
+                    if (textObj.fontStyle) setFontStyle(textObj.fontStyle as 'normal' | 'italic');
                 } else {
                     objectColor = activeObject.stroke as string;
                 }
@@ -1650,12 +1665,16 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
             top: rect.bottom + 5
         });
         setTempFontFamily(fontFamily);
+        setTempFontWeight(fontWeight);
+        setTempFontStyle(fontStyle);
         openedTimeRef.current = Date.now();
         setIsFontEditOpen(true);
     };
 
     const handleFontOk = () => {
         setFontFamily(tempFontFamily);
+        setFontWeight(tempFontWeight);
+        setFontStyle(tempFontStyle);
         setSettingsAnchor(null);
         setIsFontEditOpen(false);
         lastInteractionTimeRef.current = Date.now();
@@ -2636,6 +2655,8 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                         left: pointer.x,
                         top: pointer.y,
                         fontFamily: fontFamily,
+                        fontWeight: fontWeight,
+                        fontStyle: fontStyle,
                         fontSize: Math.max(16, brushSize * 4),
                         fill: color,
                         editable: true,
@@ -3215,6 +3236,31 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                                             {font}
                                         </DashOption>
                                     ))}
+                                </div>
+                                <div style={{ display: 'flex', gap: '4px', padding: '8px 12px', borderTop: '1px solid #eee' }}>
+                                    {[
+                                        { label: 'Thin', value: 100 },
+                                        { label: 'Normal', value: 'normal' },
+                                        { label: 'Bold', value: 'bold' }
+                                    ].map((w) => (
+                                        <CompactModalButton
+                                            key={w.label}
+                                            $variant={tempFontWeight == w.value ? 'primary' : undefined}
+                                            onClick={() => setTempFontWeight(w.value)}
+                                            style={{ flex: 1, fontSize: '0.8rem', padding: '4px' }}
+                                        >
+                                            {w.label}
+                                        </CompactModalButton>
+                                    ))}
+                                </div>
+                                <div style={{ display: 'flex', padding: '0 12px 8px 12px' }}>
+                                    <CompactModalButton
+                                        $variant={tempFontStyle === 'italic' ? 'primary' : undefined}
+                                        onClick={() => setTempFontStyle(prev => prev === 'italic' ? 'normal' : 'italic')}
+                                        style={{ flex: 1, fontSize: '0.8rem', padding: '4px', fontStyle: 'italic' }}
+                                    >
+                                        Italic
+                                    </CompactModalButton>
                                 </div>
                                 <CompactModalFooter>
                                     <div />
