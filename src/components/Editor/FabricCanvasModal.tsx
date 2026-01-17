@@ -733,6 +733,7 @@ interface ToolbarConfiguratorProps {
 }
 
 const ToolbarConfigurator: React.FC<ToolbarConfiguratorProps> = ({ currentItems, allItems, onSave, onClose, colors, brushSizes }) => {
+    const { t } = useLanguage();
     const [activeItems, setActiveItems] = useState<ToolbarItem[]>(currentItems);
     const [reservoirItems, setReservoirItems] = useState<ToolbarItem[]>(() => {
         return allItems.filter(item => !currentItems.some(curr => curr.id === item.id));
@@ -775,7 +776,7 @@ const ToolbarConfigurator: React.FC<ToolbarConfiguratorProps> = ({ currentItems,
             <ModalContainer style={{ width: '90vw', height: '80vh', maxWidth: '800px', maxHeight: '700px', overflow: 'hidden' }}>
                 <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', height: '100%' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                        <h3 style={{ margin: 0 }}>Customize Toolbar</h3>
+                        <h3 style={{ margin: 0 }}>{t.drawing?.customize_title || 'Customize Toolbar'}</h3>
                         <div style={{ display: 'flex', gap: '8px' }}>
                             <CompactModalButton
                                 onClick={() => {
@@ -784,17 +785,17 @@ const ToolbarConfigurator: React.FC<ToolbarConfiguratorProps> = ({ currentItems,
                                 }}
                                 style={{ marginRight: 'auto' }}
                             >
-                                Reset to Default
+                                {t.drawing?.reset_defaults || 'Reset to Default'}
                             </CompactModalButton>
-                            <CompactModalButton onClick={onClose}>Cancel</CompactModalButton>
-                            <CompactModalButton $variant="primary" onClick={() => onSave(activeItems)}>Save & Apply</CompactModalButton>
+                            <CompactModalButton onClick={onClose}>{t.drawing?.cancel || 'Cancel'}</CompactModalButton>
+                            <CompactModalButton $variant="primary" onClick={() => onSave(activeItems)}>{t.drawing?.save_apply || 'Save & Apply'}</CompactModalButton>
                         </div>
                     </div>
 
                     <DragDropContext onDragEnd={onDragEnd}>
                         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '1rem', overflow: 'hidden' }}>
                             <div>
-                                <h4 style={{ margin: '0 0 8px 0', fontSize: '0.9rem', color: '#666' }}>Active Toolbar</h4>
+                                <h4 style={{ margin: '0 0 8px 0', fontSize: '0.9rem', color: '#666' }}>{t.drawing?.active_toolbar || 'Active Toolbar'}</h4>
                                 <Droppable droppableId="active" direction="horizontal">
                                     {(provided, snapshot) => (
                                         <ConfigArea
@@ -829,7 +830,7 @@ const ToolbarConfigurator: React.FC<ToolbarConfiguratorProps> = ({ currentItems,
                             </div>
 
                             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                                <h4 style={{ margin: '0 0 8px 0', fontSize: '0.9rem', color: '#666' }}>Available Tools (Drag here to remove)</h4>
+                                <h4 style={{ margin: '0 0 8px 0', fontSize: '0.9rem', color: '#666' }}>{t.drawing?.available_tools || 'Available Tools'} ({t.drawing?.drag_to_remove || 'Drag here to remove'})</h4>
                                 <Droppable droppableId="reservoir">
                                     {(provided, snapshot) => (
                                         <ConfigArea
@@ -1756,7 +1757,8 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                                 handleDoubleTap(e, `tool - ${item.toolId} `, (ev) => handleShapeToolDoubleClick(ev, item.id, item.toolId!));
                             }
                         }}
-                        title={(item.toolId ?? '').charAt(0).toUpperCase() + (item.toolId ?? '').slice(1)}
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                        title={(t.drawing as any)?.[`tool_${item.toolId}`] || (item.toolId ?? '').charAt(0).toUpperCase() + (item.toolId ?? '').slice(1)}
                     >
                         {item.toolId === 'pen' ? (
                             (() => {
@@ -1800,31 +1802,31 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                 {item.type === 'action' && (
                     <>
                         {item.actionId === 'undo' && (
-                            <ToolButton onClick={handleUndo} title="Undo (Ctrl+Z)" disabled={!canUndo}>
+                            <ToolButton onClick={handleUndo} title={`${t.drawing?.undo || 'Undo'} (Ctrl+Z)`} disabled={!canUndo}>
                                 <FiRotateCcw size={16} />
                             </ToolButton>
                         )}
                         {item.actionId === 'redo' && (
-                            <ToolButton onClick={handleRedo} title="Redo (Ctrl+Y)" disabled={!canRedo}>
+                            <ToolButton onClick={handleRedo} title={`${t.drawing?.redo || 'Redo'} (Ctrl+Y)`} disabled={!canRedo}>
                                 <FiRotateCw size={16} />
                             </ToolButton>
                         )}
                         {item.actionId === 'download_png' && (
-                            <ToolButton onClick={handleDownloadPNG} title="Download as PNG">
+                            <ToolButton onClick={handleDownloadPNG} title={t.drawing?.download || 'Download as PNG'}>
                                 <FiDownload size={16} />
                             </ToolButton>
                         )}
                         {item.actionId === 'clear' && (
                             <ToolButton onClick={() => {
-                                if (window.confirm('Clear all?')) {
+                                if (window.confirm(t.drawing?.clear_all_confirm || 'Clear all?')) {
                                     handleClear();
                                 }
-                            }} title="Clear All">
+                            }} title={t.drawing?.clear_all || 'Clear All'}>
                                 <FiTrash2 size={16} />
                             </ToolButton>
                         )}
                         {item.actionId === 'extend_height' && (
-                            <ToolButton onClick={handleExtendHeight} title="Extend height">
+                            <ToolButton onClick={handleExtendHeight} title={t.drawing?.extend_height || 'Extend height'}>
                                 <VerticalExpandIcon />
                             </ToolButton>
                         )}
@@ -1851,7 +1853,7 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                                             setSettingsAnchor(null);
                                         }
                                     }}
-                                    title="Background"
+                                    title={t.drawing?.bg_settings || 'Background'}
                                 >
                                     <BackgroundIcon />
                                 </ToolButton>
@@ -1878,7 +1880,7 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                                     setActiveTool('pen');
                                 }
                             }}
-                            title={`Select color: ${availableColors[item.colorIndex!]}`}
+                            title={`${t.drawing?.select_color || 'Select Color'}: ${availableColors[item.colorIndex!]}`}
                         />
                     </div>
                 )}
@@ -1894,7 +1896,7 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                         onDoubleClick={(e) => handleBrushSizeDoubleClick(e, item.sizeIndex!)}
                         onTouchStart={(e) => handleDoubleTap(e, `size - ${item.sizeIndex} `, (ev) => handleBrushSizeDoubleClick(ev, item.sizeIndex!))}
                         style={{ width: 30, fontSize: '0.8rem', padding: 0 }}
-                        title={`Size: ${availableBrushSizes[item.sizeIndex!]} px(Double - click to change)`}
+                        title={`${t.drawing?.brush_size || 'Size'}: ${availableBrushSizes[item.sizeIndex!]}px`}
                     >
                         <div style={{
                             width: Math.min(availableBrushSizes[item.sizeIndex!], 20),
@@ -1909,7 +1911,7 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                     <ToolButton
                         $active={isPalettePickerOpen}
                         onClick={() => setIsPalettePickerOpen(true)}
-                        title="Select Palette"
+                        title={t.drawing?.select_palette || 'Select Palette'}
                     >
                         <PaletteIcon />
                     </ToolButton>
@@ -2870,14 +2872,14 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                             <ToolButton
                                 onClick={() => setIsHelpOpen(true)}
                                 style={{ border: 'none', background: 'transparent' }}
-                                title="Help"
+                                title={t.drawing?.help || 'Help'}
                             >
                                 <FiHelpCircle size={18} />
                             </ToolButton>
                             <ToolButton
                                 onClick={() => setIsConfigOpen(true)}
                                 style={{ border: 'none', background: 'transparent' }}
-                                title="Customize Toolbar"
+                                title={t.drawing?.customize || 'Customize Toolbar'}
                             >
                                 <FiSettings size={18} />
                             </ToolButton>
@@ -3283,12 +3285,12 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                                 </div>
                                 <div style={{ display: 'flex', gap: '4px', padding: '8px 12px', borderTop: '1px solid #eee' }}>
                                     {[
-                                        { label: 'Thin', value: 100 },
-                                        { label: 'Normal', value: 'normal' },
-                                        { label: 'Bold', value: 'bold' }
+                                        { label: t.drawing?.font_thin || 'Thin', value: 100 },
+                                        { label: t.drawing?.font_normal || 'Normal', value: 'normal' },
+                                        { label: t.drawing?.font_bold || 'Bold', value: 'bold' }
                                     ].map((w) => (
                                         <CompactModalButton
-                                            key={w.label}
+                                            key={typeof w.value === 'string' ? w.value : w.value.toString()}
                                             $variant={tempFontWeight == w.value ? 'primary' : undefined}
                                             onClick={() => setTempFontWeight(w.value)}
                                             style={{ flex: 1, fontSize: '0.8rem', padding: '4px' }}
@@ -3303,7 +3305,7 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                                         onClick={() => setTempFontStyle(prev => prev === 'italic' ? 'normal' : 'italic')}
                                         style={{ flex: 1, fontSize: '0.8rem', padding: '4px', fontStyle: 'italic' }}
                                     >
-                                        Italic
+                                        {t.drawing?.font_italic || 'Italic'}
                                     </CompactModalButton>
                                 </div>
                                 <CompactModalFooter>
@@ -3355,14 +3357,14 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                                                     <div style={{ display: 'flex', gap: '4px', marginLeft: '12px' }}>
                                                         <button
                                                             onClick={(e) => handlePaletteEditStart(e, idx)}
-                                                            title="Edit colors"
+                                                            title={t.drawing?.palette_edit || 'Edit colors'}
                                                             style={{ border: 'none', background: '#f1f3f5', borderRadius: '4px', cursor: 'pointer', padding: '6px', color: '#495057', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                                                         >
                                                             <FiEdit2 size={14} />
                                                         </button>
                                                         <button
-                                                            onClick={(e) => { e.stopPropagation(); if (confirm('Reset this palette?')) handlePaletteReset(idx); }}
-                                                            title="Reset to default"
+                                                            onClick={(e) => { e.stopPropagation(); if (confirm(t.drawing?.palette_reset_confirm || 'Reset this palette?')) handlePaletteReset(idx); }}
+                                                            title={t.drawing?.palette_reset || 'Reset to default'}
                                                             style={{ border: 'none', background: '#f1f3f5', borderRadius: '4px', cursor: 'pointer', padding: '6px', color: '#495057', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                                                         >
                                                             <FiRotateCcw size={14} />
@@ -3372,8 +3374,8 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                                             ))}
                                         </div>
                                         <CompactModalFooter style={{ marginTop: '20px' }}>
-                                            <CompactModalButton onClick={handlePalettePickerClose}>Cancel</CompactModalButton>
-                                            <CompactModalButton $variant="primary" onClick={handlePaletteOk} style={{ minWidth: '80px' }}>OK</CompactModalButton>
+                                            <CompactModalButton onClick={handlePalettePickerClose}>{t.drawing?.cancel || 'Cancel'}</CompactModalButton>
+                                            <CompactModalButton $variant="primary" onClick={handlePaletteOk} style={{ minWidth: '80px' }}>{t.drawing?.ok || 'OK'}</CompactModalButton>
                                         </CompactModalFooter>
                                     </>
                                 ) : (
@@ -3472,8 +3474,8 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                                             )}
                                         </div>
                                         <CompactModalFooter style={{ marginTop: '20px' }}>
-                                            <CompactModalButton onClick={handlePaletteEditCancel}>Cancel</CompactModalButton>
-                                            <CompactModalButton $variant="primary" onClick={handlePaletteEditSave} style={{ minWidth: '100px' }}>Save Palette</CompactModalButton>
+                                            <CompactModalButton onClick={handlePaletteEditCancel}>{t.drawing?.cancel || 'Cancel'}</CompactModalButton>
+                                            <CompactModalButton $variant="primary" onClick={handlePaletteEditSave} style={{ minWidth: '100px' }}>{t.drawing?.save_palette || 'Save Palette'}</CompactModalButton>
                                         </CompactModalFooter>
                                     </>
                                 )}
