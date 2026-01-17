@@ -514,12 +514,16 @@ type ShapeStyle = {
     dashArray: number[] | undefined;
     opacity: number;
     headSize?: number;
+    stroke?: string;
+    strokeWidth?: number;
 };
 
 const DEFAULT_SHAPE_STYLE: ShapeStyle = {
     dashArray: DASH_OPTIONS[INITIAL_SHAPE_DASH],
     opacity: INITIAL_SHAPE_OPACITY,
-    headSize: 20
+    headSize: 20,
+    stroke: '#000000',
+    strokeWidth: 2
 };
 
 // Helper to get icon for config item
@@ -1114,30 +1118,55 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
 
     // Load settings when tool changes
     useEffect(() => {
-        const key = getToolKey(activeTool, brushType);
-        const settings = toolSettings[key];
+        const isShape = ['line', 'arrow', 'rect', 'circle', 'ellipse', 'triangle', 'diamond', 'pentagon', 'hexagon', 'octagon', 'star', 'text'].includes(activeTool);
 
-        if (settings) {
-            // Load saved settings
-            setColor(settings.color);
-            setBrushSize(settings.size);
-        } else {
-            // Initialize defaults if not found
-            // Special defaults for certain tools
-            if (activeTool === 'pen' && brushType === 'highlighter') {
-                const defaultHighlighter = '#f08c00'; // Orange/Yellowish
-                const defaultSize = 16;
-                setColor(defaultHighlighter);
-                setBrushSize(defaultSize);
-                setToolSettings(prev => ({ ...prev, [key]: { color: defaultHighlighter, size: defaultSize } }));
+        if (isShape) {
+            // Provide explicit defaults for shapes to prevent inheriting previous tool's color
+            // If we have saved styles, use them. If not, use DEFAULT_SHAPE_STYLE.
+            const savedStyle = shapeStyles[activeTool];
+
+            if (savedStyle) {
+                // If saved style has color/width, use it. Otherwise fall back to defaults (NOT current state)
+                const newColor = savedStyle.stroke || '#000000';
+                const newSize = savedStyle.strokeWidth || 2;
+
+                setColor(newColor);
+                setBrushSize(newSize);
+                // We don't overwrite shapeStyles here. It's already saved or we use ephemeral defaults.
             } else {
-                // For others, just use current or standard defaults if we wanted, 
-                // but using current ensures continuity if we haven't saved anything yet.
-                // However, to ensure they start separate, we might want to save current state now.
-                setToolSettings(prev => ({ ...prev, [key]: { color, size: brushSize } }));
+                // No saved style for this shape yet. Use hard defaults.
+                setColor('#000000');
+                setBrushSize(2);
+                // Should we save this default immediately? Maybe not, let user choose.
+                // But we MUST NOT use current state.
+            }
+        } else {
+            // For non-shape tools (pen, etc.), use existing logic
+            const key = getToolKey(activeTool, brushType);
+            const settings = toolSettings[key];
+
+            if (settings) {
+                // Load saved settings
+                setColor(settings.color);
+                setBrushSize(settings.size);
+            } else {
+                // Initialize defaults if not found
+                // Special defaults for certain tools
+                if (activeTool === 'pen' && brushType === 'highlighter') {
+                    const defaultHighlighter = '#ffeb3b'; // Yellowish default for highlighter
+                    const defaultSize = 16;
+                    setColor(defaultHighlighter);
+                    setBrushSize(defaultSize);
+                    setToolSettings(prev => ({ ...prev, [key]: { color: defaultHighlighter, size: defaultSize } }));
+                } else if (activeTool === 'pen') {
+                    // For standard pen, try to match last used or default
+                    // If no settings, maybe just keep current or set to black?
+                    // Let's keep current behavior for pen to allow continuity if switching types
+                    setToolSettings(prev => ({ ...prev, [key]: { color, size: brushSize } }));
+                }
             }
         }
-        // We only want to run this when tool/brushType changes, NOT when color/size changes
+        // We only want to run this when tool/brushType changes
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [activeTool, brushType]);
 
@@ -1149,27 +1178,42 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
         if (newType) setBrushType(newType as any);
 
         const currentTool = activeTool;
-        const typeToUse = newType || brushType;
-        const key = getToolKey(currentTool, typeToUse);
+        const isShape = ['line', 'arrow', 'rect', 'circle', 'ellipse', 'triangle', 'diamond', 'pentagon', 'hexagon', 'octagon', 'star', 'text'].includes(currentTool);
 
-        setToolSettings(prev => ({
-            ...prev,
-            [key]: {
-                color: newColor !== undefined ? newColor : (prev[key]?.color || color),
-                size: newSize !== undefined ? newSize : (prev[key]?.size || brushSize)
-            }
-        }));
-
-        // If currently using a pen slot, update its specific settings
-        if (currentTool === 'pen' && activePenSlot) {
-            setPenSlotSettings(prev => ({
+        if (isShape) {
+            // Update shape styles
+            setShapeStyles(prev => ({
                 ...prev,
-                [activePenSlot]: {
-                    brushType: typeToUse,
-                    color: newColor !== undefined ? newColor : (prev[activePenSlot]?.color || color),
-                    size: newSize !== undefined ? newSize : (prev[activePenSlot]?.size || brushSize)
+                [currentTool]: {
+                    ...(prev[currentTool] || DEFAULT_SHAPE_STYLE),
+                    stroke: newColor !== undefined ? newColor : (prev[currentTool]?.stroke || color),
+                    strokeWidth: newSize !== undefined ? newSize : (prev[currentTool]?.strokeWidth || brushSize)
                 }
             }));
+        } else {
+            // Update tool settings (for pens, etc)
+            const typeToUse = newType || brushType;
+            const key = getToolKey(currentTool, typeToUse);
+
+            setToolSettings(prev => ({
+                ...prev,
+                [key]: {
+                    color: newColor !== undefined ? newColor : (prev[key]?.color || color),
+                    size: newSize !== undefined ? newSize : (prev[key]?.size || brushSize)
+                }
+            }));
+
+            // If currently using a pen slot, update its specific settings
+            if (currentTool === 'pen' && activePenSlot) {
+                setPenSlotSettings(prev => ({
+                    ...prev,
+                    [activePenSlot]: {
+                        brushType: typeToUse,
+                        color: newColor !== undefined ? newColor : (prev[activePenSlot]?.color || color),
+                        size: newSize !== undefined ? newSize : (prev[activePenSlot]?.size || brushSize)
+                    }
+                }));
+            }
         }
     }, [activeTool, brushType, color, brushSize, activePenSlot, getToolKey]);
 
