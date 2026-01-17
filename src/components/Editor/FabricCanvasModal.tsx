@@ -1313,6 +1313,17 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
         setCanRedo(false);
     }, []);
 
+    // Debounced history save to avoid performance issues with frequent saves
+    const saveHistoryDebounced = React.useMemo(() => {
+        let timeoutId: NodeJS.Timeout | null = null;
+        return () => {
+            if (timeoutId) clearTimeout(timeoutId);
+            timeoutId = setTimeout(() => {
+                saveHistory();
+            }, 300); // Debounce by 300ms
+        };
+    }, [saveHistory]);
+
     useLayoutEffect(() => {
         if (!canvasRef.current || !containerRef.current) return;
 
@@ -1330,6 +1341,9 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
             backgroundColor: '#ffffff',
             isDrawingMode: true,
             selection: false,
+            // Performance optimizations for mobile/Android
+            renderOnAddRemove: false, // Prevent auto-render on every add/remove
+            enableRetinaScaling: false, // Disable retina for better performance on mobile
         });
 
         // Set initial brush
@@ -1425,10 +1439,10 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
         // Save initial state to history
         setTimeout(() => saveHistory(), 100);
 
-        // Listen for changes to save history
-        canvas.on('object:added', saveHistory);
-        canvas.on('object:modified', saveHistory);
-        canvas.on('object:removed', saveHistory);
+        // Listen for changes to save history (debounced for performance)
+        canvas.on('object:added', saveHistoryDebounced);
+        canvas.on('object:modified', saveHistoryDebounced);
+        canvas.on('object:removed', saveHistoryDebounced);
 
         canvas.on('path:created', (opt: any) => {
             if (activeToolRef.current === 'eraser_pixel') {
@@ -1436,9 +1450,17 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                     isPixelEraser: true,
                     selectable: false,
                     evented: false,
-                    strokeUniform: true
+                    strokeUniform: true,
+                    objectCaching: true // Enable caching for eraser paths
+                });
+            } else {
+                // Enable caching for all drawn paths to improve rendering performance
+                opt.path.set({
+                    objectCaching: true
                 });
             }
+            // Manually trigger render since renderOnAddRemove is false
+            canvas.requestRenderAll();
         });
 
         // Selection listeners to sync toolbar with selected object
@@ -1495,9 +1517,9 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                 upperCanvas.removeEventListener('touchmove', filterPointer, true);
             }
             resizeObserver.disconnect();
-            canvas.off('object:added', saveHistory);
-            canvas.off('object:modified', saveHistory);
-            canvas.off('object:removed', saveHistory);
+            canvas.off('object:added', saveHistoryDebounced);
+            canvas.off('object:modified', saveHistoryDebounced);
+            canvas.off('object:removed', saveHistoryDebounced);
             canvas.off('selection:created', handleSelection);
             canvas.off('selection:updated', handleSelection);
             canvas.dispose();
@@ -1939,6 +1961,7 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
             top: pointer.y,
             selectable: false, // Initially false while drawing
             evented: false,
+            objectCaching: true, // Enable caching for better performance on mobile
         };
 
         if (activeTool === 'line' || activeTool === 'arrow') {
@@ -1992,6 +2015,7 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
         if (shape) {
             activeShapeRef.current = shape;
             canvas.add(shape);
+            canvas.requestRenderAll(); // Manually render since renderOnAddRemove is false
         }
     }, [activeTool, color, brushSize, shapeStyles]);
 
@@ -2178,10 +2202,12 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                         left: minX,
                         top: minY,
                         originX: 'left',
-                        originY: 'top'
+                        originY: 'top',
+                        objectCaching: true // Enable caching for better performance
                     } as any);
 
                     canvas.add(arrowGroup);
+                    canvas.requestRenderAll(); // Manually render since renderOnAddRemove is false
                 }
             }
 
