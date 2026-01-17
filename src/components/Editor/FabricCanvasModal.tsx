@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState, useLayoutEffect } from 'react';
 import styled from 'styled-components';
 import { fabric } from 'fabric';
-import { FiX, FiCheck, FiMousePointer, FiMinus, FiSquare, FiCircle, FiTriangle, FiType, FiArrowDown, FiSettings, FiRotateCcw, FiRotateCw, FiDownload, FiTrash2, FiHelpCircle } from 'react-icons/fi';
+import { FiX, FiCheck, FiMousePointer, FiMinus, FiSquare, FiCircle, FiTriangle, FiType, FiArrowDown, FiSettings, FiRotateCcw, FiRotateCw, FiDownload, FiTrash2, FiHelpCircle, FiEdit2 } from 'react-icons/fi';
 import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd';
 import { HexColorPicker } from 'react-colorful';
 import { useLanguage } from '../../contexts/LanguageContext';
@@ -116,6 +116,16 @@ const HatchIcon = () => (
         <line x1="21" y1="3" x2="3" y2="21" />
         <line x1="21" y1="10" x2="10" y2="21" />
         <line x1="21" y1="17" x2="17" y2="21" />
+    </svg>
+);
+
+const PaletteIcon = () => (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="13.5" cy="6.5" r=".5" />
+        <circle cx="17.5" cy="10.5" r=".5" />
+        <circle cx="8.5" cy="7.5" r=".5" />
+        <circle cx="6.5" cy="12.5" r=".5" />
+        <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.9 0 1.6-.7 1.6-1.6 0-.4-.2-.8-.5-1.1-.3-.3-.4-.7-.4-1.1 0-.9.7-1.6 1.6-1.6H17c2.8 0 5-2.2 5-5 0-5.3-4.5-9.7-10-9.7z" />
     </svg>
 );
 const ModalOverlay = styled.div`
@@ -441,7 +451,18 @@ interface FabricCanvasModalProps {
     onClose: () => void;
 }
 
-const INITIAL_COLORS = ['#000000', '#e03131', '#2f9e44', '#1971c2', '#f08c00', '#F9DE4B'];
+const INITIAL_PALETTES: string[][] = [
+    ['#000000', '#e03131', '#2f9e44', '#1971c2', '#f08c00', '#F9DE4B'], // 1. Default
+    ['#000000', '#0000FF', '#FF0000', '#008000', '#808080', '#FFA500'], // 2. Classic Office
+    ['#5d5d5d', '#ff9aa2', '#ffb7b2', '#ffdac1', '#e2f0cb', '#b5ead7'], // 3. Soft/Pastel
+    ['#001219', '#005f73', '#0a9396', '#94d2bd', '#e9d8a6', '#ee9b00'], // 4. Deep Marine
+    ['#370617', '#9d0208', '#d00000', '#dc2f02', '#e85d04', '#f48c06'], // 5. Sunset
+    ['#004b23', '#007200', '#008000', '#38b000', '#70e000', '#9ef01a'], // 6. Forest
+    ['#240046', '#5a189a', '#9d4edd', '#ff006e', '#fb5607', '#ffbe0b'], // 7. Lavender/Violet
+    ['#230f0d', '#3d1b19', '#5e2c28', '#893f39', '#b1584d', '#d28476'], // 8. Coffee/Brown
+    ['#000000', '#212529', '#343a40', '#495057', '#6c757d', '#adb5bd'], // 9. Monochrome
+    ['#ccff00', '#ffcf00', '#ff0099', '#6e00ff', '#00eaff', '#00ff00'], // 10. Highlighter Tint
+];
 const INITIAL_BRUSH_SIZES = [1, 2, 4, 8, 16];
 const DASH_OPTIONS: (number[] | undefined)[] = [
     undefined,
@@ -495,6 +516,7 @@ const getToolbarItemIcon = (item: ToolbarItem, colors: string[], brushSizes: num
             case 'clear': return <FiTrash2 size={16} />;
             case 'extend_height': return <VerticalExpandIcon />;
             case 'background': return <BackgroundIcon />;
+            case 'palette': return <PaletteIcon />;
             default: return <span>{item.actionId}</span>;
         }
     } else if (item.type === 'color' && item.colorIndex !== undefined) {
@@ -551,6 +573,7 @@ const INITIAL_TOOLBAR_ITEMS: ToolbarItem[] = [
     { id: 'color-3', type: 'color', colorIndex: 3 },
     { id: 'color-4', type: 'color', colorIndex: 4 },
     { id: 'color-5', type: 'color', colorIndex: 5 },
+    { id: 'palette', type: 'action', actionId: 'palette' },
     { id: 'size-0', type: 'size', sizeIndex: 0 },
     { id: 'size-1', type: 'size', sizeIndex: 1 },
     { id: 'size-2', type: 'size', sizeIndex: 2 },
@@ -847,10 +870,37 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
     }, [registerGuard, unregisterGuard]);
 
 
-    const [availableColors, setAvailableColors] = useState<string[]>(() => {
-        const saved = localStorage.getItem('fabric_colors');
-        return saved ? JSON.parse(saved) : INITIAL_COLORS;
+    const [palettes, setPalettes] = useState<string[][]>(() => {
+        const saved = localStorage.getItem('fabric_palettes');
+        return saved ? JSON.parse(saved) : INITIAL_PALETTES;
     });
+    const [activePaletteIndex, setActivePaletteIndex] = useState<number>(() => {
+        const saved = localStorage.getItem('fabric_active_palette_index');
+        return saved ? parseInt(saved) : 0;
+    });
+
+    const [availableColors, setAvailableColors] = useState<string[]>(() => {
+        const savedColors = localStorage.getItem('fabric_colors');
+        if (savedColors) return JSON.parse(savedColors);
+        return palettes[activePaletteIndex] || INITIAL_PALETTES[0];
+    });
+
+    useEffect(() => {
+        localStorage.setItem('fabric_palettes', JSON.stringify(palettes));
+    }, [palettes]);
+
+    useEffect(() => {
+        localStorage.setItem('fabric_active_palette_index', activePaletteIndex.toString());
+        // Sync current colors when palette changes
+        const newColors = palettes[activePaletteIndex];
+        setAvailableColors(newColors);
+    }, [activePaletteIndex, palettes]);
+
+    const [isPalettePickerOpen, setIsPalettePickerOpen] = useState(false);
+    const [selectedPaletteIndex, setSelectedPaletteIndex] = useState(activePaletteIndex);
+    const [editingPaletteIndex, setEditingPaletteIndex] = useState<number | null>(null);
+    const [paletteTempColors, setPaletteTempColors] = useState<string[]>([]);
+    const [paletteEditingColorIndex, setPaletteEditingColorIndex] = useState<number | null>(null);
     const [availableBrushSizes, setAvailableBrushSizes] = useState<number[]>(() => {
         const saved = localStorage.getItem('fabric_brush_sizes');
         return saved ? JSON.parse(saved) : INITIAL_BRUSH_SIZES;
@@ -892,9 +942,6 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
     const [isBgPickerOpen, setIsBgPickerOpen] = useState(false);
     const prevBackgroundStateRef = useRef<{ type: BackgroundType; color: string; opacity: number; size: number; intensity: number; colorType: 'gray' | 'beige' } | null>(null);
 
-    const [isColorEditOpen, setIsColorEditOpen] = useState(false);
-    const [tempColor, setTempColor] = useState('#000000');
-    const [editingColorIndex, setEditingColorIndex] = useState<number | null>(null);
 
     const [isSizeEditOpen, setIsSizeEditOpen] = useState(false);
     const [tempSize, setTempSize] = useState(2);
@@ -1311,43 +1358,58 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
     }, []);
 
 
-    const handleColorDoubleClick = (e: React.MouseEvent | React.TouchEvent, index: number) => {
-        const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-        setSettingsAnchor({
-            top: rect.bottom + 5
-        });
-        setEditingColorIndex(index);
-        setTempColor(availableColors[index]);
-        openedTimeRef.current = Date.now();
-        setIsColorEditOpen(true);
+    const handlePalettePickerClose = () => {
+        setIsPalettePickerOpen(false);
+        setEditingPaletteIndex(null);
+        setPaletteEditingColorIndex(null);
     };
 
-    const handleColorOk = () => {
-        setSettingsAnchor(null);
-        if (editingColorIndex !== null) {
-            const newColors = [...availableColors];
-            newColors[editingColorIndex] = tempColor;
-            setAvailableColors(newColors);
+    const handlePaletteSelect = (index: number) => {
+        setSelectedPaletteIndex(index);
+        setEditingPaletteIndex(null);
+    };
 
-            setColor(tempColor);
-            updateToolSetting(tempColor, undefined);
+    const handlePaletteDoubleTap_Local = (index: number) => {
+        setActivePaletteIndex(index);
+        setSelectedPaletteIndex(index);
+        handlePalettePickerClose();
+    };
 
-            setIsColorEditOpen(false);
-            setEditingColorIndex(null);
-            lastInteractionTimeRef.current = Date.now();
+    const handlePaletteOk = () => {
+        setActivePaletteIndex(selectedPaletteIndex);
+        handlePalettePickerClose();
+    };
+
+    const handlePaletteEditStart = (e: React.MouseEvent, index: number) => {
+        e.stopPropagation();
+        setEditingPaletteIndex(index);
+        setPaletteTempColors([...palettes[index]]);
+        setPaletteEditingColorIndex(0); // Start editing the first color
+        setSelectedPaletteIndex(index);
+    };
+
+    const handlePaletteEditSave = () => {
+        if (editingPaletteIndex !== null) {
+            const newPalettes = [...palettes];
+            newPalettes[editingPaletteIndex] = [...paletteTempColors];
+            setPalettes(newPalettes);
+            setEditingPaletteIndex(null);
+            setPaletteEditingColorIndex(null);
         }
     };
 
-    const handleColorReset = () => {
-        if (editingColorIndex !== null) {
-            setTempColor(INITIAL_COLORS[editingColorIndex]);
-        }
+    const handlePaletteEditCancel = () => {
+        setEditingPaletteIndex(null);
+        setPaletteEditingColorIndex(null);
     };
 
-    const handleColorCancel = () => {
-        setSettingsAnchor(null);
-        setIsColorEditOpen(false);
-        setEditingColorIndex(null);
+    const handlePaletteReset = (index: number) => {
+        const newPalettes = [...palettes];
+        newPalettes[index] = [...INITIAL_PALETTES[index]];
+        setPalettes(newPalettes);
+        if (editingPaletteIndex === index) {
+            setPaletteTempColors([...INITIAL_PALETTES[index]]);
+        }
     };
 
     const handleBrushSizeDoubleClick = (e: React.MouseEvent | React.TouchEvent, index: number) => {
@@ -1811,9 +1873,7 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                                     setActiveTool('pen');
                                 }
                             }}
-                            onDoubleClick={(e) => handleColorDoubleClick(e, item.colorIndex!)}
-                            onTouchStart={(e) => handleDoubleTap(e, `color - ${item.colorIndex} `, (ev) => handleColorDoubleClick(ev, item.colorIndex!))}
-                            title="Double-click to change color"
+                            title={`Select color: ${availableColors[item.colorIndex!]}`}
                         />
                     </div>
                 )}
@@ -1837,6 +1897,16 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                             borderRadius: '50%',
                             background: '#333'
                         }} />
+                    </ToolButton>
+                )}
+
+                {item.type === 'action' && item.actionId === 'palette' && (
+                    <ToolButton
+                        $active={isPalettePickerOpen}
+                        onClick={() => setIsPalettePickerOpen(true)}
+                        title="Select Palette"
+                    >
+                        <PaletteIcon />
                     </ToolButton>
                 )}
             </div >
@@ -2658,11 +2728,11 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
             <ModalOverlay onClick={(e) => {
                 if (e.target === e.currentTarget) {
                     // If any settings modal is open (Level 1)
-                    if (isColorEditOpen || isSizeEditOpen || isShapeSettingsOpen || isPenEditOpen || isFontEditOpen) {
+                    if (isPalettePickerOpen || isSizeEditOpen || isShapeSettingsOpen || isPenEditOpen || isFontEditOpen) {
                         // If we just interacted with an input (like the native color picker),
                         // ignore the first backdrop click so the user stays in the sub-modal.
                         if (Date.now() - lastInteractionTimeRef.current > 500) {
-                            handleColorOk();
+                            handlePalettePickerClose();
                             handleSizeOk();
                             handleShapeSettingsOk();
                             handlePenOk();
@@ -2705,94 +2775,6 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                             </CompactActionButton>
                         </ToolGroup>
                     </Toolbar>
-                    {isColorEditOpen && (
-                        <Backdrop
-                            $centered={!settingsAnchor}
-                            onClick={(e) => {
-                                const now = Date.now();
-                                if (now - openedTimeRef.current < 400) return; // Ignore ghost clicks
-                                if (e.target === e.currentTarget) handleColorOk();
-                            }}>
-                            <CompactModal
-                                $anchor={settingsAnchor || undefined}
-                                onClick={e => e.stopPropagation()}
-                            >
-                                <ColorInputWrapper>
-                                    <HexColorPicker
-                                        color={tempColor}
-                                        onChange={(newColor) => {
-                                            setTempColor(newColor);
-                                            lastInteractionTimeRef.current = Date.now();
-                                        }}
-                                        style={{ width: '100%', height: '180px' }}
-                                    />
-                                    <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                            <span style={{ fontSize: '0.7rem', color: '#888', fontVariantNumeric: 'tabular-nums', width: '30px' }}>HEX</span>
-                                            <input
-                                                value={tempColor.toUpperCase()}
-                                                readOnly
-                                                style={{
-                                                    flex: 1,
-                                                    padding: '4px 8px',
-                                                    border: '1px solid #ddd',
-                                                    borderRadius: '4px',
-                                                    fontSize: '0.85rem',
-                                                    fontFamily: 'monospace',
-                                                    textTransform: 'uppercase',
-                                                    background: '#f8f9fa',
-                                                    cursor: 'default'
-                                                }}
-                                            />
-                                        </div>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                            <span style={{ fontSize: '0.7rem', color: '#888', fontVariantNumeric: 'tabular-nums', width: '30px' }}>RGB</span>
-                                            <div style={{ display: 'flex', gap: '4px', flex: 1 }}>
-                                                {['r', 'g', 'b'].map((key) => {
-                                                    const rgb = hexToRgb(tempColor);
-                                                    return (
-                                                        <input
-                                                            key={key}
-                                                            type="number"
-                                                            min="0"
-                                                            max="255"
-                                                            value={rgb[key as keyof typeof rgb]}
-                                                            onChange={(e) => {
-                                                                const val = parseInt(e.target.value) || 0;
-                                                                const newRgb = { ...rgb, [key]: val };
-                                                                setTempColor(rgbToHex(newRgb.r, newRgb.g, newRgb.b));
-                                                            }}
-                                                            style={{
-                                                                width: '33%',
-                                                                padding: '4px 2px',
-                                                                border: '1px solid #ddd',
-                                                                borderRadius: '4px',
-                                                                fontSize: '0.85rem',
-                                                                textAlign: 'center'
-                                                            }}
-                                                        />
-                                                    );
-                                                })}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </ColorInputWrapper>
-                                <CompactModalFooter>
-                                    <CompactModalButton onClick={handleColorReset}>
-                                        {t.drawing?.reset || 'Reset'}
-                                    </CompactModalButton>
-                                    <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                        <CompactModalButton onClick={handleColorCancel}>
-                                            {t.drawing?.cancel || 'Cancel'}
-                                        </CompactModalButton>
-                                        <CompactModalButton onClick={handleColorOk} $variant="primary">
-                                            {t.drawing?.ok || 'OK'}
-                                        </CompactModalButton>
-                                    </div>
-                                </CompactModalFooter>
-                            </CompactModal>
-                        </Backdrop>
-                    )}
 
                     {isSizeEditOpen && (
                         <Backdrop
@@ -3158,6 +3140,166 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                                         </CompactModalButton>
                                     </div>
                                 </CompactModalFooter>
+                            </CompactModal>
+                        </Backdrop>
+                    )}
+
+                    {isPalettePickerOpen && (
+                        <Backdrop onClick={handlePalettePickerClose}>
+                            <CompactModal onClick={e => e.stopPropagation()} style={{ width: '320px', maxHeight: '80vh', overflowY: 'auto', padding: '0 16px 16px 16px' }}>
+                                {editingPaletteIndex === null ? (
+                                    <>
+                                        <div style={{ position: 'relative', height: '14px', marginBottom: '4px' }}>
+                                            <FiX style={{ position: 'absolute', top: '-4px', right: '-4px', padding: '10px', cursor: 'pointer', color: '#888' }} onClick={handlePalettePickerClose} />
+                                        </div>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                            {palettes.map((p, idx) => (
+                                                <div
+                                                    key={idx}
+                                                    onClick={() => handlePaletteSelect(idx)}
+                                                    onDoubleClick={() => handlePaletteDoubleTap_Local(idx)}
+                                                    style={{
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        padding: '8px',
+                                                        borderRadius: '8px',
+                                                        border: '2px solid',
+                                                        borderColor: selectedPaletteIndex === idx ? '#333' : '#e9ecef',
+                                                        background: selectedPaletteIndex === idx ? '#f8f9fa' : 'white',
+                                                        transition: 'all 0.2s',
+                                                        cursor: 'pointer'
+                                                    }}
+                                                >
+                                                    <div style={{ flex: 1, display: 'flex', gap: '6px' }}>
+                                                        {p.map((c, cIdx) => (
+                                                            <div key={cIdx} style={{ width: '22px', height: '22px', borderRadius: '50%', background: c, border: '1px solid rgba(0,0,0,0.1)' }} />
+                                                        ))}
+                                                    </div>
+                                                    <div style={{ display: 'flex', gap: '4px', marginLeft: '12px' }}>
+                                                        <button
+                                                            onClick={(e) => handlePaletteEditStart(e, idx)}
+                                                            title="Edit colors"
+                                                            style={{ border: 'none', background: '#f1f3f5', borderRadius: '4px', cursor: 'pointer', padding: '6px', color: '#495057', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                                        >
+                                                            <FiEdit2 size={14} />
+                                                        </button>
+                                                        <button
+                                                            onClick={(e) => { e.stopPropagation(); if (confirm('Reset this palette?')) handlePaletteReset(idx); }}
+                                                            title="Reset to default"
+                                                            style={{ border: 'none', background: '#f1f3f5', borderRadius: '4px', cursor: 'pointer', padding: '6px', color: '#495057', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                                        >
+                                                            <FiRotateCcw size={14} />
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <CompactModalFooter style={{ marginTop: '20px' }}>
+                                            <CompactModalButton onClick={handlePalettePickerClose}>Cancel</CompactModalButton>
+                                            <CompactModalButton $variant="primary" onClick={handlePaletteOk} style={{ minWidth: '80px' }}>OK</CompactModalButton>
+                                        </CompactModalFooter>
+                                    </>
+                                ) : (
+                                    <>
+                                        <div style={{ position: 'relative', height: '14px', marginBottom: '4px' }}>
+                                            <FiX style={{ position: 'absolute', top: '-4px', right: '-4px', padding: '10px', cursor: 'pointer', color: '#888' }} onClick={handlePaletteEditCancel} />
+                                        </div>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                            <div style={{ display: 'flex', flexWrap: 'nowrap', gap: '8px', justifyContent: 'space-between', padding: '4px', background: '#f8f9fa', borderRadius: '8px' }}>
+                                                {paletteTempColors.map((c, idx) => (
+                                                    <div
+                                                        key={idx}
+                                                        onClick={() => setPaletteEditingColorIndex(idx)}
+                                                        style={{
+                                                            width: '38px',
+                                                            height: '38px',
+                                                            borderRadius: '50%',
+                                                            background: c,
+                                                            border: paletteEditingColorIndex === idx ? '3px solid #333' : '2px solid white',
+                                                            boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                                                            cursor: 'pointer',
+                                                            transition: 'transform 0.1s'
+                                                        }}
+                                                    />
+                                                ))}
+                                            </div>
+                                            {paletteEditingColorIndex !== null && (
+                                                <div style={{ padding: '8px', background: 'white', borderRadius: '8px', border: '1px solid #dee2e6' }}>
+                                                    <HexColorPicker
+                                                        color={paletteTempColors[paletteEditingColorIndex]}
+                                                        onChange={(newColor) => {
+                                                            const next = [...paletteTempColors];
+                                                            next[paletteEditingColorIndex] = newColor;
+                                                            setPaletteTempColors(next);
+                                                        }}
+                                                        style={{ width: '100%', height: '150px' }}
+                                                    />
+                                                    <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px', padding: '0 4px' }}>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                            <span style={{ fontSize: '0.75rem', color: '#888', fontWeight: 600, width: '30px', flexShrink: 0 }}>HEX</span>
+                                                            <div style={{ display: 'flex', flex: 1 }}>
+                                                                <input
+                                                                    value={paletteTempColors[paletteEditingColorIndex].toUpperCase()}
+                                                                    readOnly
+                                                                    style={{
+                                                                        width: '100%',
+                                                                        padding: '6px 10px',
+                                                                        fontSize: '0.85rem',
+                                                                        fontFamily: 'inherit',
+                                                                        border: '1px solid #ced4da',
+                                                                        borderRadius: '4px',
+                                                                        background: '#f1f3f5',
+                                                                        cursor: 'default',
+                                                                        color: '#495057',
+                                                                        textAlign: 'left'
+                                                                    }}
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                            <span style={{ fontSize: '0.75rem', color: '#888', fontWeight: 600, width: '30px', flexShrink: 0 }}>RGB</span>
+                                                            <div style={{ display: 'flex', gap: '4px', flex: 1 }}>
+                                                                {['r', 'g', 'b'].map((key) => {
+                                                                    const rgb = hexToRgb(paletteTempColors[paletteEditingColorIndex!]);
+                                                                    return (
+                                                                        <input
+                                                                            key={key}
+                                                                            type="number"
+                                                                            min="0"
+                                                                            max="255"
+                                                                            value={rgb[key as keyof typeof rgb]}
+                                                                            onChange={(e) => {
+                                                                                const val = parseInt(e.target.value) || 0;
+                                                                                const newRgb = { ...rgb, [key]: val };
+                                                                                const next = [...paletteTempColors];
+                                                                                next[paletteEditingColorIndex!] = rgbToHex(newRgb.r, newRgb.g, newRgb.b);
+                                                                                setPaletteTempColors(next);
+                                                                            }}
+                                                                            style={{
+                                                                                flex: 1,
+                                                                                width: 0, // Allow flex to control width
+                                                                                padding: '6px 2px',
+                                                                                border: '1px solid #ced4da',
+                                                                                borderRadius: '4px',
+                                                                                fontSize: '0.85rem',
+                                                                                textAlign: 'center',
+                                                                                background: 'white'
+                                                                            }}
+                                                                        />
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                        <CompactModalFooter style={{ marginTop: '20px' }}>
+                                            <CompactModalButton onClick={handlePaletteEditCancel}>Cancel</CompactModalButton>
+                                            <CompactModalButton $variant="primary" onClick={handlePaletteEditSave} style={{ minWidth: '100px' }}>Save Palette</CompactModalButton>
+                                        </CompactModalFooter>
+                                    </>
+                                )}
                             </CompactModal>
                         </Backdrop>
                     )}
