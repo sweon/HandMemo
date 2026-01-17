@@ -2198,7 +2198,8 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
 
         // Remove all objects but preserve background
         canvas.discardActiveObject();
-        const objects = canvas.getObjects();
+        // Use a copy of the array to avoid modification during iteration issues
+        const objects = [...canvas.getObjects()];
         canvas.remove(...objects);
 
         canvas.renderAll();
