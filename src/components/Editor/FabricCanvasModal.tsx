@@ -247,27 +247,14 @@ const CanvasWrapper = styled.div<{ $bgColor?: string }>`
     margin: 0;
   }
 
-  /* Consistent scrollbar styling for all devices */
-  &::-webkit-scrollbar {
-    width: 16px;
+  @media (max-width: 1280px) {
+    &::-webkit-scrollbar {
+      width: 16px;
+    }
+    &::-webkit-scrollbar-thumb {
+      border-radius: 8px;
+    }
   }
-  &::-webkit-scrollbar-track {
-    background: transparent;
-  }
-  &::-webkit-scrollbar-thumb {
-    background: rgba(0, 0, 0, 0.2);
-    border-radius: 8px;
-    border: 4px solid transparent;
-    background-clip: padding-box;
-  }
-  &::-webkit-scrollbar-thumb:hover {
-    background: rgba(0, 0, 0, 0.3);
-    background-clip: padding-box;
-  }
-  
-  /* Firefox */
-  scrollbar-width: auto;
-  scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
 `;
 
 
