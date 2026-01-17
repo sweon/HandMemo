@@ -22,7 +22,7 @@ const ToastContainer = styled.div<{ $variant?: 'default' | 'warning' | 'danger';
     return `bottom: 80px;`;
   }}
   
-  background: ${({ theme, $variant }) =>
+  background: ({ $variant }) =>
     $variant === 'warning' ? 'rgba(245, 158, 11, 0.95)' :
       $variant === 'danger' ? 'rgba(239, 68, 68, 0.95)' :
         'rgba(31, 41, 55, 0.95)'};
