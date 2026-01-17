@@ -175,6 +175,10 @@ export const MemoDetail: React.FC = () => {
     // Internal editing state
     const [isEditingInternal, setIsEditingInternal] = useState(isNew);
 
+    const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [isFabricModalOpen, setIsFabricModalOpen] = useState(false);
+
     const startEditing = () => {
         setIsEditingInternal(true);
         window.history.pushState({ editing: true }, '');
@@ -189,6 +193,11 @@ export const MemoDetail: React.FC = () => {
         if (isEditingInternal) {
             const guardId = 'memo-edit-guard';
             registerGuard(guardId, () => {
+                // If any modal is open, let its own guard handle the back navigation
+                if (isFabricModalOpen || isShareModalOpen || isDeleteModalOpen) {
+                    return ExitGuardResult.CONTINUE;
+                }
+
                 if (isClosingRef.current) {
                     setIsEditingInternal(false);
                     return ExitGuardResult.ALLOW_NAVIGATION;
@@ -208,7 +217,7 @@ export const MemoDetail: React.FC = () => {
 
             return () => unregisterGuard(guardId);
         }
-    }, [isEditingInternal, registerGuard, unregisterGuard]);
+    }, [isEditingInternal, registerGuard, unregisterGuard, isFabricModalOpen, isShareModalOpen, isDeleteModalOpen]);
 
     const isEditing = isEditingInternal;
     const setIsEditing = (val: boolean) => {
@@ -224,9 +233,6 @@ export const MemoDetail: React.FC = () => {
 
 
 
-    const [isShareModalOpen, setIsShareModalOpen] = useState(false);
-    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-    const [isFabricModalOpen, setIsFabricModalOpen] = useState(false);
 
     const isDrawingMemo = content.trim().startsWith('```fabric');
 

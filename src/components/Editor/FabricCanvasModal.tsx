@@ -881,11 +881,15 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
 
     // Wrapper for onClose to handle history safe closing
     const onClose = () => {
-        if (isClosingRef.current) {
-            propsOnClose();
-        } else {
+        // If we currently have a modal-specific history state, we need to pop it.
+        // This ensures the hardware back button logic stays in sync.
+        if (window.history.state?.fabricOpen) {
             isClosingRef.current = true;
             window.history.back();
+        } else {
+            // If the history state was already popped (or never pushed), just close.
+            isClosingRef.current = true;
+            propsOnClose();
         }
     };
 
@@ -2389,7 +2393,7 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
 
     const handleConfirmExit = () => {
         setIsExitConfirmOpen(false);
-        // Explicitly mark as closing to bypass guard warning
+        // Standard onClose handles the history correction if needed
         isClosingRef.current = true;
         onClose();
     };
