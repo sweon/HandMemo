@@ -2384,19 +2384,29 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
         const canvas = fabricCanvasRef.current;
         if (!canvas) return;
 
+        let isExtending = false; // Debounce flag
+
         const checkAndExtend = (obj: any) => {
-            if (!obj || !obj.top || !obj.height) return;
+            if (!obj || !obj.top) return;
             // Skip if undo/redo operation in progress
             if (isUndoRedoRef.current) return;
+            // Skip if already extending
+            if (isExtending) return;
 
             const canvasHeight = canvas.getHeight();
-            // Check if object bottom is in the bottom 25% area
-            const objBottom = obj.top + (obj.height * (obj.scaleY || 1));
+            const objHeight = obj.height || 0;
+            const objScaleY = obj.scaleY || 1;
+            const objBottom = obj.top + (objHeight * objScaleY);
 
-            if (objBottom > canvasHeight * 0.75) {
-                // Debounce slightly to prevent double triggering? 
-                // handleExtendHeight adds 400px instantly.
+            // Extend when object is within 100px of the bottom edge
+            const threshold = 100;
+            if (objBottom > canvasHeight - threshold) {
+                isExtending = true;
                 handleExtendHeight();
+                // Reset flag after a short delay to prevent rapid re-triggering
+                setTimeout(() => {
+                    isExtending = false;
+                }, 500);
             }
         };
 
