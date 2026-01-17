@@ -1,50 +1,52 @@
 import React, { useEffect } from 'react';
 import styled, { keyframes } from 'styled-components';
 
-const fadeInOut = keyframes`
-  0% { opacity: 0; transform: translate(-50%, 30px) scale(0.9); }
-  10% { opacity: 1; transform: translate(-50%, 0) scale(1.05); }
-  15% { opacity: 1; transform: translate(-50%, 0) scale(1); }
-  85% { opacity: 1; transform: translate(-50%, 0) scale(1); }
-  100% { opacity: 0; transform: translate(-50%, -20px) scale(0.9); }
+const slideInUp = keyframes`
+  0% { opacity: 0; transform: translate(-50%, 20px) scale(0.95); }
+  100% { opacity: 1; transform: translate(-50%, 0) scale(1); }
 `;
 
-const pulse = keyframes`
-  0% { transform: scale(1); box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2), 0 0 0px rgba(245, 158, 11, 0); }
-  50% { transform: scale(1.02); box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2), 0 0 15px rgba(245, 158, 11, 0.4); }
-  100% { transform: scale(1); box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2), 0 0 0px rgba(245, 158, 11, 0); }
+const slideOutUp = keyframes`
+  0% { opacity: 1; transform: translate(-50%, 0) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -10px) scale(0.95); }
 `;
 
-const ToastContainer = styled.div<{ $variant?: 'default' | 'warning' | 'danger'; $position?: 'bottom' | 'centered' | 'left-centered' }>`
+const ToastContainer = styled.div<{ $variant?: 'default' | 'warning' | 'danger'; $position?: 'bottom' | 'centered' | 'left-centered'; $isExiting: boolean }>`
   position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  
   ${({ $position }) => {
-    if ($position === 'centered') return `top: 50%; left: 50%; transform: translate(-50%, -50%);`;
+    if ($position === 'centered') return `top: 50%; transform: translate(-50%, -50%);`;
     if ($position === 'left-centered') return `top: 50%; left: 16px; transform: translateY(-50%);`;
-    return `bottom: 100px; left: 50%; transform: translateX(-50%);`;
+    return `bottom: 80px;`;
   }}
   
-  background: ${({ $variant }) =>
-    $variant === 'warning' ? '#f59e0b' :
-      $variant === 'danger' ? '#ef4444' :
-        'rgba(0, 0, 0, 0.9)'};
+  background: ${({ theme, $variant }) =>
+    $variant === 'warning' ? 'rgba(245, 158, 11, 0.95)' :
+      $variant === 'danger' ? 'rgba(239, 68, 68, 0.95)' :
+        'rgba(31, 41, 55, 0.95)'};
   color: white;
-  padding: 6px 14px;
-  border-radius: 12px;
-  font-size: 0.75rem;
-  font-weight: 600;
+  padding: 10px 20px;
+  border-radius: 9999px;
+  font-size: 0.85rem;
+  font-weight: 500;
   z-index: 10000;
   pointer-events: none;
   text-align: center;
-  white-space: pre-line;
-  max-width: 80vw;
-  animation: ${fadeInOut} 2.5s cubic-bezier(0.4, 0, 0.2, 1) forwards,
-             ${({ $variant }) => $variant === 'warning' ? pulse : 'none'} 1.5s ease-in-out infinite;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  white-space: nowrap;
+  max-width: 90vw;
+  animation: ${({ $isExiting }) => $isExiting ? slideOutUp : slideInUp} 0.3s cubic-bezier(0.2, 0, 0, 1) forwards;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2), 0 8px 10px -6px rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
+  
+  svg {
+    flex-shrink: 0;
+  }
 `;
 
 interface ToastProps {
@@ -56,19 +58,22 @@ interface ToastProps {
   position?: 'bottom' | 'centered' | 'left-centered';
 }
 
-export const Toast: React.FC<ToastProps> = ({ message, onClose, duration = 2500, variant = 'default', icon, position = 'bottom' }) => {
+export const Toast: React.FC<ToastProps> = ({ message, onClose, duration = 3000, variant = 'default', icon, position = 'bottom' }) => {
+  const [isExiting, setIsExiting] = React.useState(false);
+
   useEffect(() => {
     const timer = setTimeout(() => {
-      onClose();
+      setIsExiting(true);
+      setTimeout(onClose, 300); // Wait for exit animation
     }, duration);
 
     return () => clearTimeout(timer);
   }, [duration, onClose]);
 
   return (
-    <ToastContainer $variant={variant} $position={position}>
+    <ToastContainer $variant={variant} $position={position} $isExiting={isExiting}>
       {icon}
-      {message}
+      <span>{message}</span>
     </ToastContainer>
   );
 };
