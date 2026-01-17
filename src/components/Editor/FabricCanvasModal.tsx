@@ -2335,6 +2335,40 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
         });
     };
 
+    // Auto-extend canvas height
+    useEffect(() => {
+        const canvas = fabricCanvasRef.current;
+        if (!canvas) return;
+
+        const checkAndExtend = (obj: any) => {
+            if (!obj || !obj.top || !obj.height) return;
+            // Skip if undo/redo operation in progress
+            if (isUndoRedoRef.current) return;
+
+            const canvasHeight = canvas.getHeight();
+            // Check if object bottom is in the bottom 25% area
+            const objBottom = obj.top + (obj.height * (obj.scaleY || 1));
+
+            if (objBottom > canvasHeight * 0.75) {
+                // Debounce slightly to prevent double triggering? 
+                // handleExtendHeight adds 400px instantly.
+                handleExtendHeight();
+            }
+        };
+
+        const onObjectAdded = (e: any) => checkAndExtend(e.target);
+        const onObjectModified = (e: any) => checkAndExtend(e.target);
+        // path:created is covered by object:added
+
+        canvas.on('object:added', onObjectAdded);
+        canvas.on('object:modified', onObjectModified);
+
+        return () => {
+            canvas.off('object:added', onObjectAdded);
+            canvas.off('object:modified', onObjectModified);
+        };
+    }, [handleExtendHeight]);
+
     const handleCancelWrapped = React.useCallback(() => {
         setIsExitConfirmOpen(true);
     }, []);
