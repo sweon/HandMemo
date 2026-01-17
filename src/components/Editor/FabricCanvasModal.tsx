@@ -1195,6 +1195,24 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
         }
     };
 
+    const handleBgCancel = () => {
+        if (prevBackgroundStateRef.current) {
+            setBackground(prevBackgroundStateRef.current.type);
+            setBackgroundColor(prevBackgroundStateRef.current.color);
+            setLineOpacity(prevBackgroundStateRef.current.opacity);
+            setBackgroundSize(prevBackgroundStateRef.current.size);
+            setBackgroundColorIntensity(prevBackgroundStateRef.current.intensity);
+            setBackgroundColorType(prevBackgroundStateRef.current.colorType);
+            setIsBgPickerOpen(false);
+            setSettingsAnchor(null);
+        }
+    };
+
+    const handleBgOk = () => {
+        setIsBgPickerOpen(false);
+        setSettingsAnchor(null);
+    };
+
     const saveHistory = React.useCallback(() => {
         if (isUndoRedoRef.current) return;
         const canvas = fabricCanvasRef.current;
@@ -1733,10 +1751,11 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                         {item.actionId === 'background' && (
                             <div style={{ position: 'relative', display: 'flex' }}>
                                 <ToolButton
-                                    $active={background !== 'none' || isBgPickerOpen}
-                                    onClick={() => {
+                                    $active={isBgPickerOpen}
+                                    onClick={(e) => {
                                         if (!isBgPickerOpen) {
-                                            // Opening
+                                            const rect = e.currentTarget.getBoundingClientRect();
+                                            setSettingsAnchor({ top: rect.bottom + 5 });
                                             prevBackgroundStateRef.current = {
                                                 type: background,
                                                 color: backgroundColor,
@@ -1746,190 +1765,16 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                                                 colorType: backgroundColorType
                                             };
                                             setIsBgPickerOpen(true);
+                                            openedTimeRef.current = Date.now();
                                         } else {
-                                            // Toggle off means accept? Or cancel? Usually toggle off acts like "OK".
                                             setIsBgPickerOpen(false);
+                                            setSettingsAnchor(null);
                                         }
                                     }}
                                     title="Background"
                                 >
                                     <BackgroundIcon />
                                 </ToolButton>
-
-                                {isBgPickerOpen && (
-                                    <div style={{
-                                        position: 'absolute',
-                                        top: '100%',
-                                        left: 0,
-                                        zIndex: 1000,
-                                        background: 'white',
-                                        border: '1px solid #ced4da',
-                                        borderRadius: '6px',
-                                        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                                        padding: '12px',
-                                        display: 'flex',
-                                        flexDirection: 'column',
-                                        gap: '8px',
-                                        minWidth: '220px',
-                                        maxHeight: '400px',
-                                        overflowY: 'auto'
-                                    }} onClick={e => e.stopPropagation()}>
-                                        <div style={{ fontWeight: 600, fontSize: '0.8rem', color: '#495057' }}>{t.drawing.bg_settings}</div>
-                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px' }}>
-                                            <BackgroundOptionButton
-                                                $active={background === 'none'}
-                                                onClick={() => setBackground('none')}
-                                            >
-                                                {t.drawing.bg_none}
-                                            </BackgroundOptionButton>
-                                            <BackgroundOptionButton
-                                                $active={background === 'lines'}
-                                                onClick={() => setBackground('lines')}
-                                            >
-                                                {t.drawing.bg_lines}
-                                            </BackgroundOptionButton>
-                                            <BackgroundOptionButton
-                                                $active={background === 'grid'}
-                                                onClick={() => setBackground('grid')}
-                                            >
-                                                {t.drawing.bg_grid}
-                                            </BackgroundOptionButton>
-                                            <BackgroundOptionButton
-                                                $active={background === 'dots'}
-                                                onClick={() => setBackground('dots')}
-                                            >
-                                                {t.drawing.bg_dots}
-                                            </BackgroundOptionButton>
-                                        </div>
-
-                                        {background !== 'none' && (
-                                            <>
-                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
-                                                    <div style={{ fontSize: '0.75rem', color: '#888' }}>{t.drawing.bg_size}</div>
-                                                    <div style={{ fontSize: '0.7rem', color: '#adb5bd' }}>{backgroundSize}px</div>
-                                                </div>
-                                                <CustomRangeInput
-                                                    type="range"
-                                                    min="10"
-                                                    max="100"
-                                                    $size={20}
-                                                    value={backgroundSize}
-                                                    onChange={(e) => setBackgroundSize(parseInt(e.target.value))}
-                                                    style={{ margin: '4px 0' }}
-                                                />
-
-                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
-                                                    <div style={{ fontSize: '0.75rem', color: '#888' }}>{t.drawing.bg_darkness}</div>
-                                                    <div style={{ fontSize: '0.7rem', color: '#adb5bd' }}>{Math.round(lineOpacity * 100)}%</div>
-                                                </div>
-                                                <CustomRangeInput
-                                                    type="range"
-                                                    min="5"
-                                                    max="80"
-                                                    $size={20}
-                                                    $opacityValue={lineOpacity * 100}
-                                                    value={lineOpacity * 100}
-                                                    onChange={(e) => setLineOpacity(parseInt(e.target.value) / 100)}
-                                                    style={{ margin: '4px 0' }}
-                                                />
-                                            </>
-                                        )}
-
-                                        <div style={{ borderTop: '1px solid #eee', margin: '4px 0' }}></div>
-
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                            <div style={{ fontWeight: 600, fontSize: '0.8rem', color: '#495057' }}>{t.drawing.bg_paper_color}</div>
-                                            <div style={{ display: 'flex', background: '#f1f3f5', padding: '2px', borderRadius: '4px' }}>
-                                                <button
-                                                    onClick={() => setBackgroundColorType('gray')}
-                                                    style={{
-                                                        padding: '2px 8px',
-                                                        fontSize: '0.7rem',
-                                                        border: 'none',
-                                                        borderRadius: '3px',
-                                                        background: backgroundColorType === 'gray' ? 'white' : 'transparent',
-                                                        boxShadow: backgroundColorType === 'gray' ? '0 1px 2px rgba(0,0,0,0.1)' : 'none',
-                                                        cursor: 'pointer',
-                                                        color: backgroundColorType === 'gray' ? '#333' : '#888'
-                                                    }}
-                                                >
-                                                    {t.drawing.bg_color_gray}
-                                                </button>
-                                                <button
-                                                    onClick={() => setBackgroundColorType('beige')}
-                                                    style={{
-                                                        padding: '2px 8px',
-                                                        fontSize: '0.7rem',
-                                                        border: 'none',
-                                                        borderRadius: '3px',
-                                                        background: backgroundColorType === 'beige' ? 'white' : 'transparent',
-                                                        boxShadow: backgroundColorType === 'beige' ? '0 1px 2px rgba(0,0,0,0.1)' : 'none',
-                                                        cursor: 'pointer',
-                                                        color: backgroundColorType === 'beige' ? '#333' : '#888'
-                                                    }}
-                                                >
-                                                    {t.drawing.bg_color_beige}
-                                                </button>
-                                            </div>
-                                        </div>
-
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
-                                            <div style={{ fontSize: '0.75rem', color: '#888' }}>{t.drawing.bg_intensity}</div>
-                                            <div style={{ fontSize: '0.7rem', color: '#adb5bd' }}>{backgroundColorIntensity}%</div>
-                                        </div>
-                                        <CustomRangeInput
-                                            type="range"
-                                            min="0"
-                                            max="100"
-                                            $size={20}
-                                            value={backgroundColorIntensity}
-                                            onChange={(e) => setBackgroundColorIntensity(parseInt(e.target.value))}
-                                            style={{ margin: '4px 0' }}
-                                        />
-
-                                        <div style={{ borderTop: '1px solid #eee', margin: '8px 0 4px 0' }}></div>
-
-                                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', alignItems: 'center' }}>
-                                            <CompactModalButton
-                                                onClick={() => {
-                                                    const settings = {
-                                                        type: background,
-                                                        size: backgroundSize,
-                                                        intensity: backgroundColorIntensity,
-                                                        colorType: backgroundColorType,
-                                                        opacity: lineOpacity
-                                                    };
-                                                    localStorage.setItem('fabric_default_background_v2', JSON.stringify(settings));
-                                                    setIsBgPickerOpen(false);
-                                                }}
-                                                style={{ marginRight: 'auto', fontSize: '0.7rem', padding: '0.2rem 0.4rem', border: '1px solid #ced4da', background: '#f8f9fa' }}
-                                            >
-                                                {t.drawing.bg_save_default}
-                                            </CompactModalButton>
-                                            <CompactModalButton
-                                                onClick={() => {
-                                                    if (prevBackgroundStateRef.current) {
-                                                        setBackground(prevBackgroundStateRef.current.type);
-                                                        setBackgroundColor(prevBackgroundStateRef.current.color);
-                                                        setLineOpacity(prevBackgroundStateRef.current.opacity);
-                                                        setBackgroundSize(prevBackgroundStateRef.current.size);
-                                                        setBackgroundColorIntensity(prevBackgroundStateRef.current.intensity);
-                                                        setBackgroundColorType(prevBackgroundStateRef.current.colorType);
-                                                        setIsBgPickerOpen(false);
-                                                    }
-                                                }}
-                                            >
-                                                {t.drawing.cancel}
-                                            </CompactModalButton>
-                                            <CompactModalButton
-                                                $variant="primary"
-                                                onClick={() => setIsBgPickerOpen(false)}
-                                            >
-                                                {t.drawing.ok}
-                                            </CompactModalButton>
-                                        </div>
-                                    </div>
-                                )}
                             </div>
                         )}
                     </>
@@ -2919,7 +2764,7 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
             <ModalOverlay onClick={(e) => {
                 if (e.target === e.currentTarget) {
                     // If any settings modal is open (Level 1)
-                    if (isPalettePickerOpen || isSizeEditOpen || isShapeSettingsOpen || isPenEditOpen || isFontEditOpen) {
+                    if (isPalettePickerOpen || isSizeEditOpen || isShapeSettingsOpen || isPenEditOpen || isFontEditOpen || isBgPickerOpen) {
                         // If we just interacted with an input (like the native color picker),
                         // ignore the first backdrop click so the user stays in the sub-modal.
                         if (Date.now() - lastInteractionTimeRef.current > 500) {
@@ -2928,6 +2773,7 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                             handleShapeSettingsOk();
                             handlePenOk();
                             handleFontOk();
+                            handleBgOk();
                         }
                     } else {
                         // Only close the main modal (Level 0) if no settings are open
@@ -3528,6 +3374,168 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                                         </CompactModalFooter>
                                     </>
                                 )}
+                            </CompactModal>
+                        </Backdrop>
+                    )}
+
+                    {isBgPickerOpen && (
+                        <Backdrop
+                            $centered={!settingsAnchor}
+                            onClick={(e) => {
+                                const now = Date.now();
+                                if (now - openedTimeRef.current < 400) return;
+                                if (e.target === e.currentTarget) handleBgOk();
+                            }}>
+                            <CompactModal
+                                $anchor={settingsAnchor || undefined}
+                                onClick={e => e.stopPropagation()}
+                                style={{ minWidth: '240px', maxHeight: '450px', overflowY: 'auto', padding: '12px' }}
+                            >
+                                <div style={{ fontWeight: 600, fontSize: '0.8rem', color: '#495057', marginBottom: '8px' }}>{t.drawing.bg_settings}</div>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px' }}>
+                                    <BackgroundOptionButton
+                                        $active={background === 'none'}
+                                        onClick={() => setBackground('none')}
+                                    >
+                                        {t.drawing.bg_none}
+                                    </BackgroundOptionButton>
+                                    <BackgroundOptionButton
+                                        $active={background === 'lines'}
+                                        onClick={() => setBackground('lines')}
+                                    >
+                                        {t.drawing.bg_lines}
+                                    </BackgroundOptionButton>
+                                    <BackgroundOptionButton
+                                        $active={background === 'grid'}
+                                        onClick={() => setBackground('grid')}
+                                    >
+                                        {t.drawing.bg_grid}
+                                    </BackgroundOptionButton>
+                                    <BackgroundOptionButton
+                                        $active={background === 'dots'}
+                                        onClick={() => setBackground('dots')}
+                                    >
+                                        {t.drawing.bg_dots}
+                                    </BackgroundOptionButton>
+                                </div>
+
+                                {background !== 'none' && (
+                                    <>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
+                                            <div style={{ fontSize: '0.75rem', color: '#888' }}>{t.drawing.bg_size}</div>
+                                            <div style={{ fontSize: '0.7rem', color: '#adb5bd' }}>{backgroundSize}px</div>
+                                        </div>
+                                        <CustomRangeInput
+                                            type="range"
+                                            min="10"
+                                            max="100"
+                                            $size={20}
+                                            value={backgroundSize}
+                                            onChange={(e) => setBackgroundSize(parseInt(e.target.value))}
+                                            style={{ margin: '4px 0' }}
+                                        />
+
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
+                                            <div style={{ fontSize: '0.75rem', color: '#888' }}>{t.drawing.bg_darkness}</div>
+                                            <div style={{ fontSize: '0.7rem', color: '#adb5bd' }}>{Math.round(lineOpacity * 100)}%</div>
+                                        </div>
+                                        <CustomRangeInput
+                                            type="range"
+                                            min="5"
+                                            max="80"
+                                            $size={20}
+                                            $opacityValue={lineOpacity * 100}
+                                            value={lineOpacity * 100}
+                                            onChange={(e) => setLineOpacity(parseInt(e.target.value) / 100)}
+                                            style={{ margin: '4px 0' }}
+                                        />
+                                    </>
+                                )}
+
+                                <div style={{ borderTop: '1px solid #eee', margin: '4px 0' }}></div>
+
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <div style={{ fontWeight: 600, fontSize: '0.8rem', color: '#495057' }}>{t.drawing.bg_paper_color}</div>
+                                    <div style={{ display: 'flex', background: '#f1f3f5', padding: '2px', borderRadius: '4px' }}>
+                                        <button
+                                            onClick={() => setBackgroundColorType('gray')}
+                                            style={{
+                                                padding: '2px 8px',
+                                                fontSize: '0.7rem',
+                                                border: 'none',
+                                                borderRadius: '3px',
+                                                background: backgroundColorType === 'gray' ? 'white' : 'transparent',
+                                                boxShadow: backgroundColorType === 'gray' ? '0 1px 2px rgba(0,0,0,0.1)' : 'none',
+                                                cursor: 'pointer',
+                                                color: backgroundColorType === 'gray' ? '#333' : '#888'
+                                            }}
+                                        >
+                                            {t.drawing.bg_color_gray}
+                                        </button>
+                                        <button
+                                            onClick={() => setBackgroundColorType('beige')}
+                                            style={{
+                                                padding: '2px 8px',
+                                                fontSize: '0.7rem',
+                                                border: 'none',
+                                                borderRadius: '3px',
+                                                background: backgroundColorType === 'beige' ? 'white' : 'transparent',
+                                                boxShadow: backgroundColorType === 'beige' ? '0 1px 2px rgba(0,0,0,0.1)' : 'none',
+                                                cursor: 'pointer',
+                                                color: backgroundColorType === 'beige' ? '#333' : '#888'
+                                            }}
+                                        >
+                                            {t.drawing.bg_color_beige}
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
+                                    <div style={{ fontSize: '0.75rem', color: '#888' }}>{t.drawing.bg_intensity}</div>
+                                    <div style={{ fontSize: '0.7rem', color: '#adb5bd' }}>{backgroundColorIntensity}%</div>
+                                </div>
+                                <CustomRangeInput
+                                    type="range"
+                                    min="0"
+                                    max="100"
+                                    $size={20}
+                                    value={backgroundColorIntensity}
+                                    onChange={(e) => setBackgroundColorIntensity(parseInt(e.target.value))}
+                                    style={{ margin: '4px 0' }}
+                                />
+
+                                <div style={{ borderTop: '1px solid #eee', margin: '8px 0 4px 0' }}></div>
+
+                                <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', alignItems: 'center' }}>
+                                    <CompactModalButton
+                                        onClick={() => {
+                                            const settings = {
+                                                type: background,
+                                                size: backgroundSize,
+                                                intensity: backgroundColorIntensity,
+                                                colorType: backgroundColorType,
+                                                opacity: lineOpacity
+                                            };
+                                            localStorage.setItem('fabric_default_background_v2', JSON.stringify(settings));
+                                            setIsBgPickerOpen(false);
+                                            setSettingsAnchor(null);
+                                        }}
+                                        style={{ marginRight: 'auto', fontSize: '0.7rem', padding: '0.2rem 0.4rem', border: '1px solid #ced4da', background: '#f8f9fa' }}
+                                    >
+                                        {t.drawing.bg_save_default}
+                                    </CompactModalButton>
+                                    <CompactModalButton
+                                        onClick={handleBgCancel}
+                                    >
+                                        {t.drawing.cancel}
+                                    </CompactModalButton>
+                                    <CompactModalButton
+                                        $variant="primary"
+                                        onClick={handleBgOk}
+                                    >
+                                        {t.drawing.ok}
+                                    </CompactModalButton>
+                                </div>
                             </CompactModal>
                         </Backdrop>
                     )}
