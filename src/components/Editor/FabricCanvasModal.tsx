@@ -773,6 +773,15 @@ const ToolbarConfigurator: React.FC<ToolbarConfiguratorProps> = ({ currentItems,
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
                         <h3 style={{ margin: 0 }}>Customize Toolbar</h3>
                         <div style={{ display: 'flex', gap: '8px' }}>
+                            <CompactModalButton
+                                onClick={() => {
+                                    setActiveItems(allItems);
+                                    setReservoirItems([]);
+                                }}
+                                style={{ marginRight: 'auto' }}
+                            >
+                                Reset to Default
+                            </CompactModalButton>
                             <CompactModalButton onClick={onClose}>Cancel</CompactModalButton>
                             <CompactModalButton $variant="primary" onClick={() => onSave(activeItems)}>Save & Apply</CompactModalButton>
                         </div>
