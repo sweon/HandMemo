@@ -30,6 +30,15 @@ const EditorWrapper = styled.div`
       background: ${({ theme }) => theme.colors.background};
       color: ${({ theme }) => theme.colors.text};
       border-color: ${({ theme }) => theme.colors.border};
+
+      @media (max-width: 768px) {
+        .CodeMirror-lines {
+          padding: 4px 0;
+        }
+        pre.CodeMirror-line {
+          padding: 0 4px !important;
+        }
+      }
     }
     
     .CodeMirror-cursor {
@@ -58,6 +67,13 @@ const EditorWrapper = styled.div`
     
     .editor-statusbar {
       color: ${({ theme }) => theme.colors.textSecondary};
+    }
+
+    .preview-container {
+      padding: 10px;
+      @media (max-width: 768px) {
+        padding: 4px;
+      }
     }
   }
 `;
@@ -221,7 +237,7 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({ value, onChange 
     });
 
     return renderToStaticMarkup(
-      <div style={{ padding: '10px' }}>
+      <div className="preview-container">
         <ReactMarkdown
           remarkPlugins={[remarkMath]}
           rehypePlugins={[rehypeKatex]}

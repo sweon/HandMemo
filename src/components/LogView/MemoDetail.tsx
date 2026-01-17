@@ -28,10 +28,26 @@ const Header = styled.div`
   margin: 24px 32px 0 32px;
   border-bottom: 1px solid ${({ theme }) => theme.colors.border};
   padding-bottom: 0.25rem;
+
+  @media (max-width: 768px) {
+    margin: 16px 8px 0 8px;
+  }
 `;
 
 const ContentPadding = styled.div`
   padding: 0 32px;
+
+  @media (max-width: 768px) {
+    padding: 0 4px;
+  }
+`;
+
+const CommentsWrapper = styled.div`
+  padding: 0 32px;
+
+  @media (max-width: 768px) {
+    padding: 0 4px;
+  }
 `;
 
 const TitleInput = styled.input`
@@ -479,9 +495,9 @@ export const MemoDetail: React.FC = () => {
                             <MarkdownView content={content} />
                         </ContentPadding>
                     )}
-                    <div style={{ padding: '0 32px' }}>
+                    <CommentsWrapper>
                         {!isNew && memo && <CommentsSection memoId={memo.id!} />}
-                    </div>
+                    </CommentsWrapper>
                 </>
             )}
 
