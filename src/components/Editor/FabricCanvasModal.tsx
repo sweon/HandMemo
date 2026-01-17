@@ -441,7 +441,7 @@ interface FabricCanvasModalProps {
     onClose: () => void;
 }
 
-const INITIAL_COLORS = ['#000000', '#e03131', '#2f9e44', '#1971c2', '#f08c00', '#FFC600'];
+const INITIAL_COLORS = ['#000000', '#e03131', '#2f9e44', '#1971c2', '#f08c00', '#F9DE4B'];
 const INITIAL_BRUSH_SIZES = [1, 2, 4, 8, 16];
 const DASH_OPTIONS: (number[] | undefined)[] = [
     undefined,
