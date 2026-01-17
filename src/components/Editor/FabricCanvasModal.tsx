@@ -971,12 +971,13 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
     useEffect(() => { activeToolRef.current = activeTool; }, [activeTool]);
     const [color, setColor] = useState('#000000');
     const [brushSize, setBrushSize] = useState(2);
-    const [background, setBackground] = useState<BackgroundType>('none');
-    const [backgroundSize, setBackgroundSize] = useState(30);
+    const savedBg = JSON.parse(localStorage.getItem('fabric_default_background_v2') || '{}');
+    const [background, setBackground] = useState<BackgroundType>(savedBg.type || 'none');
+    const [backgroundSize, setBackgroundSize] = useState(savedBg.size || 30);
     const [backgroundColor, setBackgroundColor] = useState('#ffffff');
-    const [backgroundColorIntensity, setBackgroundColorIntensity] = useState(0); // 0-100
-    const [backgroundColorType, setBackgroundColorType] = useState<'gray' | 'beige'>('gray');
-    const [lineOpacity, setLineOpacity] = useState(0.1); // Default faint
+    const [backgroundColorIntensity, setBackgroundColorIntensity] = useState(savedBg.intensity !== undefined ? savedBg.intensity : 0);
+    const [backgroundColorType, setBackgroundColorType] = useState<'gray' | 'beige'>(savedBg.colorType || 'gray');
+    const [lineOpacity, setLineOpacity] = useState(savedBg.opacity !== undefined ? savedBg.opacity : 0.1);
     const [isBgPickerOpen, setIsBgPickerOpen] = useState(false);
     const prevBackgroundStateRef = useRef<{ type: BackgroundType; color: string; opacity: number; size: number; intensity: number; colorType: 'gray' | 'beige' } | null>(null);
 
@@ -1888,7 +1889,23 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
 
                                         <div style={{ borderTop: '1px solid #eee', margin: '8px 0 4px 0' }}></div>
 
-                                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', alignItems: 'center' }}>
+                                            <CompactModalButton
+                                                onClick={() => {
+                                                    const settings = {
+                                                        type: background,
+                                                        size: backgroundSize,
+                                                        intensity: backgroundColorIntensity,
+                                                        colorType: backgroundColorType,
+                                                        opacity: lineOpacity
+                                                    };
+                                                    localStorage.setItem('fabric_default_background_v2', JSON.stringify(settings));
+                                                    setIsBgPickerOpen(false);
+                                                }}
+                                                style={{ marginRight: 'auto', fontSize: '0.7rem', padding: '0.2rem 0.4rem', border: '1px solid #ced4da', background: '#f8f9fa' }}
+                                            >
+                                                {t.drawing.bg_save_default}
+                                            </CompactModalButton>
                                             <CompactModalButton
                                                 onClick={() => {
                                                     if (prevBackgroundStateRef.current) {
