@@ -157,7 +157,18 @@ export const translations = {
             pen_highlighter: "Highlight",
             pen_glow: "Glow",
             pen_spray: "Spray",
-            pen_circle: "Bubble"
+            pen_circle: "Bubble",
+            bg_settings: "Line/Grid/Dot Type",
+            bg_none: "None",
+            bg_lines: "Lines",
+            bg_grid: "Grid",
+            bg_dots: "Dots",
+            bg_size: "Size",
+            bg_darkness: "Line Darkness",
+            bg_paper_color: "Paper Color",
+            bg_intensity: "Intensity",
+            bg_color_gray: "Gray",
+            bg_color_beige: "Beige"
         },
         android: {
             exit_warning: "Press back again to exit."
@@ -321,7 +332,18 @@ export const translations = {
             pen_highlighter: "형광펜",
             pen_glow: "네온",
             pen_spray: "스프레이",
-            pen_circle: "방울"
+            pen_circle: "방울",
+            bg_settings: "배경 서식 (줄/모눈/점)",
+            bg_none: "없음",
+            bg_lines: "줄",
+            bg_grid: "모눈",
+            bg_dots: "점",
+            bg_size: "간격",
+            bg_darkness: "선 진하기",
+            bg_paper_color: "용지 색상",
+            bg_intensity: "색상 강도",
+            bg_color_gray: "그레이",
+            bg_color_beige: "베이지"
         },
         android: {
             exit_warning: "뒤로 가기 버튼을\n한 번 더 누르면 종료됩니다."

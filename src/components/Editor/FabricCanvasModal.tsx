@@ -1710,38 +1710,38 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                                         maxHeight: '400px',
                                         overflowY: 'auto'
                                     }} onClick={e => e.stopPropagation()}>
-                                        <div style={{ fontWeight: 600, fontSize: '0.8rem', color: '#495057' }}>Line/Grid/Dot Type</div>
+                                        <div style={{ fontWeight: 600, fontSize: '0.8rem', color: '#495057' }}>{t.drawing.bg_settings}</div>
                                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px' }}>
                                             <BackgroundOptionButton
                                                 $active={background === 'none'}
                                                 onClick={() => setBackground('none')}
                                             >
-                                                None
+                                                {t.drawing.bg_none}
                                             </BackgroundOptionButton>
                                             <BackgroundOptionButton
                                                 $active={background === 'lines'}
                                                 onClick={() => setBackground('lines')}
                                             >
-                                                Lines
+                                                {t.drawing.bg_lines}
                                             </BackgroundOptionButton>
                                             <BackgroundOptionButton
                                                 $active={background === 'grid'}
                                                 onClick={() => setBackground('grid')}
                                             >
-                                                Grid
+                                                {t.drawing.bg_grid}
                                             </BackgroundOptionButton>
                                             <BackgroundOptionButton
                                                 $active={background === 'dots'}
                                                 onClick={() => setBackground('dots')}
                                             >
-                                                Dots
+                                                {t.drawing.bg_dots}
                                             </BackgroundOptionButton>
                                         </div>
 
                                         {background !== 'none' && (
                                             <>
                                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
-                                                    <div style={{ fontSize: '0.75rem', color: '#888' }}>Size</div>
+                                                    <div style={{ fontSize: '0.75rem', color: '#888' }}>{t.drawing.bg_size}</div>
                                                     <div style={{ fontSize: '0.7rem', color: '#adb5bd' }}>{backgroundSize}px</div>
                                                 </div>
                                                 <CustomRangeInput
@@ -1755,7 +1755,7 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                                                 />
 
                                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
-                                                    <div style={{ fontSize: '0.75rem', color: '#888' }}>Line Darkness</div>
+                                                    <div style={{ fontSize: '0.75rem', color: '#888' }}>{t.drawing.bg_darkness}</div>
                                                     <div style={{ fontSize: '0.7rem', color: '#adb5bd' }}>{Math.round(lineOpacity * 100)}%</div>
                                                 </div>
                                                 <CustomRangeInput
@@ -1774,7 +1774,7 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                                         <div style={{ borderTop: '1px solid #eee', margin: '4px 0' }}></div>
 
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                            <div style={{ fontWeight: 600, fontSize: '0.8rem', color: '#495057' }}>Paper Color</div>
+                                            <div style={{ fontWeight: 600, fontSize: '0.8rem', color: '#495057' }}>{t.drawing.bg_paper_color}</div>
                                             <div style={{ display: 'flex', background: '#f1f3f5', padding: '2px', borderRadius: '4px' }}>
                                                 <button
                                                     onClick={() => setBackgroundColorType('gray')}
@@ -1789,7 +1789,7 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                                                         color: backgroundColorType === 'gray' ? '#333' : '#888'
                                                     }}
                                                 >
-                                                    Gray
+                                                    {t.drawing.bg_color_gray}
                                                 </button>
                                                 <button
                                                     onClick={() => setBackgroundColorType('beige')}
@@ -1804,13 +1804,13 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                                                         color: backgroundColorType === 'beige' ? '#333' : '#888'
                                                     }}
                                                 >
-                                                    Beige
+                                                    {t.drawing.bg_color_beige}
                                                 </button>
                                             </div>
                                         </div>
 
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
-                                            <div style={{ fontSize: '0.75rem', color: '#888' }}>Intensity</div>
+                                            <div style={{ fontSize: '0.75rem', color: '#888' }}>{t.drawing.bg_intensity}</div>
                                             <div style={{ fontSize: '0.7rem', color: '#adb5bd' }}>{backgroundColorIntensity}%</div>
                                         </div>
                                         <CustomRangeInput
@@ -1839,13 +1839,13 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                                                     }
                                                 }}
                                             >
-                                                Cancel
+                                                {t.drawing.cancel}
                                             </CompactModalButton>
                                             <CompactModalButton
                                                 $variant="primary"
                                                 onClick={() => setIsBgPickerOpen(false)}
                                             >
-                                                OK
+                                                {t.drawing.ok}
                                             </CompactModalButton>
                                         </div>
                                     </div>
