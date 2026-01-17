@@ -610,7 +610,7 @@ const INITIAL_TOOLBAR_ITEMS: ToolbarItem[] = [
 type ToolType = 'select' | 'pen' | 'eraser_pixel' | 'eraser_object' | 'line' | 'arrow' | 'rect' | 'circle' | 'text' | 'triangle' | 'ellipse' | 'diamond' | 'pentagon' | 'hexagon' | 'octagon' | 'star';
 type BackgroundType = 'none' | 'lines' | 'grid' | 'dots';
 
-const createBackgroundPattern = (type: BackgroundType, paperColor: string, opacity: number, patternSize: number) => {
+const createBackgroundPattern = (type: BackgroundType, paperColor: string, opacity: number, patternSize: number, transparent: boolean = false) => {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     if (!ctx) return '#ffffff';
@@ -619,9 +619,11 @@ const createBackgroundPattern = (type: BackgroundType, paperColor: string, opaci
     canvas.width = size;
     canvas.height = size;
 
-    // Fill background
-    ctx.fillStyle = paperColor;
-    ctx.fillRect(0, 0, size, size);
+    if (!transparent) {
+        // Fill background
+        ctx.fillStyle = paperColor;
+        ctx.fillRect(0, 0, size, size);
+    }
 
     if (type === 'none') {
         return new fabric.Pattern({
@@ -958,6 +960,8 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
     });
     const [activeTool, setActiveTool] = useState<ToolType>('pen');
     const [activeToolItemId, setActiveToolItemId] = useState<string | null>('pen_1');
+    const activeToolRef = useRef(activeTool);
+    useEffect(() => { activeToolRef.current = activeTool; }, [activeTool]);
     const [color, setColor] = useState('#000000');
     const [brushSize, setBrushSize] = useState(2);
     const [background, setBackground] = useState<BackgroundType>('none');
@@ -1324,6 +1328,17 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
         canvas.on('object:added', saveHistory);
         canvas.on('object:modified', saveHistory);
         canvas.on('object:removed', saveHistory);
+
+        canvas.on('path:created', (opt: any) => {
+            if (activeToolRef.current === 'eraser_pixel') {
+                opt.path.set({
+                    isPixelEraser: true,
+                    selectable: false,
+                    evented: false,
+                    strokeUniform: true
+                });
+            }
+        });
 
         // Selection listeners to sync toolbar with selected object
         const handleSelection = (opt: fabric.IEvent) => {
@@ -2670,7 +2685,7 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
             case 'eraser_pixel':
                 canvas.isDrawingMode = true;
                 canvas.freeDrawingBrush = new fabric.PencilBrush(canvas);
-                canvas.freeDrawingBrush.color = '#ffffff'; // Simple white eraser
+                canvas.freeDrawingBrush.color = backgroundColor; // Use paper color to "erase"
                 canvas.freeDrawingBrush.width = brushSize * 4; // Wider
                 // canvas.defaultCursor = 'url("eraser_cursor")'; // if we had one
                 break;
@@ -2835,8 +2850,19 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
         }
         setBackgroundColor(newBgColor);
 
-        const pattern = createBackgroundPattern(background, newBgColor, lineOpacity, backgroundSize);
-        canvas.setBackgroundColor(pattern, () => {
+        // 1. Set solid background color
+        canvas.setBackgroundColor(newBgColor, () => { });
+
+        // 2. Set pattern as overlay (drawn ON TOP of drawings and eraser marks)
+        // This ensures dots/lines never disappear.
+        const gridPattern = createBackgroundPattern(background, newBgColor, lineOpacity, backgroundSize, true);
+        canvas.setOverlayColor(gridPattern, () => {
+            // 3. Sync existing eraser marks to new background color
+            canvas.getObjects().forEach(obj => {
+                if ((obj as any).isPixelEraser) {
+                    obj.set('stroke', newBgColor);
+                }
+            });
             canvas.renderAll();
         });
     }, [background, backgroundColorType, backgroundColorIntensity, lineOpacity, backgroundSize]);
