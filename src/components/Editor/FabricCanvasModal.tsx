@@ -179,14 +179,13 @@ const ModalContainer = styled.div`
 
 const Toolbar = styled.div`
   display: flex;
-  flex-wrap: nowrap; /* Prevent wrapping which causes height shifts/jitter */
-  overflow: hidden; /* Ensure items don't overflow vertically */
+  flex-wrap: wrap; /* Allow wrapping for mobile devices */
   gap: 2px;
-  padding: 1px 4px;
+  padding: 4px;
   background: #f1f3f5;
   border-bottom: 1px solid #e0e0e0;
   align-items: center;
-  height: 32px; /* Restored to compact height */
+  min-height: 32px; /* Use min-height to allow expansion when wrapped */
 `;
 
 const ToolButton = styled.button<{ $active?: boolean; disabled?: boolean }>`
@@ -213,8 +212,8 @@ const ToolButton = styled.button<{ $active?: boolean; disabled?: boolean }>`
 
 const ToolGroup = styled.div`
   display: flex;
-  flex-wrap: nowrap;
-  gap: 1px;
+  flex-wrap: wrap;
+  gap: 2px;
   align-items: center;
 `;
 
