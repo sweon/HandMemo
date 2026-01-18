@@ -634,8 +634,13 @@ type BackgroundType = 'none' | 'lines' | 'grid' | 'dots';
 const createBackgroundPattern = (type: BackgroundType, paperColor: string, opacity: number, patternSize: number, transparent: boolean = false) => {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
+
+    // Fallback if context creation fails
     if (!ctx) {
-        return { source: document.createElement('canvas'), repeat: 'repeat' };
+        return new fabric.Pattern({
+            source: document.createElement('canvas') as any,
+            repeat: 'repeat'
+        });
     }
 
     const size = patternSize;
@@ -648,40 +653,35 @@ const createBackgroundPattern = (type: BackgroundType, paperColor: string, opaci
         ctx.fillRect(0, 0, size, size);
     }
 
-    if (type === 'none') {
-        return { source: canvas, repeat: 'repeat' };
+    if (type !== 'none') {
+        // Draw lines
+        ctx.strokeStyle = `rgba(0, 0, 0, ${opacity})`;
+        ctx.lineWidth = 1;
+
+        if (type === 'lines') {
+            ctx.beginPath();
+            ctx.moveTo(0, size - 0.5);
+            ctx.lineTo(size, size - 0.5);
+            ctx.stroke();
+        } else if (type === 'grid') {
+            ctx.beginPath();
+            ctx.moveTo(0, size - 0.5);
+            ctx.lineTo(size, size - 0.5);
+            ctx.moveTo(size - 0.5, 0);
+            ctx.lineTo(size - 0.5, size);
+            ctx.stroke();
+        } else if (type === 'dots') {
+            ctx.fillStyle = `rgba(0, 0, 0, ${opacity})`;
+            ctx.beginPath();
+            ctx.arc(size - 0.5, size - 0.5, 1, 0, Math.PI * 2);
+            ctx.fill();
+        }
     }
 
-    // Draw lines
-    ctx.strokeStyle = `rgba(0, 0, 0, ${opacity})`;
-    ctx.lineWidth = 1;
-
-    if (type === 'lines') {
-        ctx.beginPath();
-        ctx.moveTo(0, size - 0.5);
-        ctx.lineTo(size, size - 0.5);
-        ctx.stroke();
-    } else if (type === 'grid') {
-        ctx.beginPath();
-        ctx.moveTo(0, size - 0.5);
-        ctx.lineTo(size, size - 0.5);
-        ctx.moveTo(size - 0.5, 0);
-        ctx.lineTo(size - 0.5, size);
-        ctx.stroke();
-    } else if (type === 'dots') {
-        ctx.fillStyle = `rgba(0, 0, 0, ${opacity})`;
-        ctx.beginPath();
-        ctx.arc(size - 0.5, size - 0.5, 1, 0, Math.PI * 2);
-        ctx.fill();
-    }
-
-    const pattern = new fabric.Pattern({
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return new fabric.Pattern({
         source: canvas as any,
         repeat: 'repeat'
     });
-
-    return pattern;
 };
 
 const BackgroundOptionButton = styled.button<{ $active: boolean }>`
@@ -1539,6 +1539,9 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
             // Allow browser scrolling even when touching the canvas (important for jitter)
             allowTouchScrolling: true,
         });
+
+        // Forced initial render to prevent 'black screen' when renderOnAddRemove is false
+        canvas.renderAll();
 
         // 🚀 GLOBAL PERFORMANCE OVERRIDE: Strict Viewport Culling
         // This stops Fabric from even THINKING about objects that are not visible.
@@ -3388,25 +3391,23 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
         // 1. Set solid background color
         canvas.setBackgroundColor(newBgColor, () => { });
 
-        // 2. Set pattern as overlay (Still used for baseline visibility)
-        const gridPattern = createBackgroundPattern(background, newBgColor, lineOpacity, backgroundSize, true);
-        canvas.setOverlayColor(gridPattern as any, () => {
-            // 3. Sync existing eraser marks
-            // Since they are now Pattern paths, we need to update their fill pattern
-            const newEraserPattern = createBackgroundPattern(background, newBgColor, lineOpacity, backgroundSize);
+        // 2. Sync existing eraser marks
+        const newEraserPattern = createBackgroundPattern(background, newBgColor, lineOpacity, backgroundSize);
 
-            canvas.getObjects().forEach(obj => {
-                if ((obj as any).isPixelEraser) {
-                    // Update the stroke pattern to the new background pattern
-                    obj.set('stroke', newEraserPattern as any);
-                }
-            });
-
-            // Also update the active brush if it's currently the pixel eraser
-            if (activeToolRef.current === 'eraser_pixel' && canvas.freeDrawingBrush) {
-                (canvas.freeDrawingBrush as any).source = (newEraserPattern as any).source;
+        canvas.getObjects().forEach(obj => {
+            if ((obj as any).isPixelEraser) {
+                obj.set('stroke', newEraserPattern as any);
             }
+        });
 
+        // Update the active brush if it's currently the pixel eraser
+        if (activeToolRef.current === 'eraser_pixel' && canvas.freeDrawingBrush) {
+            (canvas.freeDrawingBrush as any).source = (newEraserPattern as fabric.Pattern).source;
+        }
+
+        // IMPORTANT: We no longer set overlayColor here because we use CSS background for stability.
+        // We only clear it to ensure it doesn't overlap.
+        canvas.setOverlayColor(null as any, () => {
             canvas.renderAll();
         });
     }, [background, backgroundColorType, backgroundColorIntensity, lineOpacity, backgroundSize]);
@@ -3415,10 +3416,11 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
     const backgroundStyle = React.useMemo(() => {
         if (background === 'none') return { backgroundColor };
         const pat = createBackgroundPattern(background, backgroundColor, lineOpacity, backgroundSize, true);
-        const dataUrl = (pat.source as HTMLCanvasElement).toDataURL();
+        const source = (pat as fabric.Pattern).source;
+        const dataUrl = source instanceof HTMLCanvasElement ? source.toDataURL() : '';
         return {
             backgroundColor,
-            backgroundImage: `url(${dataUrl})`,
+            backgroundImage: dataUrl ? `url(${dataUrl})` : 'none',
             backgroundRepeat: 'repeat'
         };
     }, [background, backgroundColor, lineOpacity, backgroundSize]);
