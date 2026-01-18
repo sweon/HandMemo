@@ -1448,11 +1448,43 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
             // Intensive performance optimizations for mobile/Android
             renderOnAddRemove: false, // Prevent auto-render on every add/remove
             enableRetinaScaling: false, // Disable retina for better performance on mobile
-            skipOffscreen: true, // Skip rendering objects outside viewport
-            stateful: false, // Disable stateful object tracking
-            targetFindTolerance: 2, // Even tighter hit detection for speed
-            perPixelTargetFind: false, // Disable pixel-perfect hit detection
+            skipOffscreen: true, // Core optimization
+            stateful: false, // VERY IMPORTANT: Disable stateful tracking for massive speed gain
+            targetFindTolerance: 0, // Disable target finding during drawing
+            perPixelTargetFind: false,
+            // Fire events only on upper canvas during drawing
+            containerClass: 'canvas-container',
+            stopContextMenu: true,
+            fireRightClick: false,
+            fireMiddleClick: false,
         });
+
+        // 🚀 GLOBAL PERFORMANCE OVERRIDE: Strict Viewport Culling
+        // This stops Fabric from even THINKING about objects that are not visible.
+        const originalRenderObjects = (canvas as any)._renderObjects.bind(canvas);
+        (canvas as any)._renderObjects = function (ctx: CanvasRenderingContext2D, objects: fabric.Object[]) {
+            const container = containerRef.current;
+            if (!container) return originalRenderObjects(ctx, objects);
+
+            const scrollTop = container.scrollTop;
+            const scrollBottom = scrollTop + container.clientHeight;
+            // Buffer to prevent flicking at edges
+            const buffer = 400;
+
+            // High-speed manual loop
+            const visibleObjects = [];
+            for (let i = 0, len = objects.length; i < len; i++) {
+                const obj = objects[i];
+                const top = obj.top || 0;
+                const bottom = top + ((obj.height || 0) * (obj.scaleY || 1));
+
+                if (bottom > scrollTop - buffer && top < scrollBottom + buffer) {
+                    visibleObjects.push(obj);
+                }
+            }
+
+            originalRenderObjects(ctx, visibleObjects);
+        };
         // Set properties that might not be in types but exist in runtime
         (canvas as any).subTargetCheck = false;
 
@@ -3063,21 +3095,19 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                     ? brushSize * 2 : brushSize;
                 // Optimize path complexity for better performance
                 if (canvas.freeDrawingBrush instanceof fabric.PencilBrush) {
-                    (canvas.freeDrawingBrush as any).decimate = 2;
+                    (canvas.freeDrawingBrush as any).decimate = 2.5;
                 }
 
-                // PERFORMANCE BOOST: Disable events on all objects when drawing starts
-                // This prevents Fabric from doing coordinate checks against thousands of objects
-                canvas.getObjects().forEach(obj => {
+                // PERFORMANCE BOOST: Disable events on all objects and state tracking
+                const allObjects = canvas.getObjects();
+                for (let i = 0, len = allObjects.length; i < len; i++) {
+                    const obj = allObjects[i];
                     obj.selectable = false;
                     obj.evented = false;
-                });
+                    obj.statefullCache = false;
+                }
 
-                // Add a mouse:up listener to restore interactivity if needed (like for text)
-                canvas.on('mouse:up', () => {
-                    // Only restore it text or specific objects to keep performance high
-                    // Most paths should remain non-evented for speed
-                });
+                canvas.off('mouse:up');
 
                 canvas.defaultCursor = 'crosshair';
                 break;
