@@ -237,6 +237,7 @@ const CanvasWrapper = styled.div<{ $bgColor?: string; $side: 'left' | 'right' }>
   width: 100%;
   height: 100%;
   background: ${({ $bgColor }) => $bgColor || '#ffffff'};
+  background-attachment: local;
   overflow-y: scroll; /* ALWAYS show scrollbar to prevent width jitter */
   overflow-x: hidden;
   position: relative;
@@ -1548,7 +1549,7 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
         const canvas = new fabric.Canvas(canvasRef.current, {
             width: width,
             height,
-            backgroundColor: '#ffffff',
+            backgroundColor: undefined,
             isDrawingMode: true,
             selection: false,
             // Intensive performance optimizations for mobile/Android
@@ -2805,25 +2806,19 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
         const viewportHeight = viewportHeightRef.current || 400;
         setTotalPages(Math.ceil(newHeight / viewportHeight));
 
-        // Re-apply background
-        setBackgroundColor(backgroundColor);
-        canvas.setBackgroundColor(backgroundColor, () => {
-            // Speed optimization: Only iterate objects once, and only if pixel eraser is being used
-            // This avoids massive O(n) overhead as pages increase.
-            const pat = createBackgroundPattern(background, backgroundColor, lineOpacity, backgroundSize);
-            const eraserPattern = new fabric.Pattern(pat as any);
-            const objects = canvas.getObjects();
+        // Sync existing eraser marks (no solid bg here, keep it transparent for CSS grid)
+        const eraserPattern = createBackgroundPattern(background, currentBackgroundColor, lineOpacity, backgroundSize);
+        const objects = canvas.getObjects();
 
-            // Fast loop optimization
-            for (let i = 0, len = objects.length; i < len; i++) {
-                const obj = objects[i] as any;
-                if (obj.isPixelEraser) {
-                    obj.set('stroke', eraserPattern as any);
-                }
+        for (let i = 0, len = objects.length; i < len; i++) {
+            const obj = objects[i] as any;
+            if (obj.isPixelEraser) {
+                obj.set('stroke', eraserPattern as any);
             }
-            canvas.requestRenderAll();
-            saveHistory();
-        });
+        }
+
+        canvas.renderAll();
+        saveHistory();
     };
 
     // Auto-extend canvas height
