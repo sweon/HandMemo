@@ -777,8 +777,8 @@ const ToolbarConfigurator: React.FC<ToolbarConfiguratorProps> = ({ currentItems,
 
     return (
         <ModalOverlay style={{ zIndex: 11000, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)' }}>
-            <ModalContainer style={{ width: '90vw', height: '85vh', maxWidth: '600px', maxHeight: '800px', overflow: 'hidden', borderRadius: '16px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04)' }}>
-                <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', height: '100%', background: '#ffffff' }}>
+            <ModalContainer style={{ width: '90vw', height: 'auto', maxWidth: '600px', maxHeight: '90vh', overflow: 'hidden', borderRadius: '16px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04)' }}>
+                <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', background: '#ffffff' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
                         <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 600, color: '#111827' }}>{t.drawing?.customize_title || 'Settings'}</h3>
                         <div style={{ display: 'flex', gap: '10px' }}>
@@ -905,7 +905,7 @@ const ToolbarConfigurator: React.FC<ToolbarConfiguratorProps> = ({ currentItems,
                                                 {...provided.droppableProps}
                                                 $isDraggingOver={snapshot.isDraggingOver}
                                                 style={{
-                                                    minHeight: '120px',
+                                                    minHeight: '80px',
                                                     alignContent: 'flex-start',
                                                     background: snapshot.isDraggingOver ? '#f3f4f6' : '#ffffff',
                                                     border: '1px solid #e5e7eb',
