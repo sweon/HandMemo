@@ -635,10 +635,7 @@ const createBackgroundPattern = (type: BackgroundType, paperColor: string, opaci
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     if (!ctx) {
-        return new fabric.Pattern({
-            source: document.createElement('canvas') as any,
-            repeat: 'repeat'
-        });
+        return { source: document.createElement('canvas'), repeat: 'repeat' };
     }
 
     const size = patternSize;
@@ -652,11 +649,7 @@ const createBackgroundPattern = (type: BackgroundType, paperColor: string, opaci
     }
 
     if (type === 'none') {
-        return new fabric.Pattern({
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            source: canvas as any,
-            repeat: 'repeat'
-        });
+        return { source: canvas, repeat: 'repeat' };
     }
 
     // Draw lines
@@ -1532,11 +1525,11 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
             isDrawingMode: true,
             selection: false,
             // Intensive performance optimizations for mobile/Android
-            renderOnAddRemove: false, // Prevent auto-render on every add/remove
-            enableRetinaScaling: false, // Disable retina for better performance on mobile
-            skipOffscreen: true, // Core optimization
-            stateful: false, // VERY IMPORTANT: Disable stateful tracking for massive speed gain
-            targetFindTolerance: 0, // Disable target finding during drawing
+            renderOnAddRemove: false,
+            enableRetinaScaling: false,
+            skipOffscreen: true,
+            stateful: false,
+            targetFindTolerance: 0,
             perPixelTargetFind: false,
             // Fire events only on upper canvas during drawing
             containerClass: 'canvas-container',
@@ -1578,7 +1571,8 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
 
         // Additional global performance settings
         fabric.Object.prototype.objectCaching = true;
-        fabric.Object.prototype.statefullCache = false;
+        (fabric.Object.prototype as any).statefullCache = false;
+        (fabric.Object.prototype as any).statefulCache = false;
         fabric.Object.prototype.noScaleCache = true;
 
         // Conditional caching: Don't cache very small paths to save VRAM on mobile
@@ -1593,8 +1587,8 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
         const brush = new fabric.PencilBrush(canvas);
         brush.width = brushSize;
         brush.color = color;
-        // Moderate decimate for fidelity: 2 is safe for natural writing
-        brush.decimate = 2;
+        // High decimate for memory efficiency: 3 is a sweet spot for mobile performance
+        brush.decimate = 3;
         canvas.freeDrawingBrush = brush;
 
         fabricCanvasRef.current = canvas;
@@ -2524,7 +2518,8 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
         canvas.setBackgroundColor(backgroundColor, () => {
             // Restore Overlay Pattern (Grid/Lines) if active
             if (background !== 'none') {
-                const gridPattern = createBackgroundPattern(background, backgroundColor, lineOpacity, backgroundSize, true);
+                const pat = createBackgroundPattern(background, backgroundColor, lineOpacity, backgroundSize, true);
+                const gridPattern = new fabric.Pattern(pat as any);
                 canvas.setOverlayColor(gridPattern as any, canvas.renderAll.bind(canvas));
             } else {
                 canvas.renderAll();
@@ -2560,12 +2555,22 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
         const timestamp = `${year}${month}${day} -${hours}${minutes}${seconds} `;
         const defaultBaseName = `drawing - ${timestamp} `;
 
+        // Temporarily apply background pattern to canvas for clean export
+        const oldOverlay = canvas.overlayColor;
+        if (background !== 'none') {
+            const pat = createBackgroundPattern(background, backgroundColor, lineOpacity, backgroundSize, true);
+            canvas.setOverlayColor(new fabric.Pattern(pat as any), () => { });
+        }
+
         // Get the data URL of the canvas
         const dataURL = canvas.toDataURL({
             format: 'png',
             quality: 1,
-            enableRetinaScaling: true
+            enableRetinaScaling: false // Use highres scaling for PNG
         });
+
+        // Restore overlay
+        canvas.setOverlayColor(oldOverlay as any, () => canvas.requestRenderAll());
 
         // Try modern File System Access API first (supported in modern Chrome/Edge/Safari)
         if ('showSaveFilePicker' in window) {
@@ -2758,7 +2763,7 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
         if (!canvas) return;
 
         const currentHeight = canvas.getHeight();
-        const extendAmount = viewportHeightRef.current || 400; // Use viewport height, fallback to 400px
+        const extendAmount = viewportHeightRef.current || 400;
         const newHeight = currentHeight + extendAmount;
 
         canvas.setHeight(newHeight);
@@ -2769,13 +2774,11 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
 
         // Re-apply background
         setBackgroundColor(backgroundColor);
-        canvas.setBackgroundColor(backgroundColor, () => { });
-
-        const gridPattern = createBackgroundPattern(background, backgroundColor, lineOpacity, backgroundSize, true);
-        canvas.setOverlayColor(gridPattern as any, () => {
+        canvas.setBackgroundColor(backgroundColor, () => {
             // Speed optimization: Only iterate objects once, and only if pixel eraser is being used
             // This avoids massive O(n) overhead as pages increase.
-            const eraserPattern = createBackgroundPattern(background, backgroundColor, lineOpacity, backgroundSize);
+            const pat = createBackgroundPattern(background, backgroundColor, lineOpacity, backgroundSize);
+            const eraserPattern = new fabric.Pattern(pat as any);
             const objects = canvas.getObjects();
 
             // Fast loop optimization
@@ -2809,10 +2812,10 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
             const objScaleY = obj.scaleY || 1;
             const objBottom = obj.top + (objHeight * objScaleY);
 
-            // Extend when remaining space below object is less than half viewport height
-            const viewportHeight = viewportHeightRef.current || 400;
+            // Extend only when EXTREMELY close to the edge (80px) to prevent unnecessary growth
+            const threshold = 80;
             const remainingSpace = canvasHeight - objBottom;
-            if (remainingSpace < viewportHeight / 2) {
+            if (remainingSpace < threshold) {
                 isExtending = true;
                 handleExtendHeight();
                 // Reset flag after a short delay to prevent rapid re-triggering
@@ -3407,6 +3410,18 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
             canvas.renderAll();
         });
     }, [background, backgroundColorType, backgroundColorIntensity, lineOpacity, backgroundSize]);
+
+    // CSS-based background pattern for smoother drawing performance (removes canvas overlay overhead)
+    const backgroundStyle = React.useMemo(() => {
+        if (background === 'none') return { backgroundColor };
+        const pat = createBackgroundPattern(background, backgroundColor, lineOpacity, backgroundSize, true);
+        const dataUrl = (pat.source as HTMLCanvasElement).toDataURL();
+        return {
+            backgroundColor,
+            backgroundImage: `url(${dataUrl})`,
+            backgroundRepeat: 'repeat'
+        };
+    }, [background, backgroundColor, lineOpacity, backgroundSize]);
 
     return (
         <>
@@ -4264,7 +4279,11 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                         </Backdrop>
                     )}
 
-                    <CanvasWrapper ref={containerRef} $bgColor={backgroundColor} $side={scrollbarSide}>
+                    <CanvasWrapper
+                        ref={containerRef}
+                        $side={scrollbarSide}
+                        style={backgroundStyle}
+                    >
                         <canvas ref={canvasRef} />
                     </CanvasWrapper>
                 </ModalContainer>
