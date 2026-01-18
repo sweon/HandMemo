@@ -2812,10 +2812,10 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
             const objScaleY = obj.scaleY || 1;
             const objBottom = obj.top + (objHeight * objScaleY);
 
-            // Extend only when EXTREMELY close to the edge (80px) to prevent unnecessary growth
-            const threshold = 80;
+            // Extend when remaining space below object is less than half viewport height
+            const viewportHeight = viewportHeightRef.current || 400;
             const remainingSpace = canvasHeight - objBottom;
-            if (remainingSpace < threshold) {
+            if (remainingSpace < viewportHeight / 2) {
                 isExtending = true;
                 handleExtendHeight();
                 // Reset flag after a short delay to prevent rapid re-triggering
