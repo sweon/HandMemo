@@ -313,8 +313,8 @@ const DashPreview = styled.div<{ $dash: number[] | null }>`
 const BrushSample = styled.div<{ $type: string; $color: string; $size?: number }>`
 height: ${({ $size }) => $size ? Math.max(2, Math.min(24, $size)) : 12} px;
 flex: 1;
-margin - left: 12px;
-border - radius: 2px;
+margin-left: 12px;
+border-radius: 2px;
 position: relative;
 background: ${({ $type, $color }) => {
         if ($type === 'pen') return $color;
@@ -348,15 +348,15 @@ background: ${({ $type, $color }) => {
 `;
 
 const DashOption = styled.button<{ $active: boolean }>`
-width: 100 %;
+width: 100%;
 height: 24px;
 padding: 4px 8px;
 border: 1px solid ${({ $active }) => $active ? '#333' : '#e0e0e0'};
 background: ${({ $active }) => $active ? '#f1f3f5' : 'white'};
-border - radius: 4px;
+border-radius: 4px;
 cursor: pointer;
 display: flex;
-align - items: center;
+align-items: center;
   
   &:hover {
     background: #f8f9fa;
@@ -370,21 +370,21 @@ left: 0;
 right: 0;
 bottom: 0;
 background: rgba(0, 0, 0, 0.4);
-z - index: 10000;
+z-index: 10000;
 display: flex;
-align - items: ${({ $centered = true }) => $centered ? 'center' : 'flex-start'};
-justify - content: center;
+align-items: ${({ $centered = true }) => $centered ? 'center' : 'flex-start'};
+justify-content: center;
 `;
 
 const CompactModal = styled.div<{ $anchor?: { top: number } }>`
 background: white;
 padding: 0.4rem;
-border - radius: 8px;
-box - shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+border-radius: 8px;
+box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
 display: flex;
-flex - direction: column;
+flex-direction: column;
 gap: 0.35rem;
-min - width: 65px;
+min-width: 65px;
 
   ${({ $anchor }) => $anchor && `
     position: fixed;
@@ -397,16 +397,16 @@ min - width: 65px;
 
 const CompactModalFooter = styled.div`
 display: flex;
-justify - content: space - between;
+justify-content: space-between;
 gap: 0.5rem;
-margin - top: 0.25rem;
+margin-top: 0.25rem;
 `;
 
 const CompactModalButton = styled.button<{ $variant?: 'primary' | 'secondary' | 'danger' }>`
 padding: 0.25rem 0.5rem;
-border - radius: 4px;
-font - size: 0.8rem;
-font - weight: 600;
+border-radius: 4px;
+font-size: 0.8rem;
+font-weight: 600;
 cursor: pointer;
 border: 1px solid #dee2e6;
 background: ${({ $variant }) => $variant === 'primary' ? '#333' : 'white'};
@@ -419,54 +419,54 @@ color: ${({ $variant }) => $variant === 'primary' ? 'white' : '#495057'};
 
 const ColorInputWrapper = styled.div`
 display: flex;
-flex - direction: column;
-align - items: center;
+flex-direction: column;
+align-items: center;
 gap: 0.5rem;
 `;
 
 const CustomRangeInput = styled.input<{ $size: number; $opacityValue?: number }>`
 appearance: none;
-width: 100 %;
+width: 100%;
 margin: 0.2rem 0;
 cursor: pointer;
 background: transparent;
 
-  &:: -webkit - slider - runnable - track {
-    width: 100 %;
+  &::-webkit - slider-runnable-track {
+    width: 100%;
     height: ${({ $size }) => Math.min($size, 100)} px;
     background: ${({ $opacityValue }) => $opacityValue !== undefined ? 'linear-gradient(to right, #eee, #333)' : '#dee2e6'};
-    border - radius: ${({ $size }) => Math.min($size, 100) / 2} px;
+    border-radius: ${({ $size }) => Math.min($size, 100) / 2} px;
 }
 
-  &:: -webkit - slider - thumb {
+  &::-webkit - slider-thumb {
     appearance: none;
     height: ${({ $size }) => Math.max(Math.min($size, 100) + 10, 24)} px;
     width: ${({ $size }) => Math.max(Math.min($size, 100) + 10, 24)} px;
-    border - radius: 50 %;
+    border-radius: 50%;
     background: #333;
     opacity: ${({ $opacityValue }) => $opacityValue !== undefined ? Math.max($opacityValue / 100, 0.1) : 1};
     cursor: pointer;
-    margin - top: ${({ $size }) => (Math.min($size, 100) / 2) - (Math.max(Math.min($size, 100) + 10, 24) / 2)} px;
+    margin-top: ${({ $size }) => (Math.min($size, 100) / 2) - (Math.max(Math.min($size, 100) + 10, 24) / 2)} px;
     border: 2px solid white;
-    box - shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 
   &:: -moz - range - track {
-    width: 100 %;
+    width: 100%;
     height: ${({ $size }) => Math.min($size, 100)} px;
     background: ${({ $opacityValue }) => $opacityValue !== undefined ? 'linear-gradient(to right, #eee, #333)' : '#dee2e6'};
-    border - radius: ${({ $size }) => Math.min($size, 100) / 2} px;
+    border-radius: ${({ $size }) => Math.min($size, 100) / 2} px;
 }
 
   &:: -moz - range - thumb {
     height: ${({ $size }) => Math.max(Math.min($size, 100) + 10, 24)} px;
     width: ${({ $size }) => Math.max(Math.min($size, 100) + 10, 24)} px;
-    border - radius: 50 %;
+    border-radius: 50%;
     background: #333;
     opacity: ${({ $opacityValue }) => $opacityValue !== undefined ? Math.max($opacityValue / 100, 0.1) : 1};
     cursor: pointer;
     border: 2px solid white;
-    box - shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 
   &:focus {
@@ -478,13 +478,13 @@ const CustomNumberInput = styled.input`
 width: 60px;
 padding: 0.2rem;
 border: 1px solid #ced4da;
-border - radius: 4px;
-font - size: 0.9rem;
-text - align: center;
+border-radius: 4px;
+font-size: 0.9rem;
+text-align: center;
 outline: none;
 
   &:focus {
-    border - color: #333;
+    border-color: #333;
 }
 `;
 
@@ -694,13 +694,13 @@ const createBackgroundPattern = (type: BackgroundType, paperColor: string, opaci
 
 const BackgroundOptionButton = styled.button<{ $active: boolean }>`
 padding: 6px 8px;
-font - size: 11px;
-text - align: left;
+font-size: 11px;
+text-align: left;
 background: ${({ $active }) => $active ? '#e9ecef' : 'transparent'};
 border: none;
 cursor: pointer;
-border - radius: 4px;
-width: 100 %;
+border-radius: 4px;
+width: 100%;
   
   &:hover {
     background: #f1f3f5;
@@ -709,26 +709,36 @@ width: 100 %;
 
 
 const ConfigItem = styled.div`
-display: flex;
-align - items: center;
-justify - content: center;
-min - width: 32px;
-height: 32px;
-margin: 2px;
-cursor: grab;
-color: #333; /* Ensure icon color is dark */
-/* Visual box removed for cleaner look on small screens */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  margin: 4px;
+  cursor: grab;
+  color: #333;
+  background: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  border: 1px solid #e5e7eb;
+  transition: all 0.2s;
+
+  &:hover {
+    border-color: #adb5bd;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
 `;
 
 const ConfigArea = styled.div<{ $isDraggingOver: boolean }>`
 background: ${({ $isDraggingOver }) => $isDraggingOver ? '#f1f3f5' : '#f8f9fa'};
 border: 2px dashed #dee2e6;
-border - radius: 8px;
+border-radius: 8px;
 padding: 12px;
-min - height: 80px;
+min-height: 80px;
 display: flex;
-flex - wrap: wrap;
-align - content: flex - start;
+flex-wrap: wrap;
+align-content: flex-start;
 gap: 4px;
 transition: background - color 0.2s;
 `;
@@ -875,12 +885,7 @@ const ToolbarConfigurator: React.FC<ToolbarConfiguratorProps> = ({ currentItems,
                                                                 {...provided.draggableProps}
                                                                 {...provided.dragHandleProps}
                                                                 style={{
-                                                                    ...provided.draggableProps.style,
-                                                                    background: 'transparent',
-                                                                    boxShadow: 'none',
-                                                                    borderRadius: '0',
-                                                                    width: '32px',
-                                                                    height: '32px'
+                                                                    ...provided.draggableProps.style
                                                                 }}
                                                             >
                                                                 {getToolbarItemIcon(item, colors, brushSizes)}
@@ -922,11 +927,7 @@ const ToolbarConfigurator: React.FC<ToolbarConfiguratorProps> = ({ currentItems,
                                                                 {...provided.dragHandleProps}
                                                                 style={{
                                                                     ...provided.draggableProps.style,
-                                                                    background: 'transparent',
-                                                                    border: 'none',
-                                                                    borderRadius: '0',
-                                                                    width: '32px',
-                                                                    height: '32px'
+                                                                    background: '#f9fafb'
                                                                 }}
                                                             >
                                                                 {getToolbarItemIcon(item, colors, brushSizes)}
