@@ -241,7 +241,9 @@ const CanvasWrapper = styled.div<{ $bgColor?: string }>`
   overflow-y: scroll; /* ALWAYS show scrollbar to prevent width jitter */
   overflow-x: hidden;
   position: relative;
-  display: block; /* block is more stable for scroll-based layouts than flex */
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
   
   /* Smooth scroll and momentum for mobile */
   -webkit-overflow-scrolling: touch;
@@ -249,24 +251,30 @@ const CanvasWrapper = styled.div<{ $bgColor?: string }>`
   
   /* Fixed wide scrollbar for stability and visibility */
   &::-webkit-scrollbar {
-    width: 24px; /* Wide and stable */
-    background-color: #f0f0f0; /* Stable track color */
+    width: 32px; /* Original wide width */
+  }
+  &::-webkit-scrollbar-track {
+    background: #f1f1f1;
   }
   &::-webkit-scrollbar-thumb {
-    background-color: #888888; /* Stable opaque thumb color */
-    border-radius: 12px;
-    border: 4px solid #f0f0f0; /* Padding around thumb */
+    background: #c1c1c1;
+    border-radius: 16px;
   }
   &::-webkit-scrollbar-thumb:hover {
-    background-color: #666666;
+    background: #a8a8a8;
   }
   
-  /* Fabric container - center it horizontally without flex jitter */
+  @media (max-width: 1280px) {
+    &::-webkit-scrollbar {
+      width: 24px;
+    }
+  }
+
+  /* Fabric container */
   .canvas-container {
-    margin: 0 auto !important;
+    margin: 0;
   }
 `;
-
 
 const CompactActionButton = styled.button<{ $primary?: boolean }>`
   width: 20px;
@@ -298,17 +306,15 @@ const DashPreview = styled.div<{ $dash: number[] | null }>`
   background: transparent;
   border-top: 2px ${({ $dash }) => $dash ? 'dashed' : 'solid'} #333;
   ${({ $dash }) => $dash && `border-image: repeating-linear-gradient(to right, #333, #333 ${$dash[0]}px, transparent ${$dash[0]}px, transparent ${$dash[0] + $dash[1]}px) 1;`}
-  /* Simple fallback for complex dashes */
-  ${({ $dash }) => $dash && $dash.length > 2 && `border-top: 2px dashed #333;`}
 `;
 
 const BrushSample = styled.div<{ $type: string; $color: string; $size?: number }>`
-  height: ${({ $size }) => $size ? Math.max(2, Math.min(24, $size)) : 12}px;
-  flex: 1;
-  margin-left: 12px;
-  border-radius: 2px;
-  position: relative;
-  background: ${({ $type, $color }) => {
+height: ${({ $size }) => $size ? Math.max(2, Math.min(24, $size)) : 12} px;
+flex: 1;
+margin - left: 12px;
+border - radius: 2px;
+position: relative;
+background: ${({ $type, $color }) => {
         if ($type === 'pen') return $color;
         if ($type === 'highlighter') {
             if ($color.startsWith('#')) {
@@ -322,7 +328,8 @@ const BrushSample = styled.div<{ $type: string; $color: string; $size?: number }
         if ($type === 'carbon') return `radial-gradient(${$color}, transparent)`;
         if ($type === 'hatch') return `repeating-linear-gradient(45deg, ${$color}, ${$color} 1px, transparent 1px, transparent 4px)`;
         return $color;
-    }};
+    }
+    };
 
   ${({ $type, $color }) => $type === 'glow' && `
     box-shadow: 0 0 8px ${$color};
@@ -339,43 +346,43 @@ const BrushSample = styled.div<{ $type: string; $color: string; $size?: number }
 `;
 
 const DashOption = styled.button<{ $active: boolean }>`
-  width: 100%;
-  height: 24px;
-  padding: 4px 8px;
-  border: 1px solid ${({ $active }) => $active ? '#333' : '#e0e0e0'};
-  background: ${({ $active }) => $active ? '#f1f3f5' : 'white'};
-  border-radius: 4px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
+width: 100 %;
+height: 24px;
+padding: 4px 8px;
+border: 1px solid ${({ $active }) => $active ? '#333' : '#e0e0e0'};
+background: ${({ $active }) => $active ? '#f1f3f5' : 'white'};
+border - radius: 4px;
+cursor: pointer;
+display: flex;
+align - items: center;
   
   &:hover {
     background: #f8f9fa;
-  }
+}
 `;
 
 const Backdrop = styled.div<{ $centered?: boolean }>`
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.4);
-  z-index: 10000;
-  display: flex;
-  align-items: ${({ $centered = true }) => $centered ? 'center' : 'flex-start'};
-  justify-content: center;
+position: fixed;
+top: 0;
+left: 0;
+right: 0;
+bottom: 0;
+background: rgba(0, 0, 0, 0.4);
+z - index: 10000;
+display: flex;
+align - items: ${({ $centered = true }) => $centered ? 'center' : 'flex-start'};
+justify - content: center;
 `;
 
 const CompactModal = styled.div<{ $anchor?: { top: number } }>`
-  background: white;
-  padding: 0.4rem;
-  border-radius: 8px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-  min-width: 65px;
+background: white;
+padding: 0.4rem;
+border - radius: 8px;
+box - shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+display: flex;
+flex - direction: column;
+gap: 0.35rem;
+min - width: 65px;
 
   ${({ $anchor }) => $anchor && `
     position: fixed;
@@ -387,96 +394,96 @@ const CompactModal = styled.div<{ $anchor?: { top: number } }>`
 `;
 
 const CompactModalFooter = styled.div`
-  display: flex;
-  justify-content: space-between;
-  gap: 0.5rem;
-  margin-top: 0.25rem;
+display: flex;
+justify - content: space - between;
+gap: 0.5rem;
+margin - top: 0.25rem;
 `;
 
 const CompactModalButton = styled.button<{ $variant?: 'primary' | 'secondary' | 'danger' }>`
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  cursor: pointer;
-  border: 1px solid #dee2e6;
-  background: ${({ $variant }) => $variant === 'primary' ? '#333' : 'white'};
-  color: ${({ $variant }) => $variant === 'primary' ? 'white' : '#495057'};
+padding: 0.25rem 0.5rem;
+border - radius: 4px;
+font - size: 0.8rem;
+font - weight: 600;
+cursor: pointer;
+border: 1px solid #dee2e6;
+background: ${({ $variant }) => $variant === 'primary' ? '#333' : 'white'};
+color: ${({ $variant }) => $variant === 'primary' ? 'white' : '#495057'};
 
   &:hover {
     background: ${({ $variant }) => $variant === 'primary' ? '#222' : '#f8f9fa'};
-  }
+}
 `;
 
 const ColorInputWrapper = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.5rem;
+display: flex;
+flex - direction: column;
+align - items: center;
+gap: 0.5rem;
 `;
 
 const CustomRangeInput = styled.input<{ $size: number; $opacityValue?: number }>`
-  appearance: none;
-  width: 100%;
-  margin: 0.2rem 0;
-  cursor: pointer;
-  background: transparent;
+appearance: none;
+width: 100 %;
+margin: 0.2rem 0;
+cursor: pointer;
+background: transparent;
 
-  &::-webkit-slider-runnable-track {
-    width: 100%;
-    height: ${({ $size }) => Math.min($size, 100)}px;
+  &:: -webkit - slider - runnable - track {
+    width: 100 %;
+    height: ${({ $size }) => Math.min($size, 100)} px;
     background: ${({ $opacityValue }) => $opacityValue !== undefined ? 'linear-gradient(to right, #eee, #333)' : '#dee2e6'};
-    border-radius: ${({ $size }) => Math.min($size, 100) / 2}px;
-  }
+    border - radius: ${({ $size }) => Math.min($size, 100) / 2} px;
+}
 
-  &::-webkit-slider-thumb {
+  &:: -webkit - slider - thumb {
     appearance: none;
-    height: ${({ $size }) => Math.max(Math.min($size, 100) + 10, 24)}px;
-    width: ${({ $size }) => Math.max(Math.min($size, 100) + 10, 24)}px;
-    border-radius: 50%;
+    height: ${({ $size }) => Math.max(Math.min($size, 100) + 10, 24)} px;
+    width: ${({ $size }) => Math.max(Math.min($size, 100) + 10, 24)} px;
+    border - radius: 50 %;
     background: #333;
     opacity: ${({ $opacityValue }) => $opacityValue !== undefined ? Math.max($opacityValue / 100, 0.1) : 1};
     cursor: pointer;
-    margin-top: ${({ $size }) => (Math.min($size, 100) / 2) - (Math.max(Math.min($size, 100) + 10, 24) / 2)}px;
+    margin - top: ${({ $size }) => (Math.min($size, 100) / 2) - (Math.max(Math.min($size, 100) + 10, 24) / 2)} px;
     border: 2px solid white;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-  }
+    box - shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
 
-  &::-moz-range-track {
-    width: 100%;
-    height: ${({ $size }) => Math.min($size, 100)}px;
+  &:: -moz - range - track {
+    width: 100 %;
+    height: ${({ $size }) => Math.min($size, 100)} px;
     background: ${({ $opacityValue }) => $opacityValue !== undefined ? 'linear-gradient(to right, #eee, #333)' : '#dee2e6'};
-    border-radius: ${({ $size }) => Math.min($size, 100) / 2}px;
-  }
+    border - radius: ${({ $size }) => Math.min($size, 100) / 2} px;
+}
 
-  &::-moz-range-thumb {
-    height: ${({ $size }) => Math.max(Math.min($size, 100) + 10, 24)}px;
-    width: ${({ $size }) => Math.max(Math.min($size, 100) + 10, 24)}px;
-    border-radius: 50%;
+  &:: -moz - range - thumb {
+    height: ${({ $size }) => Math.max(Math.min($size, 100) + 10, 24)} px;
+    width: ${({ $size }) => Math.max(Math.min($size, 100) + 10, 24)} px;
+    border - radius: 50 %;
     background: #333;
     opacity: ${({ $opacityValue }) => $opacityValue !== undefined ? Math.max($opacityValue / 100, 0.1) : 1};
     cursor: pointer;
     border: 2px solid white;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-  }
+    box - shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
 
   &:focus {
     outline: none;
-  }
+}
 `;
 
 const CustomNumberInput = styled.input`
-  width: 60px;
-  padding: 0.2rem;
-  border: 1px solid #ced4da;
-  border-radius: 4px;
-  font-size: 0.9rem;
-  text-align: center;
-  outline: none;
+width: 60px;
+padding: 0.2rem;
+border: 1px solid #ced4da;
+border - radius: 4px;
+font - size: 0.9rem;
+text - align: center;
+outline: none;
 
   &:focus {
-    border-color: #333;
-  }
+    border - color: #333;
+}
 `;
 
 interface FabricCanvasModalProps {
@@ -684,44 +691,44 @@ const createBackgroundPattern = (type: BackgroundType, paperColor: string, opaci
 };
 
 const BackgroundOptionButton = styled.button<{ $active: boolean }>`
-  padding: 6px 8px;
-  font-size: 11px;
-  text-align: left;
-  background: ${({ $active }) => $active ? '#e9ecef' : 'transparent'};
-  border: none;
-  cursor: pointer;
-  border-radius: 4px;
-  width: 100%;
+padding: 6px 8px;
+font - size: 11px;
+text - align: left;
+background: ${({ $active }) => $active ? '#e9ecef' : 'transparent'};
+border: none;
+cursor: pointer;
+border - radius: 4px;
+width: 100 %;
   
   &:hover {
     background: #f1f3f5;
-  }
+}
 `;
 
 
 const ConfigItem = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 32px;
-  height: 32px;
-  margin: 2px;
-  cursor: grab;
-  color: #333; /* Ensure icon color is dark */
-  /* Visual box removed for cleaner look on small screens */
+display: flex;
+align - items: center;
+justify - content: center;
+min - width: 32px;
+height: 32px;
+margin: 2px;
+cursor: grab;
+color: #333; /* Ensure icon color is dark */
+/* Visual box removed for cleaner look on small screens */
 `;
 
 const ConfigArea = styled.div<{ $isDraggingOver: boolean }>`
-  background: ${({ $isDraggingOver }) => $isDraggingOver ? '#f1f3f5' : '#f8f9fa'};
-  border: 2px dashed #dee2e6;
-  border-radius: 8px;
-  padding: 12px;
-  min-height: 80px;
-  display: flex;
-  flex-wrap: wrap;
-  align-content: flex-start;
-  gap: 4px;
-  transition: background-color 0.2s;
+background: ${({ $isDraggingOver }) => $isDraggingOver ? '#f1f3f5' : '#f8f9fa'};
+border: 2px dashed #dee2e6;
+border - radius: 8px;
+padding: 12px;
+min - height: 80px;
+display: flex;
+flex - wrap: wrap;
+align - content: flex - start;
+gap: 4px;
+transition: background - color 0.2s;
 `;
 
 interface ToolbarConfiguratorProps {
@@ -1309,7 +1316,7 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
     const getObjectId = React.useCallback((obj: fabric.Object): string => {
         let id = objectIdMapRef.current.get(obj);
         if (!id) {
-            id = `obj_${nextObjectIdRef.current++}`;
+            id = `obj_${nextObjectIdRef.current++} `;
             objectIdMapRef.current.set(obj, id);
             (obj as any).__historyId = id; // Store on object for serialization recovery
         }
@@ -1986,7 +1993,7 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                             }
                         }}
                         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                        title={(t.drawing as any)?.[`tool_${item.toolId}`] || (item.toolId ?? '').charAt(0).toUpperCase() + (item.toolId ?? '').slice(1)}
+                        title={(t.drawing as any)?.[`tool_${item.toolId} `] || (item.toolId ?? '').charAt(0).toUpperCase() + (item.toolId ?? '').slice(1)}
                     >
                         {item.toolId === 'pen' ? (
                             (() => {
@@ -2030,12 +2037,12 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                 {item.type === 'action' && (
                     <>
                         {item.actionId === 'undo' && (
-                            <ToolButton onClick={handleUndo} title={`${t.drawing?.undo || 'Undo'} (Ctrl+Z)`} disabled={!canUndo}>
+                            <ToolButton onClick={handleUndo} title={`${t.drawing?.undo || 'Undo'} (Ctrl + Z)`} disabled={!canUndo}>
                                 <FiRotateCcw size={16} />
                             </ToolButton>
                         )}
                         {item.actionId === 'redo' && (
-                            <ToolButton onClick={handleRedo} title={`${t.drawing?.redo || 'Redo'} (Ctrl+Y)`} disabled={!canRedo}>
+                            <ToolButton onClick={handleRedo} title={`${t.drawing?.redo || 'Redo'} (Ctrl + Y)`} disabled={!canRedo}>
                                 <FiRotateCw size={16} />
                             </ToolButton>
                         )}
@@ -2103,7 +2110,7 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                                     setActiveTool('pen');
                                 }
                             }}
-                            title={`${t.drawing?.select_color || 'Select Color'}: ${availableColors[item.colorIndex!]}`}
+                            title={`${t.drawing?.select_color || 'Select Color'}: ${availableColors[item.colorIndex!]} `}
                         />
                     </div>
                 )}
@@ -2119,7 +2126,7 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                         onDoubleClick={(e) => handleBrushSizeDoubleClick(e, item.sizeIndex!)}
                         onTouchStart={(e) => handleDoubleTap(e, `size - ${item.sizeIndex} `, (ev) => handleBrushSizeDoubleClick(ev, item.sizeIndex!))}
                         style={{ width: 30, fontSize: '0.8rem', padding: 0 }}
-                        title={`${t.drawing?.brush_size || 'Size'}: ${availableBrushSizes[item.sizeIndex!]}px`}
+                        title={`${t.drawing?.brush_size || 'Size'}: ${availableBrushSizes[item.sizeIndex!]} px`}
                     >
                         <div style={{
                             width: Math.min(availableBrushSizes[item.sizeIndex!], 20),
@@ -2470,8 +2477,8 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
         const minutes = String(now.getMinutes()).padStart(2, '0');
         const seconds = String(now.getSeconds()).padStart(2, '0');
 
-        const timestamp = `${year}${month}${day}-${hours}${minutes}${seconds}`;
-        const defaultBaseName = `drawing-${timestamp}`;
+        const timestamp = `${year}${month}${day} -${hours}${minutes}${seconds} `;
+        const defaultBaseName = `drawing - ${timestamp} `;
 
         // Get the data URL of the canvas
         const dataURL = canvas.toDataURL({
@@ -3362,7 +3369,7 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                                 marginRight: '4px',
                                 fontFamily: 'monospace',
                                 cursor: 'pointer',
-                                minWidth: '45px', // Fixed width to prevent toolbar layout shift
+                                minWidth: '80px', // Extra wide to prevent any toolbar layout shift
                                 justifyContent: 'center'
                             }}
                                 onClick={() => {
@@ -3802,7 +3809,7 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                                             }}
                                             onTouchStart={(e) => {
                                                 setTempFontFamily(font);
-                                                handleDoubleTap(e, `font-${font}`, () => {
+                                                handleDoubleTap(e, `font - ${font} `, () => {
                                                     setFontFamily(font);
                                                     setSettingsAnchor(null);
                                                     setIsFontEditOpen(false);
