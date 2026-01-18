@@ -1402,6 +1402,21 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
             return false;
         };
 
+        // Check if a touch event is from stylus
+        const isStylusTouch = (e: any): boolean => {
+            const touchesToCheck = e.touches && e.touches.length > 0 ? e.touches : e.changedTouches;
+            if (touchesToCheck && touchesToCheck.length > 0) {
+                const t = touchesToCheck[0];
+                // Check touchType (iOS/some Android)
+                if ((t as any).touchType === 'stylus') return true;
+
+                // Check force (S-Pen has variable force, fingers usually 0 or 1)
+                const force = t.force || 0;
+                if (force > 0 && force !== 1) return true;
+            }
+            return false;
+        };
+
         const filterPointerDown = (e: any) => {
             if (!palmRejectionRef.current) return;
 
@@ -1464,13 +1479,32 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
             }
         };
 
+        // Touch event filter for devices that fire touch events before/instead of pointer events
+        const filterTouch = (e: any) => {
+            if (!palmRejectionRef.current) return;
+
+            // Allow if stylus touch
+            if (isStylusTouch(e)) return;
+
+            // Block finger touch
+            if (e.cancelable) {
+                e.preventDefault();
+            }
+            e.stopImmediatePropagation();
+            e.stopPropagation();
+        };
+
         const upperCanvas = (canvas as any).upperCanvasEl;
         if (upperCanvas) {
             const opts = { capture: true, passive: false };
+            // Pointer events (primary for modern browsers)
             upperCanvas.addEventListener('pointerdown', filterPointerDown, opts);
             upperCanvas.addEventListener('pointermove', filterPointerMove, opts);
             upperCanvas.addEventListener('pointerup', filterPointerUp, opts);
             upperCanvas.addEventListener('pointercancel', filterPointerUp, opts);
+            // Touch events (fallback for some Android devices)
+            upperCanvas.addEventListener('touchstart', filterTouch, opts);
+            upperCanvas.addEventListener('touchmove', filterTouch, opts);
         }
 
         // Save initial state to history
@@ -1552,6 +1586,8 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                 upperCanvas.removeEventListener('pointermove', filterPointerMove, true);
                 upperCanvas.removeEventListener('pointerup', filterPointerUp, true);
                 upperCanvas.removeEventListener('pointercancel', filterPointerUp, true);
+                upperCanvas.removeEventListener('touchstart', filterTouch, true);
+                upperCanvas.removeEventListener('touchmove', filterTouch, true);
             }
             resizeObserver.disconnect();
             canvas.off('object:added', saveHistoryDebounced);
