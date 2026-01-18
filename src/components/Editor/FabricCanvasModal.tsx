@@ -245,7 +245,6 @@ const CanvasWrapper = styled.div<{ $bgColor?: string }>`
   /* Smooth scroll and momentum for mobile */
   -webkit-overflow-scrolling: touch;
   scroll-behavior: auto; /* Keeping jump/direct scroll fast */
-  scrollbar-width: thin;
   
   /* GPU Hint */
   will-change: transform, scroll-position;
