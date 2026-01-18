@@ -1098,6 +1098,8 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
     const [isPenEditOpen, setIsPenEditOpen] = useState(false);
     const [isConfigOpen, setIsConfigOpen] = useState(false);
     const [isHelpOpen, setIsHelpOpen] = useState(false);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
     const lastInteractionTimeRef = useRef(0);
 
 
@@ -2627,6 +2629,10 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
 
         canvas.setHeight(newHeight);
 
+        // Update total pages count
+        const viewportHeight = viewportHeightRef.current || 400;
+        setTotalPages(Math.ceil(newHeight / viewportHeight));
+
         // Re-apply background
         setBackgroundColor(backgroundColor);
         canvas.setBackgroundColor(backgroundColor, () => { });
@@ -2689,6 +2695,30 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
             canvas.off('object:modified', onObjectModified);
         };
     }, [handleExtendHeight]);
+
+    // Track current page based on scroll position
+    useEffect(() => {
+        const container = containerRef.current;
+        if (!container) return;
+
+        const handleScroll = () => {
+            const scrollTop = container.scrollTop;
+            const viewportHeight = viewportHeightRef.current || container.clientHeight;
+            const newCurrentPage = Math.floor(scrollTop / viewportHeight) + 1;
+            setCurrentPage(newCurrentPage);
+        };
+
+        // Initialize total pages based on canvas height
+        const canvas = fabricCanvasRef.current;
+        if (canvas) {
+            const viewportHeight = viewportHeightRef.current || container.clientHeight;
+            const canvasHeight = canvas.getHeight();
+            setTotalPages(Math.max(1, Math.ceil(canvasHeight / viewportHeight)));
+        }
+
+        container.addEventListener('scroll', handleScroll, { passive: true });
+        return () => container.removeEventListener('scroll', handleScroll);
+    }, []);
 
     const handleCancelWrapped = React.useCallback(() => {
         setIsExitConfirmOpen(true);
@@ -3228,6 +3258,19 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                         <ToolGroup style={{ flex: 1 }}>
                             {toolbarItems.map((item) => renderToolbarItem(item))}
                             <div style={{ flex: 1 }} /> {/* Spacer to push buttons to right */}
+                            <div style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                fontSize: '11px',
+                                color: '#666',
+                                padding: '2px 6px',
+                                background: '#f5f5f5',
+                                borderRadius: '4px',
+                                marginRight: '4px',
+                                fontFamily: 'monospace'
+                            }}>
+                                {currentPage}/{totalPages}
+                            </div>
                             <ToolButton
                                 onClick={() => setIsHelpOpen(true)}
                                 style={{ border: 'none', background: 'transparent' }}
