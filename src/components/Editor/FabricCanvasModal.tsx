@@ -245,8 +245,8 @@ const CanvasWrapper = styled.div<{ $bgColor?: string }>`
   -webkit-overflow-scrolling: touch;
   scroll-behavior: auto; /* Keeping jump/direct scroll fast */
   
-  /* GPU Hint - reduced to what's necessary */
-  will-change: transform;
+  /* Remove unstable will-change to fix scrollbar flickering */
+  scrollbar-color: #888 transparent; /* Explicit scrollbar color for stability */
   
   /* Fabric container - center it horizontally */
   .canvas-container {
@@ -255,18 +255,26 @@ const CanvasWrapper = styled.div<{ $bgColor?: string }>`
 
   /* Default: larger screens */
   &::-webkit-scrollbar {
-    width: 32px;
+    width: 14px; /* Slightly narrower than before for better look but still easy to grab */
   }
   &::-webkit-scrollbar-thumb {
-    border-radius: 16px;
+    background: #ccc;
+    border-radius: 7px;
+    border: 3px solid transparent;
+    background-clip: content-box;
+  }
+  &::-webkit-scrollbar-thumb:hover {
+    background: #aaa;
+    background-clip: content-box;
   }
 
   @media (max-width: 1280px) {
     &::-webkit-scrollbar {
-      width: 16px;
+      width: 10px;
     }
     &::-webkit-scrollbar-thumb {
-      border-radius: 8px;
+      border-radius: 5px;
+      border: 2px solid transparent;
     }
   }
 `;
@@ -1489,16 +1497,16 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                 const newWidth = containerRef.current.clientWidth;
                 const newHeight = containerRef.current.clientHeight;
 
-                // Update if either dimension changed to ensure background fills container
+                // Update if dimension changed significantly to avoid sub-pixel jitter
                 let changed = false;
-                if (canvas.getWidth() !== newWidth) {
+                if (Math.abs(canvas.getWidth() - newWidth) > 1) {
                     canvas.setWidth(newWidth);
                     changed = true;
                 }
 
                 // If container grew taller than canvas, match height.
                 // But never shrink height to avoid hiding drawn content.
-                if (canvas.getHeight() < newHeight) {
+                if (newHeight - canvas.getHeight() > 1) {
                     canvas.setHeight(newHeight);
                     changed = true;
                 }
@@ -3335,7 +3343,9 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                                 borderRadius: '4px',
                                 marginRight: '4px',
                                 fontFamily: 'monospace',
-                                cursor: 'pointer'
+                                cursor: 'pointer',
+                                minWidth: '45px', // Fixed width to prevent toolbar layout shift
+                                justifyContent: 'center'
                             }}
                                 onClick={() => {
                                     if (!isPageEditing) {
