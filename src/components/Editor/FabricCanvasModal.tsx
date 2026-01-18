@@ -788,14 +788,14 @@ const ToolbarConfigurator: React.FC<ToolbarConfiguratorProps> = ({
 
     return (
         <ModalOverlay style={{ zIndex: 11000, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)' }}>
-            <ModalContainer style={{ width: '90vw', height: 'auto', maxWidth: '600px', maxHeight: '90vh', overflow: 'hidden', borderRadius: '16px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04)' }}>
-                <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', background: '#ffffff' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+            <ModalContainer style={{ width: '90vw', maxWidth: '600px', maxHeight: '90vh', height: '90vh', overflow: 'hidden', borderRadius: '16px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04)' }}>
+                <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', height: '100%', background: '#ffffff' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexShrink: 0 }}>
                         <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 600, color: '#111827' }}>{t.drawing?.customize_title || 'Settings'}</h3>
                         <CompactModalButton onClick={onClose} style={{ borderRadius: '8px', padding: '6px 12px' }}>{t.drawing?.close || 'Close'}</CompactModalButton>
                     </div>
 
-                    <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '24px', paddingRight: '4px' }}>
+                    <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '32px', paddingRight: '8px' }}>
                         {/* Scrollbar Side Selection */}
                         <section>
                             <h4 style={{ margin: '0 0 12px 0', fontSize: '0.875rem', fontWeight: 600, color: '#4b5563', textTransform: 'uppercase', letterSpacing: '0.025em' }}>
