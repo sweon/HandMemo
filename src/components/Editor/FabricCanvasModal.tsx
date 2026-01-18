@@ -1247,10 +1247,20 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
     const activeShapeRef = useRef<fabric.Object | null>(null);
     const arrowHeadPreviewRef = useRef<fabric.Polyline | null>(null);
 
-    // History for undo/redo
-    const historyRef = useRef<string[]>([]);
+    // History for undo/redo - Action-based for performance
+    // Each action stores: { type: 'add'|'remove'|'modify', objectJson, prevJson?, id }
+    type HistoryAction = {
+        type: 'add' | 'remove' | 'modify' | 'snapshot';
+        objectJson?: string;
+        prevJson?: string;
+        objectId?: string;
+        snapshot?: string; // Full snapshot for initial state or complex operations
+    };
+    const historyRef = useRef<HistoryAction[]>([]);
     const historyIndexRef = useRef(-1);
     const isUndoRedoRef = useRef(false); // Prevent saving during undo/redo
+    const objectIdMapRef = useRef<WeakMap<fabric.Object, string>>(new WeakMap()); // Track object IDs
+    const nextObjectIdRef = useRef(1); // Counter for unique IDs
 
     const lastTapMapRef = useRef<{ [key: string]: number }>({});
     const openedTimeRef = useRef<number>(0);
@@ -1289,41 +1299,127 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
         setSettingsAnchor(null);
     };
 
-    const saveHistory = React.useCallback(() => {
-        if (isUndoRedoRef.current) return;
+    // Helper to get or assign object ID
+    const getObjectId = React.useCallback((obj: fabric.Object): string => {
+        let id = objectIdMapRef.current.get(obj);
+        if (!id) {
+            id = `obj_${nextObjectIdRef.current++}`;
+            objectIdMapRef.current.set(obj, id);
+            (obj as any).__historyId = id; // Store on object for serialization recovery
+        }
+        return id;
+    }, []);
+
+    // Save initial snapshot (full JSON) - only called once on init
+    const saveInitialSnapshot = React.useCallback(() => {
         const canvas = fabricCanvasRef.current;
         if (!canvas) return;
 
         const json = JSON.stringify(canvas.toJSON());
+        historyRef.current = [{ type: 'snapshot', snapshot: json }];
+        historyIndexRef.current = 0;
+        setCanUndo(false);
+        setCanRedo(false);
+    }, []);
+
+    // Add action to history (incremental - much faster than full JSON)
+    const addHistoryAction = React.useCallback((action: HistoryAction) => {
+        if (isUndoRedoRef.current) return;
 
         // Remove any future history if we're not at the end
         if (historyIndexRef.current < historyRef.current.length - 1) {
             historyRef.current = historyRef.current.slice(0, historyIndexRef.current + 1);
         }
 
-        historyRef.current.push(json);
+        historyRef.current.push(action);
         historyIndexRef.current = historyRef.current.length - 1;
 
-        // Limit history size
-        if (historyRef.current.length > 50) {
-            historyRef.current.shift();
-            historyIndexRef.current--;
+        // Limit history size - but keep initial snapshot
+        if (historyRef.current.length > 100) {
+            // Compact: Create new snapshot from current state periodically
+            const canvas = fabricCanvasRef.current;
+            if (canvas && historyRef.current.length > 150) {
+                const snapshot = JSON.stringify(canvas.toJSON());
+                historyRef.current = [{ type: 'snapshot', snapshot }];
+                historyIndexRef.current = 0;
+            } else {
+                historyRef.current.shift();
+                historyIndexRef.current--;
+            }
         }
 
         setCanUndo(historyIndexRef.current > 0);
         setCanRedo(false);
     }, []);
 
-    // Debounced history save to avoid performance issues with frequent saves
-    const saveHistoryDebounced = React.useMemo(() => {
-        let timeoutId: NodeJS.Timeout | null = null;
-        return () => {
-            if (timeoutId) clearTimeout(timeoutId);
-            timeoutId = setTimeout(() => {
-                saveHistory();
-            }, 300); // Debounce by 300ms
-        };
-    }, [saveHistory]);
+    // Handle object added - save just the new object
+    const handleObjectAddedForHistory = React.useCallback((e: any) => {
+        if (isUndoRedoRef.current) return;
+        const obj = e.target;
+        if (!obj) return;
+
+        const id = getObjectId(obj);
+        // Serialize just this one object
+        const objectJson = JSON.stringify(obj.toJSON());
+        addHistoryAction({ type: 'add', objectJson, objectId: id });
+    }, [getObjectId, addHistoryAction]);
+
+    // Handle object removed - save the removed object for potential undo
+    const handleObjectRemovedForHistory = React.useCallback((e: any) => {
+        if (isUndoRedoRef.current) return;
+        const obj = e.target;
+        if (!obj) return;
+
+        const id = (obj as any).__historyId || getObjectId(obj);
+        const objectJson = JSON.stringify(obj.toJSON());
+        addHistoryAction({ type: 'remove', objectJson, objectId: id });
+    }, [getObjectId, addHistoryAction]);
+
+    // Debounced modify handler - only saves after user stops modifying
+    const modifyTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const pendingModifyRef = useRef<{ obj: fabric.Object; prevJson: string } | null>(null);
+
+    const handleObjectModifiedForHistory = React.useCallback((e: any) => {
+        if (isUndoRedoRef.current) return;
+        const obj = e.target;
+        if (!obj) return;
+
+        // Clear existing timeout
+        if (modifyTimeoutRef.current) {
+            clearTimeout(modifyTimeoutRef.current);
+        }
+
+        // Store the previous state if not already captured
+        if (!pendingModifyRef.current || pendingModifyRef.current.obj !== obj) {
+            pendingModifyRef.current = { obj, prevJson: JSON.stringify(obj.toJSON()) };
+        }
+
+        // Debounce - save after 500ms of no modifications
+        modifyTimeoutRef.current = setTimeout(() => {
+            if (pendingModifyRef.current) {
+                const { obj: modObj } = pendingModifyRef.current;
+                const id = (modObj as any).__historyId || getObjectId(modObj);
+                const objectJson = JSON.stringify(modObj.toJSON());
+                addHistoryAction({
+                    type: 'modify',
+                    objectJson,
+                    prevJson: pendingModifyRef.current.prevJson,
+                    objectId: id
+                });
+                pendingModifyRef.current = null;
+            }
+        }, 500);
+    }, [getObjectId, addHistoryAction]);
+
+    // Legacy saveHistory for compatibility with extend height etc (uses snapshot)
+    const saveHistory = React.useCallback(() => {
+        if (isUndoRedoRef.current) return;
+        const canvas = fabricCanvasRef.current;
+        if (!canvas) return;
+
+        const json = JSON.stringify(canvas.toJSON());
+        addHistoryAction({ type: 'snapshot', snapshot: json });
+    }, [addHistoryAction]);
 
     useLayoutEffect(() => {
         if (!canvasRef.current || !containerRef.current) return;
@@ -1346,12 +1442,23 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
             // Performance optimizations for mobile/Android
             renderOnAddRemove: false, // Prevent auto-render on every add/remove
             enableRetinaScaling: false, // Disable retina for better performance on mobile
+            skipOffscreen: true, // Skip rendering objects outside viewport
+            stateful: false, // Disable stateful object tracking
+            targetFindTolerance: 4, // Reduce hit detection tolerance for faster find
         });
 
-        // Set initial brush
-        canvas.freeDrawingBrush = new fabric.PencilBrush(canvas);
-        canvas.freeDrawingBrush.width = brushSize;
-        canvas.freeDrawingBrush.color = color;
+        // Additional global performance settings
+        fabric.Object.prototype.objectCaching = true; // Enable caching by default
+        fabric.Object.prototype.statefullCache = false; // Disable stateful cache checks
+        fabric.Object.prototype.noScaleCache = true; // Don't invalidate cache on scale
+        fabric.Object.prototype.needsItsOwnCache = () => false; // Optimize cache layer usage
+
+        // Set initial brush with optimized settings
+        const brush = new fabric.PencilBrush(canvas);
+        brush.width = brushSize;
+        brush.color = color;
+        brush.decimate = 4; // Reduce path points for smoother drawing (higher = fewer points)
+        canvas.freeDrawingBrush = brush;
 
         fabricCanvasRef.current = canvas;
 
@@ -1481,13 +1588,13 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
             upperCanvas.addEventListener('touchmove', filterTouch, opts);
         }
 
-        // Save initial state to history
-        setTimeout(() => saveHistory(), 100);
+        // Save initial state to history as a snapshot
+        setTimeout(() => saveInitialSnapshot(), 100);
 
-        // Listen for changes to save history (debounced for performance)
-        canvas.on('object:added', saveHistoryDebounced);
-        canvas.on('object:modified', saveHistoryDebounced);
-        canvas.on('object:removed', saveHistoryDebounced);
+        // Listen for changes with action-based history (much faster than full JSON)
+        canvas.on('object:added', handleObjectAddedForHistory);
+        canvas.on('object:modified', handleObjectModifiedForHistory);
+        canvas.on('object:removed', handleObjectRemovedForHistory);
 
         canvas.on('path:created', (opt: any) => {
             if (activeToolRef.current === 'eraser_pixel') {
@@ -1564,9 +1671,9 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                 upperCanvas.removeEventListener('touchmove', filterTouch, true);
             }
             resizeObserver.disconnect();
-            canvas.off('object:added', saveHistoryDebounced);
-            canvas.off('object:modified', saveHistoryDebounced);
-            canvas.off('object:removed', saveHistoryDebounced);
+            canvas.off('object:added', handleObjectAddedForHistory);
+            canvas.off('object:modified', handleObjectModifiedForHistory);
+            canvas.off('object:removed', handleObjectRemovedForHistory);
             canvas.off('selection:created', handleSelection);
             canvas.off('selection:updated', handleSelection);
             canvas.dispose();
@@ -2365,39 +2472,150 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
         document.body.removeChild(link);
     };
 
-    const handleUndo = React.useCallback(() => {
+    // Helper to rebuild canvas from history actions up to a given index
+    const rebuildCanvasFromHistory = React.useCallback((targetIndex: number) => {
         const canvas = fabricCanvasRef.current;
         if (!canvas) return;
 
-        if (historyIndexRef.current > 0) {
-            isUndoRedoRef.current = true;
-            historyIndexRef.current--;
-            const json = historyRef.current[historyIndexRef.current];
-            canvas.loadFromJSON(JSON.parse(json), () => {
-                canvas.renderAll();
+        // Find the most recent snapshot before or at targetIndex
+        let snapshotIndex = -1;
+        for (let i = targetIndex; i >= 0; i--) {
+            if (historyRef.current[i].type === 'snapshot') {
+                snapshotIndex = i;
+                break;
+            }
+        }
+
+        if (snapshotIndex === -1) {
+            console.warn('No snapshot found in history');
+            return;
+        }
+
+        const snapshot = historyRef.current[snapshotIndex].snapshot;
+        if (!snapshot) return;
+
+        canvas.loadFromJSON(JSON.parse(snapshot), () => {
+            // Apply incremental actions from snapshot+1 to targetIndex
+            for (let i = snapshotIndex + 1; i <= targetIndex; i++) {
+                const action = historyRef.current[i];
+                if (action.type === 'add' && action.objectJson) {
+                    fabric.util.enlivenObjects([JSON.parse(action.objectJson)], (objects: fabric.Object[]) => {
+                        if (objects[0]) {
+                            const obj = objects[0];
+                            if (action.objectId) {
+                                (obj as any).__historyId = action.objectId;
+                                objectIdMapRef.current.set(obj, action.objectId);
+                            }
+                            canvas.add(obj);
+                        }
+                    }, 'fabric');
+                } else if (action.type === 'remove' && action.objectId) {
+                    const toRemove = canvas.getObjects().find(o => (o as any).__historyId === action.objectId);
+                    if (toRemove) canvas.remove(toRemove);
+                } else if (action.type === 'modify' && action.objectJson && action.objectId) {
+                    // For modify, remove old and add new
+                    const toModify = canvas.getObjects().find(o => (o as any).__historyId === action.objectId);
+                    if (toModify) canvas.remove(toModify);
+                    fabric.util.enlivenObjects([JSON.parse(action.objectJson)], (objects: fabric.Object[]) => {
+                        if (objects[0]) {
+                            const obj = objects[0];
+                            (obj as any).__historyId = action.objectId;
+                            objectIdMapRef.current.set(obj, action.objectId!);
+                            canvas.add(obj);
+                        }
+                    }, 'fabric');
+                }
+            }
+            canvas.requestRenderAll();
+            isUndoRedoRef.current = false;
+            setCanUndo(targetIndex > 0);
+            setCanRedo(targetIndex < historyRef.current.length - 1);
+        });
+    }, []);
+
+    const handleUndo = React.useCallback(() => {
+        const canvas = fabricCanvasRef.current;
+        if (!canvas || historyIndexRef.current <= 0) return;
+
+        isUndoRedoRef.current = true;
+        const currentAction = historyRef.current[historyIndexRef.current];
+
+        // Fast path for simple actions (don't need to rebuild entire canvas)
+        if (currentAction.type === 'add' && currentAction.objectId) {
+            // Undo add = remove the object
+            const toRemove = canvas.getObjects().find(o => (o as any).__historyId === currentAction.objectId);
+            if (toRemove) {
+                canvas.remove(toRemove);
+                canvas.requestRenderAll();
+                historyIndexRef.current--;
                 isUndoRedoRef.current = false;
                 setCanUndo(historyIndexRef.current > 0);
                 setCanRedo(true);
-            });
+                return;
+            }
+        } else if (currentAction.type === 'remove' && currentAction.objectJson && currentAction.objectId) {
+            // Undo remove = re-add the object
+            fabric.util.enlivenObjects([JSON.parse(currentAction.objectJson)], (objects: fabric.Object[]) => {
+                if (objects[0]) {
+                    const obj = objects[0];
+                    (obj as any).__historyId = currentAction.objectId;
+                    objectIdMapRef.current.set(obj, currentAction.objectId!);
+                    canvas.add(obj);
+                    canvas.requestRenderAll();
+                }
+                historyIndexRef.current--;
+                isUndoRedoRef.current = false;
+                setCanUndo(historyIndexRef.current > 0);
+                setCanRedo(true);
+            }, 'fabric');
+            return;
         }
-    }, []);
+
+        // For modify/snapshot or failed fast path, rebuild from history
+        historyIndexRef.current--;
+        rebuildCanvasFromHistory(historyIndexRef.current);
+    }, [rebuildCanvasFromHistory]);
 
     const handleRedo = React.useCallback(() => {
         const canvas = fabricCanvasRef.current;
-        if (!canvas) return;
+        if (!canvas || historyIndexRef.current >= historyRef.current.length - 1) return;
 
-        if (historyIndexRef.current < historyRef.current.length - 1) {
-            isUndoRedoRef.current = true;
-            historyIndexRef.current++;
-            const json = historyRef.current[historyIndexRef.current];
-            canvas.loadFromJSON(JSON.parse(json), () => {
-                canvas.renderAll();
+        isUndoRedoRef.current = true;
+        historyIndexRef.current++;
+        const action = historyRef.current[historyIndexRef.current];
+
+        // Fast path for simple actions
+        if (action.type === 'add' && action.objectJson && action.objectId) {
+            // Redo add = add the object back
+            fabric.util.enlivenObjects([JSON.parse(action.objectJson)], (objects: fabric.Object[]) => {
+                if (objects[0]) {
+                    const obj = objects[0];
+                    (obj as any).__historyId = action.objectId;
+                    objectIdMapRef.current.set(obj, action.objectId!);
+                    canvas.add(obj);
+                    canvas.requestRenderAll();
+                }
                 isUndoRedoRef.current = false;
                 setCanUndo(true);
                 setCanRedo(historyIndexRef.current < historyRef.current.length - 1);
-            });
+            }, 'fabric');
+            return;
+        } else if (action.type === 'remove' && action.objectId) {
+            // Redo remove = remove the object
+            const toRemove = canvas.getObjects().find(o => (o as any).__historyId === action.objectId);
+            if (toRemove) {
+                canvas.remove(toRemove);
+                canvas.requestRenderAll();
+                isUndoRedoRef.current = false;
+                setCanUndo(true);
+                setCanRedo(historyIndexRef.current < historyRef.current.length - 1);
+                return;
+            }
         }
-    }, []);
+
+        // For modify/snapshot or failed fast path, rebuild from history
+        rebuildCanvasFromHistory(historyIndexRef.current);
+    }, [rebuildCanvasFromHistory]);
 
     const handleExtendHeight = () => {
         const canvas = fabricCanvasRef.current;
@@ -2764,6 +2982,10 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
 
                 canvas.freeDrawingBrush.width = (brushType === 'highlighter')
                     ? brushSize * 2 : brushSize;
+                // Optimize path complexity for better performance
+                if (canvas.freeDrawingBrush instanceof fabric.PencilBrush) {
+                    (canvas.freeDrawingBrush as any).decimate = 4;
+                }
                 canvas.defaultCursor = 'crosshair';
                 break;
 
