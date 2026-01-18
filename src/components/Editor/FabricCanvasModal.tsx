@@ -738,12 +738,14 @@ interface ToolbarConfiguratorProps {
     brushSizes: number[];
     scrollbarSide: 'left' | 'right';
     onScrollbarSideChange: (side: 'left' | 'right') => void;
+    maxPages: number;
+    onMaxPagesChange: (val: number) => void;
     onSave: (items: ToolbarItem[]) => void;
     onClose: () => void;
 }
 
-const ToolbarConfigurator: React.FC<ToolbarConfiguratorProps> = ({ currentItems, allItems, onSave, onClose, colors, brushSizes, scrollbarSide, onScrollbarSideChange }) => {
-    const { t } = useLanguage();
+const ToolbarConfigurator: React.FC<ToolbarConfiguratorProps> = ({ currentItems, allItems, onSave, onClose, colors, brushSizes, scrollbarSide, onScrollbarSideChange, maxPages, onMaxPagesChange }) => {
+    const { t, language } = useLanguage();
     const [activeItems, setActiveItems] = useState<ToolbarItem[]>(currentItems);
     const [reservoirItems, setReservoirItems] = useState<ToolbarItem[]>(() => {
         return allItems.filter(item => !currentItems.some(curr => curr.id === item.id));
@@ -829,6 +831,55 @@ const ToolbarConfigurator: React.FC<ToolbarConfiguratorProps> = ({ currentItems,
                                     {t.drawing?.scrollbar_right || 'Right'}
                                 </div>
                             </div>
+                        </section>
+
+                        {/* Max Page Limit */}
+                        <section style={{ borderTop: '1px solid #f3f4f6', paddingTop: '24px' }}>
+                            <h4 style={{ margin: '0 0 4px 0', fontSize: '0.875rem', fontWeight: 600, color: '#4b5563', textTransform: 'uppercase', letterSpacing: '0.025em' }}>
+                                {t.drawing?.max_pages}
+                            </h4>
+                            <p style={{ margin: '0 0 12px 0', fontSize: '0.75rem', color: '#6b7280' }}>
+                                {t.drawing?.max_pages_desc}
+                            </p>
+
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '12px' }}>
+                                <input
+                                    type="number"
+                                    min="1"
+                                    max="100"
+                                    value={maxPages}
+                                    onChange={(e) => onMaxPagesChange(Math.max(1, parseInt(e.target.value) || 1))}
+                                    style={{
+                                        width: '80px',
+                                        padding: '10px',
+                                        borderRadius: '8px',
+                                        border: '1px solid #d1d5db',
+                                        fontSize: '1rem',
+                                        fontWeight: 600,
+                                        color: '#111827',
+                                        textAlign: 'center'
+                                    }}
+                                />
+                                <div style={{ fontSize: '0.875rem', color: '#4b5563', fontWeight: 500 }}>
+                                    {language === 'ko' ? '페이지' : 'Pages'}
+                                </div>
+                            </div>
+
+                            {maxPages > 5 && (
+                                <div style={{
+                                    padding: '12px',
+                                    background: '#fff9db',
+                                    border: '1px solid #ffe066',
+                                    borderRadius: '10px',
+                                    fontSize: '0.75rem',
+                                    lineHeight: '1.5',
+                                    color: '#862e08',
+                                    display: 'flex',
+                                    gap: '8px'
+                                }}>
+                                    <span>{t.drawing?.max_pages_warning}</span>
+                                </div>
+                            )}
                         </section>
 
                         <DragDropContext onDragEnd={onDragEnd}>
@@ -932,8 +983,8 @@ const ToolbarConfigurator: React.FC<ToolbarConfiguratorProps> = ({ currentItems,
                         </DragDropContext>
                     </div>
                 </div>
-            </ModalContainer>
-        </ModalOverlay>
+            </ModalContainer >
+        </ModalOverlay >
     );
 };
 
@@ -1202,6 +1253,15 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
     useEffect(() => {
         localStorage.setItem('fabric_scrollbar_side', scrollbarSide);
     }, [scrollbarSide]);
+
+    const [maxPages, setMaxPages] = useState<number>(() => {
+        const saved = localStorage.getItem('fabric_max_pages');
+        return saved ? parseInt(saved) : 5;
+    });
+
+    useEffect(() => {
+        localStorage.setItem('fabric_max_pages', maxPages.toString());
+    }, [maxPages]);
 
     const lastInteractionTimeRef = useRef(0);
 
@@ -2822,6 +2882,8 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
 
         const checkAndExtend = (obj: any) => {
             if (!obj || !obj.top) return;
+            // Skip if limit reached
+            if (totalPages >= maxPages) return;
             // Skip if undo/redo operation in progress
             if (isUndoRedoRef.current) return;
             // Skip if already extending
@@ -4301,6 +4363,8 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                     brushSizes={availableBrushSizes}
                     scrollbarSide={scrollbarSide}
                     onScrollbarSideChange={setScrollbarSide}
+                    maxPages={maxPages}
+                    onMaxPagesChange={setMaxPages}
                     onSave={(newItems) => {
                         setToolbarItems(newItems);
                         setIsConfigOpen(false);
