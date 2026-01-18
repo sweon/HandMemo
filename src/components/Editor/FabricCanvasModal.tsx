@@ -1775,9 +1775,10 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
             if (!container) return originalRenderObjects(ctx, objects);
 
             const scrollTop = container.scrollTop;
-            const scrollBottom = scrollTop + container.clientHeight;
-            // Buffer to prevent flicking at edges
-            const buffer = 400;
+            const scrollHeight = container.clientHeight;
+            const scrollBottom = scrollTop + scrollHeight;
+            // Buffer to prevent flicking at edges - dynamic based on viewport height
+            const buffer = scrollHeight;
 
             // High-speed manual loop
             const visibleObjects = [];
@@ -3089,10 +3090,11 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                 });
 
                 // 🚀 CRITICAL: Request render on scroll to update the 'Strict Viewport Culling'
-                // Without this, Fabric doesn't know the scroll position changed, 
-                // and since it's in a scrollable container, it won't re-render 
-                // until an internal event (like a touch) occurs.
-                fabricCanvasRef.current?.requestRenderAll();
+                // Without this, Fabric doesn't know the scroll position changed.
+                // Using renderAll() for more immediate feedback during fast scrolling.
+                if (fabricCanvasRef.current && !isClosingRef.current) {
+                    fabricCanvasRef.current.renderAll();
+                }
             });
         };
 
