@@ -179,12 +179,14 @@ const ModalContainer = styled.div`
 
 const Toolbar = styled.div`
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap; /* Prevent wrapping which causes height shifts/jitter */
+  overflow: hidden; /* Ensure items don't overflow vertically */
   gap: 2px;
   padding: 1px 4px;
   background: #f1f3f5;
   border-bottom: 1px solid #e0e0e0;
   align-items: center;
+  height: 40px; /* Fixed height for stability */
 `;
 
 const ToolButton = styled.button<{ $active?: boolean; disabled?: boolean }>`
@@ -236,42 +238,32 @@ const CanvasWrapper = styled.div<{ $bgColor?: string }>`
   width: 100%;
   height: 100%;
   background: ${({ $bgColor }) => $bgColor || '#ffffff'};
-  overflow-y: auto;
+  overflow-y: scroll; /* ALWAYS show scrollbar to prevent width jitter */
   overflow-x: hidden;
   position: relative;
-  display: block; /* Using block for more stable scrolling than flex */
+  display: block; /* block is more stable for scroll-based layouts than flex */
   
   /* Smooth scroll and momentum for mobile */
   -webkit-overflow-scrolling: touch;
-  scroll-behavior: auto; /* Keeping jump/direct scroll fast */
+  scroll-behavior: auto;
   
-  /* Remove unstable will-change to fix scrollbar flickering */
-  scrollbar-color: #888 transparent; /* Explicit scrollbar color for stability */
-  
-  /* Fabric container - center it horizontally */
-  .canvas-container {
-    margin: 0 auto !important;
-  }
-
-  /* Default: larger screens */
+  /* Fixed wide scrollbar for stability and visibility */
   &::-webkit-scrollbar {
-    width: 32px;
+    width: 24px; /* Wide and stable */
+    background-color: #f0f0f0; /* Stable track color */
   }
   &::-webkit-scrollbar-thumb {
-    background: #ccc;
-    border-radius: 16px;
+    background-color: #888888; /* Stable opaque thumb color */
+    border-radius: 12px;
+    border: 4px solid #f0f0f0; /* Padding around thumb */
   }
   &::-webkit-scrollbar-thumb:hover {
-    background: #aaa;
+    background-color: #666666;
   }
-
-  @media (max-width: 1280px) {
-    &::-webkit-scrollbar {
-      width: 16px;
-    }
-    &::-webkit-scrollbar-thumb {
-      border-radius: 8px;
-    }
+  
+  /* Fabric container - center it horizontally without flex jitter */
+  .canvas-container {
+    margin: 0 auto !important;
   }
 `;
 
