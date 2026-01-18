@@ -1149,6 +1149,33 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
         localStorage.setItem('fabric_shape_styles', JSON.stringify(shapeStyles));
     }, [shapeStyles]);
 
+    // Unified background color calculation (calculated during render for sync stability)
+    const currentBackgroundColor = React.useMemo(() => {
+        const intensity = backgroundColorIntensity / 100;
+        if (backgroundColorType === 'gray') {
+            const val = Math.round(255 - (255 - 189) * intensity);
+            return `rgb(${val}, ${val}, ${val})`;
+        } else {
+            const r = Math.round(255 - (255 - 232) * intensity);
+            const g = Math.round(255 - (255 - 228) * intensity);
+            const b = Math.round(255 - (255 - 201) * intensity);
+            return `rgb(${r}, ${g}, ${b})`;
+        }
+    }, [backgroundColorType, backgroundColorIntensity]);
+
+    // CSS-based background pattern for smoother drawing performance (removes canvas overlay overhead)
+    const backgroundStyle = React.useMemo(() => {
+        if (background === 'none') return { backgroundColor: currentBackgroundColor };
+        const pat = createBackgroundPattern(background, currentBackgroundColor, lineOpacity, backgroundSize, true);
+        const source = (pat as fabric.Pattern).source;
+        const dataUrl = source instanceof HTMLCanvasElement ? source.toDataURL() : '';
+        return {
+            backgroundColor: currentBackgroundColor,
+            backgroundImage: dataUrl ? `url(${dataUrl})` : 'none',
+            backgroundRepeat: 'repeat'
+        };
+    }, [background, currentBackgroundColor, lineOpacity, backgroundSize]);
+
     const [brushType, setBrushType] = useState<'pen' | 'highlighter' | 'glow' | 'spray' | 'circle' | 'carbon' | 'hatch'>(() => {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         return (localStorage.getItem('fabric_brush_type') as any) || 'pen';
@@ -2560,19 +2587,22 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
 
         // Temporarily apply background pattern to canvas for clean export
         const oldOverlay = canvas.overlayColor;
+        const oldBg = canvas.backgroundColor;
+        canvas.setBackgroundColor(currentBackgroundColor, () => { });
         if (background !== 'none') {
-            const pat = createBackgroundPattern(background, backgroundColor, lineOpacity, backgroundSize, true);
-            canvas.setOverlayColor(new fabric.Pattern(pat as any), () => { });
+            const pat = createBackgroundPattern(background, currentBackgroundColor, lineOpacity, backgroundSize, true);
+            canvas.setOverlayColor(pat as any, () => { });
         }
 
         // Get the data URL of the canvas
         const dataURL = canvas.toDataURL({
             format: 'png',
             quality: 1,
-            enableRetinaScaling: false // Use highres scaling for PNG
+            enableRetinaScaling: false
         });
 
-        // Restore overlay
+        // Restore
+        canvas.setBackgroundColor(oldBg as any, () => { });
         canvas.setOverlayColor(oldOverlay as any, () => canvas.requestRenderAll());
 
         // Try modern File System Access API first (supported in modern Chrome/Edge/Safari)
@@ -3364,66 +3394,35 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
         }
     }, [color, brushSize, brushType, shapeStyles, fontFamily, saveHistory]);
 
-    // Handle background change
-    // Handle background change
+    // Update canvas-specific background objects (erasers) when settings change
     useEffect(() => {
         const canvas = fabricCanvasRef.current;
         if (!canvas) return;
 
-        // Calculate backgroundColor based on type and intensity
-        let newBgColor = '#ffffff';
-        const intensity = backgroundColorIntensity / 100;
-        if (backgroundColorType === 'gray') {
-            // Gray: 0 intensity is #ffffff, 100 intensity is #adb5bd
-            const r = Math.round(255 - (255 - 173) * intensity);
-            const g = Math.round(255 - (255 - 181) * intensity);
-            const b = Math.round(255 - (255 - 189) * intensity);
-            newBgColor = `rgb(${r}, ${g}, ${b})`;
-        } else {
-            // Beige: 0 intensity is #ffffff, 100 intensity is #e8e4c9
-            const r = Math.round(255 - (255 - 232) * intensity);
-            const g = Math.round(255 - (255 - 228) * intensity);
-            const b = Math.round(255 - (255 - 201) * intensity);
-            newBgColor = `rgb(${r}, ${g}, ${b})`;
-        }
-        setBackgroundColor(newBgColor);
+        // Sync local state for other components
+        setBackgroundColor(currentBackgroundColor);
 
-        // 1. Set solid background color
-        canvas.setBackgroundColor(newBgColor, () => { });
-
-        // 2. Sync existing eraser marks
-        const newEraserPattern = createBackgroundPattern(background, newBgColor, lineOpacity, backgroundSize);
+        // Sync existing eraser marks (they need the pattern to know what to "reveal")
+        const eraserPattern = createBackgroundPattern(background, currentBackgroundColor, lineOpacity, backgroundSize);
 
         canvas.getObjects().forEach(obj => {
             if ((obj as any).isPixelEraser) {
-                obj.set('stroke', newEraserPattern as any);
+                obj.set('stroke', eraserPattern as any);
             }
         });
 
         // Update the active brush if it's currently the pixel eraser
         if (activeToolRef.current === 'eraser_pixel' && canvas.freeDrawingBrush) {
-            (canvas.freeDrawingBrush as any).source = (newEraserPattern as fabric.Pattern).source;
+            (canvas.freeDrawingBrush as any).source = (eraserPattern as fabric.Pattern).source;
         }
 
-        // IMPORTANT: We no longer set overlayColor here because we use CSS background for stability.
-        // We only clear it to ensure it doesn't overlap.
-        canvas.setOverlayColor(null as any, () => {
-            canvas.renderAll();
+        // Keep canvas background transparent so CSS grid shows through
+        canvas.setBackgroundColor(null as any, () => {
+            canvas.setOverlayColor(null as any, () => {
+                canvas.renderAll();
+            });
         });
-    }, [background, backgroundColorType, backgroundColorIntensity, lineOpacity, backgroundSize]);
-
-    // CSS-based background pattern for smoother drawing performance (removes canvas overlay overhead)
-    const backgroundStyle = React.useMemo(() => {
-        if (background === 'none') return { backgroundColor };
-        const pat = createBackgroundPattern(background, backgroundColor, lineOpacity, backgroundSize, true);
-        const source = (pat as fabric.Pattern).source;
-        const dataUrl = source instanceof HTMLCanvasElement ? source.toDataURL() : '';
-        return {
-            backgroundColor,
-            backgroundImage: dataUrl ? `url(${dataUrl})` : 'none',
-            backgroundRepeat: 'repeat'
-        };
-    }, [background, backgroundColor, lineOpacity, backgroundSize]);
+    }, [background, currentBackgroundColor, lineOpacity, backgroundSize]);
 
     return (
         <>
