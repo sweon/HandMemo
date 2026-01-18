@@ -717,16 +717,11 @@ const ConfigItem = styled.div`
   margin: 4px;
   cursor: grab;
   color: #333;
-  background: #ffffff;
-  border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-  border: 1px solid #e5e7eb;
-  transition: all 0.2s;
+  background: transparent;
+  transition: transform 0.2s;
 
   &:hover {
-    border-color: #adb5bd;
-    transform: translateY(-1px);
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transform: scale(1.1);
   }
 `;
 
@@ -927,7 +922,7 @@ const ToolbarConfigurator: React.FC<ToolbarConfiguratorProps> = ({ currentItems,
                                                                 {...provided.dragHandleProps}
                                                                 style={{
                                                                     ...provided.draggableProps.style,
-                                                                    background: '#f9fafb'
+                                                                    background: 'transparent'
                                                                 }}
                                                             >
                                                                 {getToolbarItemIcon(item, colors, brushSizes)}
