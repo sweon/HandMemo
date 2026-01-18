@@ -186,7 +186,7 @@ const Toolbar = styled.div`
   background: #f1f3f5;
   border-bottom: 1px solid #e0e0e0;
   align-items: center;
-  height: 40px; /* Fixed height for stability */
+  height: 32px; /* Restored to compact height */
 `;
 
 const ToolButton = styled.button<{ $active?: boolean; disabled?: boolean }>`
@@ -213,7 +213,7 @@ const ToolButton = styled.button<{ $active?: boolean; disabled?: boolean }>`
 
 const ToolGroup = styled.div`
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 1px;
   align-items: center;
 `;
