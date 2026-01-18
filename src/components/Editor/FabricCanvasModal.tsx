@@ -1384,58 +1384,93 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
             resizeObserver.observe(containerRef.current);
         }
 
-        // Palm Rejection Filter
-        const filterPointer = (e: any) => {
+        // Palm Rejection Filter - Optimized with pointer ID caching
+        const allowedPointers = new Set<number>(); // Cache allowed pointer IDs
+        const blockedPointers = new Set<number>(); // Cache blocked pointer IDs
+
+        const isPenInput = (e: any): boolean => {
+            // Quick check for pen pointer type
+            if (e.pointerType === 'pen') return true;
+
+            // Check tilt (only pens have tilt)
+            if ((e.tiltX || 0) !== 0 || (e.tiltY || 0) !== 0) return true;
+
+            // Check pressure (pens have variable pressure, fingers usually 0, 0.5, or 1)
+            const pressure = e.pressure || 0;
+            if (pressure > 0 && pressure !== 0.5 && pressure !== 1) return true;
+
+            return false;
+        };
+
+        const filterPointerDown = (e: any) => {
             if (!palmRejectionRef.current) return;
 
-            // 1. Check Pointer Properties
-            const isPenPointer = e.pointerType === 'pen';
+            const pointerId = e.pointerId;
+            if (pointerId === undefined) return;
 
-            // 2. Check Touch Properties (Stylus specific)
-            let isStylusTouch = false;
-            // Check both touches (active) and changedTouches (just ended)
-            const touchesToCheck = e.touches && e.touches.length > 0 ? e.touches : e.changedTouches;
-
-            if (touchesToCheck && touchesToCheck.length > 0) {
-                const t = touchesToCheck[0];
-                if ((t as any).touchType === 'stylus') isStylusTouch = true;
-
-                // Heuristic: Check for Pressure/Force or Tilt (Hardware features of S-Pen)
-                // Fingers on Android usually report force=0 or force=1. S-Pen reports variable force.
-                const force = t.force || e.pressure || 0;
-                // Allow if force is valid and "variable" (not just a binary 1 for a hard press)
-                // Also check tilt if available (Touch events rarely have tilt, but Pointer events might)
-                // Note: We check e.pressure for PointerEvents as well.
-                if (force > 0 && force !== 1) isStylusTouch = true;
+            // Determine if this is a pen input
+            if (isPenInput(e)) {
+                allowedPointers.add(pointerId);
+                return; // ALLOW
             }
 
-            // 3. Check specific Pointer properties (Tilt/Pressure)
-            const pressure = e.pressure || 0;
-            const tilt = (e.tiltX || 0) !== 0 || (e.tiltY || 0) !== 0;
-
-            // ALLOW if:
-            // - It says it's a pen/stylus
-            // - It has tilt (Fingers don't tilt)
-            // - It has pressure sensitivity (typical of pens)
-            if (isPenPointer || isStylusTouch || tilt || (pressure > 0 && pressure !== 0.5 && pressure !== 1)) {
-                return; // PASS
-            }
-
-            // Otherwise, BLOCK (Finger/Mouse)
-            if (e.cancelable && e.type !== 'pointerleave' && e.type !== 'pointercancel') {
+            // Block finger/mouse input
+            blockedPointers.add(pointerId);
+            if (e.cancelable) {
                 e.preventDefault();
             }
             e.stopImmediatePropagation();
             e.stopPropagation();
         };
 
+        const filterPointerMove = (e: any) => {
+            if (!palmRejectionRef.current) return;
+
+            const pointerId = e.pointerId;
+            if (pointerId === undefined) return;
+
+            // Fast path: check cache first
+            if (allowedPointers.has(pointerId)) return; // Already allowed
+            if (blockedPointers.has(pointerId)) {
+                // Block this pointer
+                if (e.cancelable) {
+                    e.preventDefault();
+                }
+                e.stopImmediatePropagation();
+                e.stopPropagation();
+                return;
+            }
+
+            // Unknown pointer (shouldn't happen often) - do full check
+            if (isPenInput(e)) {
+                allowedPointers.add(pointerId);
+                return;
+            }
+
+            blockedPointers.add(pointerId);
+            if (e.cancelable) {
+                e.preventDefault();
+            }
+            e.stopImmediatePropagation();
+            e.stopPropagation();
+        };
+
+        const filterPointerUp = (e: any) => {
+            // Clean up cache when pointer is released
+            const pointerId = e.pointerId;
+            if (pointerId !== undefined) {
+                allowedPointers.delete(pointerId);
+                blockedPointers.delete(pointerId);
+            }
+        };
+
         const upperCanvas = (canvas as any).upperCanvasEl;
         if (upperCanvas) {
             const opts = { capture: true, passive: false };
-            upperCanvas.addEventListener('pointerdown', filterPointer, opts);
-            upperCanvas.addEventListener('pointermove', filterPointer, opts);
-            upperCanvas.addEventListener('touchstart', filterPointer, opts);
-            upperCanvas.addEventListener('touchmove', filterPointer, opts);
+            upperCanvas.addEventListener('pointerdown', filterPointerDown, opts);
+            upperCanvas.addEventListener('pointermove', filterPointerMove, opts);
+            upperCanvas.addEventListener('pointerup', filterPointerUp, opts);
+            upperCanvas.addEventListener('pointercancel', filterPointerUp, opts);
         }
 
         // Save initial state to history
@@ -1513,10 +1548,10 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
 
         return () => {
             if (upperCanvas) {
-                upperCanvas.removeEventListener('pointerdown', filterPointer, true);
-                upperCanvas.removeEventListener('pointermove', filterPointer, true);
-                upperCanvas.removeEventListener('touchstart', filterPointer, true);
-                upperCanvas.removeEventListener('touchmove', filterPointer, true);
+                upperCanvas.removeEventListener('pointerdown', filterPointerDown, true);
+                upperCanvas.removeEventListener('pointermove', filterPointerMove, true);
+                upperCanvas.removeEventListener('pointerup', filterPointerUp, true);
+                upperCanvas.removeEventListener('pointercancel', filterPointerUp, true);
             }
             resizeObserver.disconnect();
             canvas.off('object:added', saveHistoryDebounced);
