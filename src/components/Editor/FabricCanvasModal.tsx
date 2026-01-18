@@ -242,6 +242,17 @@ const CanvasWrapper = styled.div<{ $bgColor?: string }>`
   display: flex;
   justify-content: center;
   
+  /* Smooth scroll and momentum for mobile */
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: auto; /* Keeping jump/direct scroll fast */
+  scrollbar-width: thin;
+  
+  /* GPU Hint */
+  will-change: transform, scroll-position;
+  
+  /* Ensure no pull-to-refresh interference on some browsers */
+  overscroll-behavior-y: contain;
+  
   /* Fabric container */
   .canvas-container {
     margin: 0;
@@ -2719,11 +2730,21 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
         const container = containerRef.current;
         if (!container) return;
 
+        let rafId: number;
         const handleScroll = () => {
-            const scrollTop = container.scrollTop;
-            const viewportHeight = viewportHeightRef.current || container.clientHeight;
-            const newCurrentPage = Math.floor(scrollTop / viewportHeight) + 1;
-            setCurrentPage(newCurrentPage);
+            if (rafId) cancelAnimationFrame(rafId);
+
+            rafId = requestAnimationFrame(() => {
+                const scrollTop = container.scrollTop;
+                const height = viewportHeightRef.current || container.clientHeight;
+                const newCurrentPage = Math.floor(scrollTop / height) + 1;
+
+                // Only update if page actually changed to avoid redundant renders
+                setCurrentPage(prev => {
+                    if (prev !== newCurrentPage) return newCurrentPage;
+                    return prev;
+                });
+            });
         };
 
         // Initialize total pages based on canvas height
@@ -2735,7 +2756,10 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
         }
 
         container.addEventListener('scroll', handleScroll, { passive: true });
-        return () => container.removeEventListener('scroll', handleScroll);
+        return () => {
+            container.removeEventListener('scroll', handleScroll);
+            if (rafId) cancelAnimationFrame(rafId);
+        };
     }, []);
 
     const handleCancelWrapped = React.useCallback(() => {
