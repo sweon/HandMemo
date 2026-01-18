@@ -241,14 +241,12 @@ const CanvasWrapper = styled.div<{ $bgColor?: string }>`
   overflow-y: scroll; /* ALWAYS show scrollbar to prevent width jitter */
   overflow-x: hidden;
   position: relative;
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
-  
-  /* Smooth scroll and momentum for mobile */
+  display: block; /* Block layout is more stable for scroll-based layouts */
   -webkit-overflow-scrolling: touch;
-  scroll-behavior: auto;
   
+  /* Force GPU layer to fix scroll jitter in WebKit */
+  transform: translateZ(0);
+
   /* Fixed wide scrollbar for stability and visibility */
   &::-webkit-scrollbar {
     width: 32px; /* Original wide width */
@@ -270,9 +268,9 @@ const CanvasWrapper = styled.div<{ $bgColor?: string }>`
     }
   }
 
-  /* Fabric container */
+  /* Centering via margin is more stable than flex for complex scrolling */
   .canvas-container {
-    margin: 0;
+    margin: 0 auto !important;
   }
 `;
 
@@ -1464,6 +1462,8 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
             stopContextMenu: true,
             fireRightClick: false,
             fireMiddleClick: false,
+            // Allow browser scrolling even when touching the canvas (important for jitter)
+            allowTouchScrolling: true,
         });
 
         // 🚀 GLOBAL PERFORMANCE OVERRIDE: Strict Viewport Culling
@@ -1521,25 +1521,24 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
         // Auto-resize canvas when container resizes (e.g. scrollbar appears)
         const resizeObserver = new ResizeObserver(() => {
             if (containerRef.current) {
-                const newWidth = containerRef.current.clientWidth;
-                const newHeight = containerRef.current.clientHeight;
+                const newWidth = Math.floor(containerRef.current.clientWidth);
+                const newHeight = Math.floor(containerRef.current.clientHeight);
 
-                // Update if dimension changed significantly to avoid sub-pixel jitter
+                // Update if dimension changed significantly to avoid sub-pixel loops
                 let changed = false;
-                if (Math.abs(canvas.getWidth() - newWidth) > 1) {
+                if (Math.abs(canvas.getWidth() - newWidth) > 5) {
                     canvas.setWidth(newWidth);
                     changed = true;
                 }
 
-                // If container grew taller than canvas, match height.
-                // But never shrink height to avoid hiding drawn content.
-                if (newHeight - canvas.getHeight() > 1) {
+                // If container grew significantly taller than canvas, match height.
+                if (newHeight - canvas.getHeight() > 5) {
                     canvas.setHeight(newHeight);
                     changed = true;
                 }
 
                 if (changed) {
-                    canvas.renderAll();
+                    canvas.requestRenderAll();
                 }
             }
         });
