@@ -868,6 +868,7 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const fabricCanvasRef = useRef<fabric.Canvas | null>(null);
+    const viewportHeightRef = useRef<number>(0); // Store initial viewport height for canvas extension
     const { t, language } = useLanguage();
 
     // Guard State
@@ -1334,6 +1335,7 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
 
         const width = containerRef.current.clientWidth;
         const height = containerRef.current.clientHeight;
+        viewportHeightRef.current = height; // Store viewport height for canvas extension
 
         const canvas = new fabric.Canvas(canvasRef.current, {
             width: width,
@@ -2357,7 +2359,8 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
         if (!canvas) return;
 
         const currentHeight = canvas.getHeight();
-        const newHeight = currentHeight + 400; // Add 400px
+        const extendAmount = viewportHeightRef.current || 400; // Use viewport height, fallback to 400px
+        const newHeight = currentHeight + extendAmount;
 
         canvas.setHeight(newHeight);
 
@@ -2398,9 +2401,10 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
             const objScaleY = obj.scaleY || 1;
             const objBottom = obj.top + (objHeight * objScaleY);
 
-            // Extend when object is within 100px of the bottom edge
-            const threshold = 100;
-            if (objBottom > canvasHeight - threshold) {
+            // Extend when remaining space below object is less than half viewport height
+            const viewportHeight = viewportHeightRef.current || 400;
+            const remainingSpace = canvasHeight - objBottom;
+            if (remainingSpace < viewportHeight / 2) {
                 isExtending = true;
                 handleExtendHeight();
                 // Reset flag after a short delay to prevent rapid re-triggering
