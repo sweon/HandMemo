@@ -1384,125 +1384,99 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
             resizeObserver.observe(containerRef.current);
         }
 
-        // Palm Rejection Filter - Optimized with pointer ID caching
-        const allowedPointers = new Set<number>(); // Cache allowed pointer IDs
-        const blockedPointers = new Set<number>(); // Cache blocked pointer IDs
+        // Palm Rejection Filter - Ultra-optimized for older devices
+        // Logic: When ON, block all non-pen input. When OFF, allow everything.
+        // Optimization: Use primitive numbers instead of Set, inline all checks
 
-        const isPenInput = (e: any): boolean => {
-            // Quick check for pen pointer type
-            if (e.pointerType === 'pen') return true;
-
-            // Check tilt (only pens have tilt)
-            if ((e.tiltX || 0) !== 0 || (e.tiltY || 0) !== 0) return true;
-
-            // Check pressure (pens have variable pressure, fingers usually 0, 0.5, or 1)
-            const pressure = e.pressure || 0;
-            if (pressure > 0 && pressure !== 0.5 && pressure !== 1) return true;
-
-            return false;
-        };
-
-        // Check if a touch event is from stylus
-        const isStylusTouch = (e: any): boolean => {
-            const touchesToCheck = e.touches && e.touches.length > 0 ? e.touches : e.changedTouches;
-            if (touchesToCheck && touchesToCheck.length > 0) {
-                const t = touchesToCheck[0];
-                // Check touchType (iOS/some Android)
-                if ((t as any).touchType === 'stylus') return true;
-
-                // Check force (S-Pen has variable force, fingers usually 0 or 1)
-                const force = t.force || 0;
-                if (force > 0 && force !== 1) return true;
-            }
-            return false;
-        };
+        // Track active pointers with simple numbers (faster than Set)
+        // Using -1 as "no pointer" since pointer IDs are always >= 0
+        let penPointerId = -1;     // Currently active pen pointer
+        let blockedPointerId = -1; // Last blocked pointer for fast path
 
         const filterPointerDown = (e: any) => {
             if (!palmRejectionRef.current) return;
 
-            const pointerId = e.pointerId;
-            if (pointerId === undefined) return;
+            const id = e.pointerId;
+            if (id === undefined) return;
 
-            // Determine if this is a pen input
-            if (isPenInput(e)) {
-                allowedPointers.add(pointerId);
-                return; // ALLOW
+            // Inline pen detection - ordered by likelihood/speed
+            // 1. pointerType check (fastest, most reliable)
+            // 2. tilt check (S-Pen specific)
+            // 3. pressure check (fallback)
+            if (e.pointerType === 'pen' ||
+                e.tiltX || e.tiltY ||
+                (e.pressure > 0 && e.pressure !== 0.5 && e.pressure !== 1)) {
+                penPointerId = id;
+                return; // ALLOW pen
             }
 
-            // Block finger/mouse input
-            blockedPointers.add(pointerId);
-            if (e.cancelable) {
-                e.preventDefault();
-            }
-            e.stopImmediatePropagation();
+            // Block non-pen input
+            blockedPointerId = id;
+            if (e.cancelable) e.preventDefault();
             e.stopPropagation();
         };
 
         const filterPointerMove = (e: any) => {
             if (!palmRejectionRef.current) return;
 
-            const pointerId = e.pointerId;
-            if (pointerId === undefined) return;
+            const id = e.pointerId;
 
-            // Fast path: check cache first
-            if (allowedPointers.has(pointerId)) return; // Already allowed
-            if (blockedPointers.has(pointerId)) {
-                // Block this pointer
-                if (e.cancelable) {
-                    e.preventDefault();
-                }
-                e.stopImmediatePropagation();
+            // Fast path: known pen pointer (single number comparison)
+            if (id === penPointerId) return;
+
+            // Fast path: known blocked pointer
+            if (id === blockedPointerId) {
+                if (e.cancelable) e.preventDefault();
                 e.stopPropagation();
                 return;
             }
 
-            // Unknown pointer (shouldn't happen often) - do full check
-            if (isPenInput(e)) {
-                allowedPointers.add(pointerId);
+            // Unknown pointer (rare) - inline pen check
+            if (e.pointerType === 'pen' ||
+                e.tiltX || e.tiltY ||
+                (e.pressure > 0 && e.pressure !== 0.5 && e.pressure !== 1)) {
+                penPointerId = id;
                 return;
             }
 
-            blockedPointers.add(pointerId);
-            if (e.cancelable) {
-                e.preventDefault();
-            }
-            e.stopImmediatePropagation();
+            // Block it
+            blockedPointerId = id;
+            if (e.cancelable) e.preventDefault();
             e.stopPropagation();
         };
 
         const filterPointerUp = (e: any) => {
-            // Clean up cache when pointer is released
-            const pointerId = e.pointerId;
-            if (pointerId !== undefined) {
-                allowedPointers.delete(pointerId);
-                blockedPointers.delete(pointerId);
-            }
+            const id = e.pointerId;
+            if (id === penPointerId) penPointerId = -1;
+            if (id === blockedPointerId) blockedPointerId = -1;
         };
 
-        // Touch event filter for devices that fire touch events before/instead of pointer events
+        // Touch event filter - inline stylus check for speed
         const filterTouch = (e: any) => {
             if (!palmRejectionRef.current) return;
 
-            // Allow if stylus touch
-            if (isStylusTouch(e)) return;
+            // Inline stylus touch check
+            const t = e.touches?.[0] || e.changedTouches?.[0];
+            if (t) {
+                // touchType check (iOS/some Android)
+                if ((t as any).touchType === 'stylus') return;
+                // force check (S-Pen)
+                const f = t.force;
+                if (f > 0 && f !== 1) return;
+            }
 
             // Block finger touch
-            if (e.cancelable) {
-                e.preventDefault();
-            }
-            e.stopImmediatePropagation();
+            if (e.cancelable) e.preventDefault();
             e.stopPropagation();
         };
 
         const upperCanvas = (canvas as any).upperCanvasEl;
         if (upperCanvas) {
             const opts = { capture: true, passive: false };
-            // Pointer events (primary for modern browsers)
             upperCanvas.addEventListener('pointerdown', filterPointerDown, opts);
             upperCanvas.addEventListener('pointermove', filterPointerMove, opts);
             upperCanvas.addEventListener('pointerup', filterPointerUp, opts);
             upperCanvas.addEventListener('pointercancel', filterPointerUp, opts);
-            // Touch events (fallback for some Android devices)
             upperCanvas.addEventListener('touchstart', filterTouch, opts);
             upperCanvas.addEventListener('touchmove', filterTouch, opts);
         }
