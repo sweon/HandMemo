@@ -1100,6 +1100,8 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
     const [isHelpOpen, setIsHelpOpen] = useState(false);
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
+    const [isPageEditing, setIsPageEditing] = useState(false);
+    const [pageInput, setPageInput] = useState('');
     const lastInteractionTimeRef = useRef(0);
 
 
@@ -2740,6 +2742,21 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
         onSave(json);
     };
 
+    const handlePageJump = () => {
+        const pageNum = parseInt(pageInput);
+        if (!isNaN(pageNum) && pageNum >= 1 && pageNum <= totalPages) {
+            const container = containerRef.current;
+            if (container) {
+                const viewportHeight = viewportHeightRef.current || container.clientHeight;
+                container.scrollTo({
+                    top: (pageNum - 1) * viewportHeight,
+                    behavior: 'smooth'
+                });
+            }
+        }
+        setIsPageEditing(false);
+    };
+
     // ... (omitted intermediate lines if tool allows or do separate calls, but seeing replace_file_content limitation)
     // Actually I need to replace separate chunks.
 
@@ -3267,9 +3284,44 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                                 background: '#f5f5f5',
                                 borderRadius: '4px',
                                 marginRight: '4px',
-                                fontFamily: 'monospace'
-                            }}>
-                                {currentPage}/{totalPages}
+                                fontFamily: 'monospace',
+                                cursor: 'pointer'
+                            }}
+                                onClick={() => {
+                                    if (!isPageEditing) {
+                                        setPageInput(currentPage.toString());
+                                        setIsPageEditing(true);
+                                    }
+                                }}
+                            >
+                                {isPageEditing ? (
+                                    <input
+                                        type="number"
+                                        value={pageInput}
+                                        onChange={(e) => setPageInput(e.target.value)}
+                                        onBlur={handlePageJump}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter') handlePageJump();
+                                            if (e.key === 'Escape') setIsPageEditing(false);
+                                        }}
+                                        autoFocus
+                                        style={{
+                                            width: '30px',
+                                            border: 'none',
+                                            background: 'white',
+                                            fontSize: '11px',
+                                            padding: '0 2px',
+                                            textAlign: 'center',
+                                            outline: 'none',
+                                            borderRadius: '2px'
+                                        }}
+                                        min={1}
+                                        max={totalPages}
+                                    />
+                                ) : (
+                                    currentPage
+                                )}
+                                /{totalPages}
                             </div>
                             <ToolButton
                                 onClick={() => setIsHelpOpen(true)}
