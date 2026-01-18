@@ -1164,20 +1164,10 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
         }
     }, [backgroundColorType, backgroundColorIntensity]);
 
-    // CSS-based background pattern for smoother drawing performance (removes canvas overlay overhead)
+    // CSS-based background pattern styling (calculated during render)
     const backgroundStyle = React.useMemo(() => {
-        if (background === 'none') return { backgroundColor: currentBackgroundColor };
-        const pat = createBackgroundPattern(background, currentBackgroundColor, lineOpacity, backgroundSize, true);
-        const source = (pat as fabric.Pattern).source;
-        const dataUrl = source instanceof HTMLCanvasElement ? source.toDataURL() : '';
-        return {
-            backgroundColor: currentBackgroundColor,
-            backgroundImage: dataUrl ? `url(${dataUrl})` : 'none',
-            backgroundRepeat: 'repeat',
-            backgroundPosition: '0 0',
-            backgroundAttachment: 'local'
-        };
-    }, [background, currentBackgroundColor, lineOpacity, backgroundSize]);
+        return { backgroundColor: currentBackgroundColor };
+    }, [currentBackgroundColor]);
 
     const [brushType, setBrushType] = useState<'pen' | 'highlighter' | 'glow' | 'spray' | 'circle' | 'carbon' | 'hatch'>(() => {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -3419,6 +3409,23 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                 canvas.renderAll();
             });
         });
+
+        // 🚀 SYNC BACKGROUND TO CONTAINER (Stable anchoring)
+        // By putting the background on the centered .canvas-container, 
+        // it stays pinned to the canvas (0,0) regardless of parent width rounding/scrollbars.
+        const container = canvas.getElement().parentElement;
+        if (container && container.classList.contains('canvas-container')) {
+            if (background === 'none') {
+                container.style.backgroundImage = 'none';
+            } else {
+                const pat = createBackgroundPattern(background, currentBackgroundColor, lineOpacity, backgroundSize, true);
+                const source = (pat as fabric.Pattern).source;
+                const dataUrl = source instanceof HTMLCanvasElement ? source.toDataURL() : '';
+                container.style.backgroundImage = dataUrl ? `url(${dataUrl})` : 'none';
+                container.style.backgroundRepeat = 'repeat';
+                container.style.backgroundPosition = '0 0';
+            }
+        }
     }, [background, currentBackgroundColor, lineOpacity, backgroundSize]);
 
     return (
