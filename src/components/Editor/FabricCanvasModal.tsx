@@ -255,26 +255,22 @@ const CanvasWrapper = styled.div<{ $bgColor?: string }>`
 
   /* Default: larger screens */
   &::-webkit-scrollbar {
-    width: 14px; /* Slightly narrower than before for better look but still easy to grab */
+    width: 32px;
   }
   &::-webkit-scrollbar-thumb {
     background: #ccc;
-    border-radius: 7px;
-    border: 3px solid transparent;
-    background-clip: content-box;
+    border-radius: 16px;
   }
   &::-webkit-scrollbar-thumb:hover {
     background: #aaa;
-    background-clip: content-box;
   }
 
   @media (max-width: 1280px) {
     &::-webkit-scrollbar {
-      width: 10px;
+      width: 16px;
     }
     &::-webkit-scrollbar-thumb {
-      border-radius: 5px;
-      border: 2px solid transparent;
+      border-radius: 8px;
     }
   }
 `;
