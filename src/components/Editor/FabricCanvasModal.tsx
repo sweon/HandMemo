@@ -1173,7 +1173,9 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
         return {
             backgroundColor: currentBackgroundColor,
             backgroundImage: dataUrl ? `url(${dataUrl})` : 'none',
-            backgroundRepeat: 'repeat'
+            backgroundRepeat: 'repeat',
+            backgroundPosition: '0 0',
+            backgroundAttachment: 'local'
         };
     }, [background, currentBackgroundColor, lineOpacity, backgroundSize]);
 
@@ -2817,8 +2819,8 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
             }
         }
 
-        canvas.renderAll();
-        saveHistory();
+        // Just request render, don't save history for auto-extension to keep it seamless
+        canvas.requestRenderAll();
     };
 
     // Auto-extend canvas height
