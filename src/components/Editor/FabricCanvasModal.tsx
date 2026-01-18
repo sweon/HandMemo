@@ -740,32 +740,43 @@ interface ToolbarConfiguratorProps {
     onScrollbarSideChange: (side: 'left' | 'right') => void;
     maxPages: number;
     onMaxPagesChange: (val: number) => void;
-    onSave: (items: ToolbarItem[]) => void;
+    onSaveItems: (items: ToolbarItem[]) => void;
     onClose: () => void;
 }
 
-const ToolbarConfigurator: React.FC<ToolbarConfiguratorProps> = ({ currentItems, allItems, onSave, onClose, colors, brushSizes, scrollbarSide, onScrollbarSideChange, maxPages, onMaxPagesChange }) => {
+const ToolbarConfigurator: React.FC<ToolbarConfiguratorProps> = ({
+    currentItems, allItems, onSaveItems, onClose, colors, brushSizes,
+    scrollbarSide, onScrollbarSideChange, maxPages, onMaxPagesChange
+}) => {
     const { t, language } = useLanguage();
-    const [activeItems, setActiveItems] = useState<ToolbarItem[]>(currentItems);
-    const [reservoirItems, setReservoirItems] = useState<ToolbarItem[]>(() => {
+
+    // Section 1: Scrollbar
+    const [tempScrollbarSide, setTempScrollbarSide] = useState(scrollbarSide);
+
+    // Section 2: Toolbar
+    const [tempActiveItems, setTempActiveItems] = useState<ToolbarItem[]>(currentItems);
+    const [tempReservoirItems, setTempReservoirItems] = useState<ToolbarItem[]>(() => {
         return allItems.filter(item => !currentItems.some(curr => curr.id === item.id));
     });
+
+    // Section 3: Max Pages
+    const [tempMaxPages, setTempMaxPages] = useState(maxPages);
 
     const onDragEnd = (result: DropResult) => {
         const { source, destination } = result;
         if (!destination) return;
         if (source.droppableId === destination.droppableId) {
-            const list = source.droppableId === 'active' ? activeItems : reservoirItems;
-            const setList = source.droppableId === 'active' ? setActiveItems : setReservoirItems;
+            const list = source.droppableId === 'active' ? tempActiveItems : tempReservoirItems;
+            const setList = source.droppableId === 'active' ? setTempActiveItems : setTempReservoirItems;
             const newList = Array.from(list);
             const [removed] = newList.splice(source.index, 1);
             newList.splice(destination.index, 0, removed);
             setList(newList);
         } else {
-            const sourceList = source.droppableId === 'active' ? activeItems : reservoirItems;
-            const destList = destination.droppableId === 'active' ? activeItems : reservoirItems;
-            const setSource = source.droppableId === 'active' ? setActiveItems : setReservoirItems;
-            const setDest = destination.droppableId === 'active' ? setActiveItems : setReservoirItems;
+            const sourceList = source.droppableId === 'active' ? tempActiveItems : tempReservoirItems;
+            const destList = destination.droppableId === 'active' ? tempActiveItems : tempReservoirItems;
+            const setSource = source.droppableId === 'active' ? setTempActiveItems : setTempReservoirItems;
+            const setDest = destination.droppableId === 'active' ? setTempActiveItems : setTempReservoirItems;
             const newSource = Array.from(sourceList);
             const newDest = Array.from(destList);
             const [removed] = newSource.splice(source.index, 1);
@@ -781,10 +792,7 @@ const ToolbarConfigurator: React.FC<ToolbarConfiguratorProps> = ({ currentItems,
                 <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', background: '#ffffff' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
                         <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 600, color: '#111827' }}>{t.drawing?.customize_title || 'Settings'}</h3>
-                        <div style={{ display: 'flex', gap: '10px' }}>
-                            <CompactModalButton onClick={onClose} style={{ borderRadius: '8px', padding: '6px 12px' }}>{t.drawing?.cancel || 'Cancel'}</CompactModalButton>
-                            <CompactModalButton $variant="primary" onClick={() => onSave(activeItems)} style={{ borderRadius: '8px', padding: '6px 12px' }}>{t.drawing?.save_apply || 'Save'}</CompactModalButton>
-                        </div>
+                        <CompactModalButton onClick={onClose} style={{ borderRadius: '8px', padding: '6px 12px' }}>{t.drawing?.close || 'Close'}</CompactModalButton>
                     </div>
 
                     <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '24px', paddingRight: '4px' }}>
@@ -831,28 +839,164 @@ const ToolbarConfigurator: React.FC<ToolbarConfiguratorProps> = ({ currentItems,
                                     {t.drawing?.scrollbar_right || 'Right'}
                                 </div>
                             </div>
+                            {/* Section Buttons */}
+                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '16px', alignItems: 'center' }}>
+                                <span
+                                    onClick={() => setTempScrollbarSide('left')}
+                                    style={{ marginRight: 'auto', fontSize: '0.7rem', color: '#6b7280', cursor: 'pointer', textDecoration: 'underline' }}
+                                >
+                                    {t.drawing?.reset_each}
+                                </span>
+                                <CompactModalButton onClick={() => setTempScrollbarSide(scrollbarSide)} style={{ fontSize: '0.75rem', padding: '6px 12px' }}>
+                                    {t.drawing?.cancel}
+                                </CompactModalButton>
+                                <CompactModalButton $variant="primary" onClick={() => onScrollbarSideChange(tempScrollbarSide)} style={{ fontSize: '0.75rem', padding: '6px 12px' }}>
+                                    {t.drawing?.save_apply}
+                                </CompactModalButton>
+                            </div>
                         </section>
 
-                        {/* Max Page Limit */}
-                        <section style={{ borderTop: '1px solid #f3f4f6', paddingTop: '24px' }}>
-                            <h4 style={{ margin: '0 0 4px 0', fontSize: '0.875rem', fontWeight: 600, color: '#4b5563', textTransform: 'uppercase', letterSpacing: '0.025em' }}>
+                        {/* Section 2: Toolbar Layout */}
+                        <section style={{ paddingBottom: '24px', borderBottom: '1px solid #f3f4f6' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                                <h4 style={{ margin: 0, fontSize: '0.9rem', fontWeight: 600, color: '#1f2937', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                    {t.drawing?.active_toolbar || 'Toolbar Layout'}
+                                </h4>
+                            </div>
+
+                            <DragDropContext onDragEnd={onDragEnd}>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                                    <div>
+                                        <Droppable droppableId="active" direction="horizontal">
+                                            {(provided, snapshot) => (
+                                                <ConfigArea
+                                                    ref={provided.innerRef}
+                                                    {...provided.droppableProps}
+                                                    $isDraggingOver={snapshot.isDraggingOver}
+                                                    style={{
+                                                        minHeight: '72px',
+                                                        flexWrap: 'nowrap',
+                                                        overflowX: 'auto',
+                                                        alignItems: 'center',
+                                                        padding: '12px',
+                                                        background: snapshot.isDraggingOver ? '#f3f4f6' : '#f9fafb',
+                                                        border: '1px solid #e5e7eb',
+                                                        borderRadius: '12px'
+                                                    }}
+                                                >
+                                                    {tempActiveItems.map((item, index) => (
+                                                        <Draggable key={item.id} draggableId={item.id} index={index}>
+                                                            {(provided) => (
+                                                                <ConfigItem
+                                                                    ref={provided.innerRef}
+                                                                    {...provided.draggableProps}
+                                                                    {...provided.dragHandleProps}
+                                                                >
+                                                                    {getToolbarItemIcon(item, colors, brushSizes)}
+                                                                </ConfigItem>
+                                                            )}
+                                                        </Draggable>
+                                                    ))}
+                                                    {provided.placeholder}
+                                                </ConfigArea>
+                                            )}
+                                        </Droppable>
+                                    </div>
+
+                                    <div>
+                                        <h5 style={{ margin: '0 0 8px 0', fontSize: '0.75rem', fontWeight: 600, color: '#6b7280' }}>
+                                            {t.drawing?.available_tools || 'Available'}
+                                        </h5>
+                                        <Droppable droppableId="reservoir">
+                                            {(provided, snapshot) => (
+                                                <ConfigArea
+                                                    ref={provided.innerRef}
+                                                    {...provided.droppableProps}
+                                                    $isDraggingOver={snapshot.isDraggingOver}
+                                                    style={{
+                                                        minHeight: '80px',
+                                                        alignContent: 'flex-start',
+                                                        background: snapshot.isDraggingOver ? '#f3f4f6' : '#ffffff',
+                                                        border: '1px solid #e5e7eb',
+                                                        borderRadius: '12px',
+                                                        padding: '12px'
+                                                    }}
+                                                >
+                                                    {tempReservoirItems.map((item, index) => (
+                                                        <Draggable key={item.id} draggableId={item.id} index={index}>
+                                                            {(provided) => (
+                                                                <ConfigItem
+                                                                    ref={provided.innerRef}
+                                                                    {...provided.draggableProps}
+                                                                    {...provided.dragHandleProps}
+                                                                    style={{
+                                                                        ...provided.draggableProps.style,
+                                                                        background: 'transparent'
+                                                                    }}
+                                                                >
+                                                                    {getToolbarItemIcon(item, colors, brushSizes)}
+                                                                </ConfigItem>
+                                                            )}
+                                                        </Draggable>
+                                                    ))}
+                                                    {provided.placeholder}
+                                                </ConfigArea>
+                                            )}
+                                        </Droppable>
+                                    </div>
+                                </div>
+                            </DragDropContext>
+
+                            {/* Section Buttons */}
+                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '16px', alignItems: 'center' }}>
+                                <span
+                                    onClick={() => {
+                                        setTempActiveItems(allItems);
+                                        setTempReservoirItems([]);
+                                    }}
+                                    style={{ marginRight: 'auto', fontSize: '0.7rem', color: '#6b7280', cursor: 'pointer', textDecoration: 'underline' }}
+                                >
+                                    {t.drawing?.reset_each}
+                                </span>
+                                <CompactModalButton
+                                    onClick={() => {
+                                        setTempActiveItems(currentItems);
+                                        setTempReservoirItems(allItems.filter(item => !currentItems.some(curr => curr.id === item.id)));
+                                    }}
+                                    style={{ fontSize: '0.75rem', padding: '6px 12px' }}
+                                >
+                                    {t.drawing?.cancel}
+                                </CompactModalButton>
+                                <CompactModalButton
+                                    $variant="primary"
+                                    onClick={() => onSaveItems(tempActiveItems)}
+                                    style={{ fontSize: '0.75rem', padding: '6px 12px' }}
+                                >
+                                    {t.drawing?.save_apply}
+                                </CompactModalButton>
+                            </div>
+                        </section>
+
+                        {/* Section 3: Max Page Limit (Latest / Absolute bottom) */}
+                        <section style={{ paddingBottom: '8px' }}>
+                            <h4 style={{ margin: '0 0 4px 0', fontSize: '0.9rem', fontWeight: 600, color: '#1f2937', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                                 {t.drawing?.max_pages}
                             </h4>
-                            <p style={{ margin: '0 0 12px 0', fontSize: '0.75rem', color: '#6b7280' }}>
+                            <p style={{ margin: '0 0 12px 0', fontSize: '0.75rem', color: '#6b7280', lineHeight: '1.4' }}>
                                 {t.drawing?.max_pages_desc}
                             </p>
 
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '12px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
                                 <input
                                     type="number"
                                     min="1"
                                     max="100"
-                                    value={maxPages}
-                                    onChange={(e) => onMaxPagesChange(Math.max(1, parseInt(e.target.value) || 1))}
+                                    value={tempMaxPages}
+                                    onChange={(e) => setTempMaxPages(Math.max(1, parseInt(e.target.value) || 1))}
                                     style={{
                                         width: '80px',
                                         padding: '10px',
-                                        borderRadius: '8px',
+                                        borderRadius: '10px',
                                         border: '1px solid #d1d5db',
                                         fontSize: '1rem',
                                         fontWeight: 600,
@@ -860,127 +1004,42 @@ const ToolbarConfigurator: React.FC<ToolbarConfiguratorProps> = ({ currentItems,
                                         textAlign: 'center'
                                     }}
                                 />
-                                <div style={{ fontSize: '0.875rem', color: '#4b5563', fontWeight: 500 }}>
+                                <div style={{ fontSize: '0.9rem', color: '#4b5563', fontWeight: 500 }}>
                                     {language === 'ko' ? '페이지' : 'Pages'}
                                 </div>
                             </div>
 
-                            {maxPages > 5 && (
+                            {tempMaxPages > 5 && (
                                 <div style={{
-                                    padding: '12px',
+                                    padding: '10px',
                                     background: '#fff9db',
                                     border: '1px solid #ffe066',
-                                    borderRadius: '10px',
+                                    borderRadius: '8px',
                                     fontSize: '0.75rem',
                                     lineHeight: '1.5',
                                     color: '#862e08',
-                                    display: 'flex',
-                                    gap: '8px'
+                                    marginBottom: '16px'
                                 }}>
-                                    <span>{t.drawing?.max_pages_warning}</span>
+                                    {t.drawing?.max_pages_warning}
                                 </div>
                             )}
-                        </section>
 
-                        <DragDropContext onDragEnd={onDragEnd}>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                                <div>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                                        <h4 style={{ margin: 0, fontSize: '0.875rem', fontWeight: 600, color: '#4b5563', textTransform: 'uppercase', letterSpacing: '0.025em' }}>
-                                            {t.drawing?.active_toolbar || 'Active Toolbar'}
-                                        </h4>
-                                        <button
-                                            onClick={() => {
-                                                setActiveItems(allItems);
-                                                setReservoirItems([]);
-                                            }}
-                                            style={{ background: 'none', border: 'none', color: '#6366f1', fontSize: '0.8rem', cursor: 'pointer', fontWeight: 500 }}
-                                        >
-                                            {t.drawing?.reset_defaults || 'Reset'}
-                                        </button>
-                                    </div>
-                                    <Droppable droppableId="active" direction="horizontal">
-                                        {(provided, snapshot) => (
-                                            <ConfigArea
-                                                ref={provided.innerRef}
-                                                {...provided.droppableProps}
-                                                $isDraggingOver={snapshot.isDraggingOver}
-                                                style={{
-                                                    minHeight: '72px',
-                                                    flexWrap: 'nowrap',
-                                                    overflowX: 'auto',
-                                                    alignItems: 'center',
-                                                    padding: '12px',
-                                                    background: snapshot.isDraggingOver ? '#f3f4f6' : '#f9fafb',
-                                                    border: '1px solid #e5e7eb',
-                                                    borderRadius: '12px'
-                                                }}
-                                            >
-                                                {activeItems.map((item, index) => (
-                                                    <Draggable key={item.id} draggableId={item.id} index={index}>
-                                                        {(provided) => (
-                                                            <ConfigItem
-                                                                ref={provided.innerRef}
-                                                                {...provided.draggableProps}
-                                                                {...provided.dragHandleProps}
-                                                                style={{
-                                                                    ...provided.draggableProps.style
-                                                                }}
-                                                            >
-                                                                {getToolbarItemIcon(item, colors, brushSizes)}
-                                                            </ConfigItem>
-                                                        )}
-                                                    </Draggable>
-                                                ))}
-                                                {provided.placeholder}
-                                            </ConfigArea>
-                                        )}
-                                    </Droppable>
-                                </div>
-
-                                <div>
-                                    <h4 style={{ margin: '0 0 8px 0', fontSize: '0.875rem', fontWeight: 600, color: '#4b5563', textTransform: 'uppercase', letterSpacing: '0.025em' }}>
-                                        {t.drawing?.available_tools || 'Available'}
-                                    </h4>
-                                    <Droppable droppableId="reservoir">
-                                        {(provided, snapshot) => (
-                                            <ConfigArea
-                                                ref={provided.innerRef}
-                                                {...provided.droppableProps}
-                                                $isDraggingOver={snapshot.isDraggingOver}
-                                                style={{
-                                                    minHeight: '80px',
-                                                    alignContent: 'flex-start',
-                                                    background: snapshot.isDraggingOver ? '#f3f4f6' : '#ffffff',
-                                                    border: '1px solid #e5e7eb',
-                                                    borderRadius: '12px',
-                                                    padding: '12px'
-                                                }}
-                                            >
-                                                {reservoirItems.map((item, index) => (
-                                                    <Draggable key={item.id} draggableId={item.id} index={index}>
-                                                        {(provided) => (
-                                                            <ConfigItem
-                                                                ref={provided.innerRef}
-                                                                {...provided.draggableProps}
-                                                                {...provided.dragHandleProps}
-                                                                style={{
-                                                                    ...provided.draggableProps.style,
-                                                                    background: 'transparent'
-                                                                }}
-                                                            >
-                                                                {getToolbarItemIcon(item, colors, brushSizes)}
-                                                            </ConfigItem>
-                                                        )}
-                                                    </Draggable>
-                                                ))}
-                                                {provided.placeholder}
-                                            </ConfigArea>
-                                        )}
-                                    </Droppable>
-                                </div>
+                            {/* Section Buttons */}
+                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', alignItems: 'center' }}>
+                                <span
+                                    onClick={() => setTempMaxPages(5)}
+                                    style={{ marginRight: 'auto', fontSize: '0.7rem', color: '#6b7280', cursor: 'pointer', textDecoration: 'underline' }}
+                                >
+                                    {t.drawing?.reset_each}
+                                </span>
+                                <CompactModalButton onClick={() => setTempMaxPages(maxPages)} style={{ fontSize: '0.75rem', padding: '6px 12px' }}>
+                                    {t.drawing?.cancel}
+                                </CompactModalButton>
+                                <CompactModalButton $variant="primary" onClick={() => onMaxPagesChange(tempMaxPages)} style={{ fontSize: '0.75rem', padding: '6px 12px' }}>
+                                    {t.drawing?.save_apply}
+                                </CompactModalButton>
                             </div>
-                        </DragDropContext>
+                        </section>
                     </div>
                 </div>
             </ModalContainer >
@@ -4365,10 +4424,7 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                     onScrollbarSideChange={setScrollbarSide}
                     maxPages={maxPages}
                     onMaxPagesChange={setMaxPages}
-                    onSave={(newItems) => {
-                        setToolbarItems(newItems);
-                        setIsConfigOpen(false);
-                    }}
+                    onSaveItems={setToolbarItems}
                     onClose={() => setIsConfigOpen(false)}
                 />
             )

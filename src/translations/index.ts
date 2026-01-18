@@ -250,9 +250,10 @@ export const translations = {
             sc_redo: "Redo",
             sc_size: "Size 1-5",
             sc_del_sel: "Del Select",
-            max_pages: "Max Page Limit",
-            max_pages_desc: "Limit height extension to prevent performance drop. (Default: 5)",
-            max_pages_warning: "⚠️ Increasing this limit may cause lag or crashes on low-RAM devices. Use at your own risk."
+            max_pages: "Max Vertical Limit",
+            max_pages_desc: "Limit vertical length to prevent performance drop. (Default: 5) You can increase this based on your device RAM. (User is responsible for any issues.)",
+            max_pages_warning: "⚠️ Increasing this limit may cause lag or crashes on low-RAM devices.",
+            reset_each: "Reset to Default"
         },
         android: {
             exit_warning: "Press back again to exit."
@@ -509,9 +510,10 @@ export const translations = {
             sc_redo: "다시실행",
             sc_size: "굵기 1~5",
             sc_del_sel: "선택삭제",
-            max_pages: "최대 페이지 제한",
-            max_pages_desc: "성능 저하를 막기 위해 높이 연장을 제한합니다. (기본: 5)",
-            max_pages_warning: "⚠️ 이 값을 늘리면 저사양 기기에서 렉이나 앱 종료가 발생할 수 있습니다. 발생하는 문제의 책임은 사용자에게 있습니다."
+            max_pages: "최대 세로 길이 제한",
+            max_pages_desc: "성능 저하를 막기 위해 최대 세로 길이를 제한합니다. (기본: 5) 자신의 디바이스의 성능과 램의 양에 따라 최대 세로 길이를 늘일 수 있습니다. (발생하는 문제에 대한 책임은 본인이 가짐.)",
+            max_pages_warning: "⚠️ 이 값을 늘리면 저사양 기기에서 렉이나 앱 종료가 발생할 수 있습니다.",
+            reset_each: "기본값으로 되돌리기"
         },
         android: {
             exit_warning: "뒤로 가기 버튼을\n한 번 더 누르면 종료됩니다."
