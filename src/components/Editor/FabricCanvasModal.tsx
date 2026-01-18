@@ -1471,8 +1471,8 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
         const brush = new fabric.PencilBrush(canvas);
         brush.width = brushSize;
         brush.color = color;
-        // Ultra-performance setting for multi-page canvas
-        brush.decimate = 10;
+        // Moderate decimate for fidelity: 2 is safe for natural writing
+        brush.decimate = 2;
         canvas.freeDrawingBrush = brush;
 
         fabricCanvasRef.current = canvas;
@@ -3047,7 +3047,7 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                     ? brushSize * 2 : brushSize;
                 // Optimize path complexity for better performance
                 if (canvas.freeDrawingBrush instanceof fabric.PencilBrush) {
-                    (canvas.freeDrawingBrush as any).decimate = 10;
+                    (canvas.freeDrawingBrush as any).decimate = 2;
                 }
 
                 // PERFORMANCE BOOST: Disable events on all objects when drawing starts
