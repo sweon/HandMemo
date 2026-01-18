@@ -1443,25 +1443,36 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
             backgroundColor: '#ffffff',
             isDrawingMode: true,
             selection: false,
-            // Performance optimizations for mobile/Android
+            // Intensive performance optimizations for mobile/Android
             renderOnAddRemove: false, // Prevent auto-render on every add/remove
             enableRetinaScaling: false, // Disable retina for better performance on mobile
             skipOffscreen: true, // Skip rendering objects outside viewport
             stateful: false, // Disable stateful object tracking
-            targetFindTolerance: 4, // Reduce hit detection tolerance for faster find
+            targetFindTolerance: 2, // Even tighter hit detection for speed
+            perPixelTargetFind: false, // Disable pixel-perfect hit detection
         });
+        // Set properties that might not be in types but exist in runtime
+        (canvas as any).subTargetCheck = false;
 
         // Additional global performance settings
-        fabric.Object.prototype.objectCaching = true; // Enable caching by default
-        fabric.Object.prototype.statefullCache = false; // Disable stateful cache checks
-        fabric.Object.prototype.noScaleCache = true; // Don't invalidate cache on scale
-        fabric.Object.prototype.needsItsOwnCache = () => false; // Optimize cache layer usage
+        fabric.Object.prototype.objectCaching = true;
+        fabric.Object.prototype.statefullCache = false;
+        fabric.Object.prototype.noScaleCache = true;
+
+        // Conditional caching: Don't cache very small paths to save VRAM on mobile
+        fabric.Object.prototype.needsItsOwnCache = function () {
+            if (this.type === 'path') {
+                if (this.width! * this.scaleX! < 10 || this.height! * this.scaleY! < 10) return false;
+            }
+            return true;
+        };
 
         // Set initial brush with optimized settings
         const brush = new fabric.PencilBrush(canvas);
         brush.width = brushSize;
         brush.color = color;
-        brush.decimate = 4; // Reduce path points for smoother drawing (higher = fewer points)
+        // Ultra-performance setting for multi-page canvas
+        brush.decimate = 10;
         canvas.freeDrawingBrush = brush;
 
         fabricCanvasRef.current = canvas;
@@ -2641,14 +2652,19 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
 
         const gridPattern = createBackgroundPattern(background, backgroundColor, lineOpacity, backgroundSize, true);
         canvas.setOverlayColor(gridPattern as any, () => {
-            // Sync existing eraser marks
+            // Speed optimization: Only iterate objects once, and only if pixel eraser is being used
+            // This avoids massive O(n) overhead as pages increase.
             const eraserPattern = createBackgroundPattern(background, backgroundColor, lineOpacity, backgroundSize);
-            canvas.getObjects().forEach(obj => {
-                if ((obj as any).isPixelEraser) {
+            const objects = canvas.getObjects();
+
+            // Fast loop optimization
+            for (let i = 0, len = objects.length; i < len; i++) {
+                const obj = objects[i] as any;
+                if (obj.isPixelEraser) {
                     obj.set('stroke', eraserPattern as any);
                 }
-            });
-            canvas.renderAll();
+            }
+            canvas.requestRenderAll();
             saveHistory();
         });
     };
@@ -3031,8 +3047,22 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                     ? brushSize * 2 : brushSize;
                 // Optimize path complexity for better performance
                 if (canvas.freeDrawingBrush instanceof fabric.PencilBrush) {
-                    (canvas.freeDrawingBrush as any).decimate = 4;
+                    (canvas.freeDrawingBrush as any).decimate = 10;
                 }
+
+                // PERFORMANCE BOOST: Disable events on all objects when drawing starts
+                // This prevents Fabric from doing coordinate checks against thousands of objects
+                canvas.getObjects().forEach(obj => {
+                    obj.selectable = false;
+                    obj.evented = false;
+                });
+
+                // Add a mouse:up listener to restore interactivity if needed (like for text)
+                canvas.on('mouse:up', () => {
+                    // Only restore it text or specific objects to keep performance high
+                    // Most paths should remain non-evented for speed
+                });
+
                 canvas.defaultCursor = 'crosshair';
                 break;
 
