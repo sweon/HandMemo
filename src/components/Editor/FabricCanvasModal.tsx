@@ -3074,6 +3074,9 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
             if (rafId) cancelAnimationFrame(rafId);
 
             rafId = requestAnimationFrame(() => {
+                const container = containerRef.current;
+                if (!container) return;
+
                 const scrollTop = container.scrollTop;
                 const height = viewportHeightRef.current || container.clientHeight;
                 // Add a small 1px offset to make boundary calculation more stable
@@ -3084,6 +3087,12 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
                     if (prev !== newCurrentPage) return newCurrentPage;
                     return prev;
                 });
+
+                // 🚀 CRITICAL: Request render on scroll to update the 'Strict Viewport Culling'
+                // Without this, Fabric doesn't know the scroll position changed, 
+                // and since it's in a scrollable container, it won't re-render 
+                // until an internal event (like a touch) occurs.
+                fabricCanvasRef.current?.requestRenderAll();
             });
         };
 
