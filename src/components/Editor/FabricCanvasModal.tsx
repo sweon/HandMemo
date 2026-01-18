@@ -796,67 +796,7 @@ const ToolbarConfigurator: React.FC<ToolbarConfiguratorProps> = ({
                     </div>
 
                     <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '32px', paddingRight: '8px' }}>
-                        {/* Scrollbar Side Selection */}
-                        <section>
-                            <h4 style={{ margin: '0 0 12px 0', fontSize: '0.875rem', fontWeight: 600, color: '#4b5563', textTransform: 'uppercase', letterSpacing: '0.025em' }}>
-                                {t.drawing?.scrollbar_side || 'Scrollbar Position'}
-                            </h4>
-                            <div style={{ display: 'flex', gap: '12px' }}>
-                                <div
-                                    onClick={() => onScrollbarSideChange('left')}
-                                    style={{
-                                        flex: 1,
-                                        padding: '12px',
-                                        borderRadius: '10px',
-                                        border: `2px solid ${scrollbarSide === 'left' ? '#111827' : '#e5e7eb'}`,
-                                        background: scrollbarSide === 'left' ? '#f3f4f6' : '#ffffff',
-                                        color: scrollbarSide === 'left' ? '#111827' : '#9ca3af',
-                                        cursor: 'pointer',
-                                        textAlign: 'center',
-                                        fontSize: '0.9rem',
-                                        fontWeight: scrollbarSide === 'left' ? 600 : 500,
-                                        transition: 'all 0.2s'
-                                    }}
-                                >
-                                    {t.drawing?.scrollbar_left || 'Left (Default)'}
-                                </div>
-                                <div
-                                    onClick={() => onScrollbarSideChange('right')}
-                                    style={{
-                                        flex: 1,
-                                        padding: '12px',
-                                        borderRadius: '10px',
-                                        border: `2px solid ${scrollbarSide === 'right' ? '#111827' : '#e5e7eb'}`,
-                                        background: scrollbarSide === 'right' ? '#f3f4f6' : '#ffffff',
-                                        color: scrollbarSide === 'right' ? '#111827' : '#9ca3af',
-                                        cursor: 'pointer',
-                                        textAlign: 'center',
-                                        fontSize: '0.9rem',
-                                        fontWeight: scrollbarSide === 'right' ? 600 : 500,
-                                        transition: 'all 0.2s'
-                                    }}
-                                >
-                                    {t.drawing?.scrollbar_right || 'Right'}
-                                </div>
-                            </div>
-                            {/* Section Buttons */}
-                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '16px', alignItems: 'center' }}>
-                                <span
-                                    onClick={() => setTempScrollbarSide('left')}
-                                    style={{ marginRight: 'auto', fontSize: '0.7rem', color: '#6b7280', cursor: 'pointer', textDecoration: 'underline' }}
-                                >
-                                    {t.drawing?.reset_each}
-                                </span>
-                                <CompactModalButton onClick={() => setTempScrollbarSide(scrollbarSide)} style={{ fontSize: '0.75rem', padding: '6px 12px' }}>
-                                    {t.drawing?.cancel}
-                                </CompactModalButton>
-                                <CompactModalButton $variant="primary" onClick={() => onScrollbarSideChange(tempScrollbarSide)} style={{ fontSize: '0.75rem', padding: '6px 12px' }}>
-                                    {t.drawing?.save_apply}
-                                </CompactModalButton>
-                            </div>
-                        </section>
-
-                        {/* Section 2: Toolbar Layout */}
+                        {/* Section 1: Toolbar Layout */}
                         <section style={{ paddingBottom: '24px', borderBottom: '1px solid #f3f4f6' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                                 <h4 style={{ margin: 0, fontSize: '0.9rem', fontWeight: 600, color: '#1f2937', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
@@ -972,6 +912,66 @@ const ToolbarConfigurator: React.FC<ToolbarConfiguratorProps> = ({
                                     onClick={() => onSaveItems(tempActiveItems)}
                                     style={{ fontSize: '0.75rem', padding: '6px 12px' }}
                                 >
+                                    {t.drawing?.save_apply}
+                                </CompactModalButton>
+                            </div>
+                        </section>
+
+                        {/* Section 2: Scrollbar Side Selection */}
+                        <section style={{ paddingBottom: '24px', borderBottom: '1px solid #f3f4f6' }}>
+                            <h4 style={{ margin: '0 0 12px 0', fontSize: '0.9rem', fontWeight: 600, color: '#1f2937', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                {t.drawing?.scrollbar_side || 'Scrollbar Position'}
+                            </h4>
+                            <div style={{ display: 'flex', gap: '12px' }}>
+                                <div
+                                    onClick={() => setTempScrollbarSide('left')}
+                                    style={{
+                                        flex: 1,
+                                        padding: '12px',
+                                        borderRadius: '10px',
+                                        border: `2px solid ${tempScrollbarSide === 'left' ? '#111827' : '#e5e7eb'}`,
+                                        background: tempScrollbarSide === 'left' ? '#f3f4f6' : '#ffffff',
+                                        color: tempScrollbarSide === 'left' ? '#111827' : '#9ca3af',
+                                        cursor: 'pointer',
+                                        textAlign: 'center',
+                                        fontSize: '0.9rem',
+                                        fontWeight: tempScrollbarSide === 'left' ? 600 : 500,
+                                        transition: 'all 0.2s'
+                                    }}
+                                >
+                                    {t.drawing?.scrollbar_left || 'Left (Default)'}
+                                </div>
+                                <div
+                                    onClick={() => setTempScrollbarSide('right')}
+                                    style={{
+                                        flex: 1,
+                                        padding: '12px',
+                                        borderRadius: '10px',
+                                        border: `2px solid ${tempScrollbarSide === 'right' ? '#111827' : '#e5e7eb'}`,
+                                        background: tempScrollbarSide === 'right' ? '#f3f4f6' : '#ffffff',
+                                        color: tempScrollbarSide === 'right' ? '#111827' : '#9ca3af',
+                                        cursor: 'pointer',
+                                        textAlign: 'center',
+                                        fontSize: '0.9rem',
+                                        fontWeight: tempScrollbarSide === 'right' ? 600 : 500,
+                                        transition: 'all 0.2s'
+                                    }}
+                                >
+                                    {t.drawing?.scrollbar_right || 'Right'}
+                                </div>
+                            </div>
+                            {/* Section Buttons */}
+                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '16px', alignItems: 'center' }}>
+                                <span
+                                    onClick={() => setTempScrollbarSide('left')}
+                                    style={{ marginRight: 'auto', fontSize: '0.7rem', color: '#6b7280', cursor: 'pointer', textDecoration: 'underline' }}
+                                >
+                                    {t.drawing?.reset_each}
+                                </span>
+                                <CompactModalButton onClick={() => setTempScrollbarSide(scrollbarSide)} style={{ fontSize: '0.75rem', padding: '6px 12px' }}>
+                                    {t.drawing?.cancel}
+                                </CompactModalButton>
+                                <CompactModalButton $variant="primary" onClick={() => onScrollbarSideChange(tempScrollbarSide)} style={{ fontSize: '0.75rem', padding: '6px 12px' }}>
                                     {t.drawing?.save_apply}
                                 </CompactModalButton>
                             </div>
