@@ -940,7 +940,10 @@ const ToolbarConfigurator: React.FC<ToolbarConfiguratorProps> = ({
                                 </CompactModalButton>
                                 <CompactModalButton
                                     $variant="primary"
-                                    onClick={() => onSaveItems(tempActiveItems)}
+                                    onClick={() => {
+                                        onSaveItems(tempActiveItems);
+                                        onClose();
+                                    }}
                                     style={{ fontSize: '0.75rem', padding: '6px 12px' }}
                                 >
                                     {t.drawing?.save_apply}
@@ -1002,7 +1005,14 @@ const ToolbarConfigurator: React.FC<ToolbarConfiguratorProps> = ({
                                 <CompactModalButton onClick={() => setTempScrollbarSide(scrollbarSide)} style={{ fontSize: '0.75rem', padding: '6px 12px' }}>
                                     {t.drawing?.cancel}
                                 </CompactModalButton>
-                                <CompactModalButton $variant="primary" onClick={() => onScrollbarSideChange(tempScrollbarSide)} style={{ fontSize: '0.75rem', padding: '6px 12px' }}>
+                                <CompactModalButton
+                                    $variant="primary"
+                                    onClick={() => {
+                                        onScrollbarSideChange(tempScrollbarSide);
+                                        onClose();
+                                    }}
+                                    style={{ fontSize: '0.75rem', padding: '6px 12px' }}
+                                >
                                     {t.drawing?.save_apply}
                                 </CompactModalButton>
                             </div>
@@ -1066,7 +1076,14 @@ const ToolbarConfigurator: React.FC<ToolbarConfiguratorProps> = ({
                                 <CompactModalButton onClick={() => setTempMaxPages(maxPages)} style={{ fontSize: '0.75rem', padding: '6px 12px' }}>
                                     {t.drawing?.cancel}
                                 </CompactModalButton>
-                                <CompactModalButton $variant="primary" onClick={() => onMaxPagesChange(tempMaxPages)} style={{ fontSize: '0.75rem', padding: '6px 12px' }}>
+                                <CompactModalButton
+                                    $variant="primary"
+                                    onClick={() => {
+                                        onMaxPagesChange(tempMaxPages);
+                                        onClose();
+                                    }}
+                                    style={{ fontSize: '0.75rem', padding: '6px 12px' }}
+                                >
                                     {t.drawing?.save_apply}
                                 </CompactModalButton>
                             </div>

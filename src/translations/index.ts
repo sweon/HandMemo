@@ -212,7 +212,6 @@ export const translations = {
             select_color: "Select Color",
             brush_size: "Thickness",
             drag_to_remove: "Drag here to remove",
-            save_apply: "Save & Apply",
             active_toolbar: "Active Toolbar",
             available_tools: "Available Tools",
             save_palette: "Save Palette",
@@ -253,7 +252,8 @@ export const translations = {
             max_pages: "Max Vertical Limit",
             max_pages_desc: "Limit vertical length to prevent performance drop. (Default: 5) You can increase this based on your device RAM. (User is responsible for any issues.)",
             max_pages_warning: "⚠️ Increasing this limit may cause lag or crashes on low-RAM devices.",
-            reset_each: "Reset to Default"
+            reset_each: "Reset to Default",
+            save_apply: "Save & Apply"
         },
         android: {
             exit_warning: "Press back again to exit."
@@ -472,7 +472,6 @@ export const translations = {
             select_color: "색상 선택",
             brush_size: "굵기",
             drag_to_remove: "제거하려면 여기로 드래그",
-            save_apply: "저장 및 적용",
             active_toolbar: "사용 중인 툴바",
             available_tools: "사용 가능한 도구",
             save_palette: "팔레트 저장",
@@ -513,7 +512,8 @@ export const translations = {
             max_pages: "최대 세로 길이 제한",
             max_pages_desc: "성능 저하를 막기 위해 최대 세로 길이를 제한합니다. (기본: 5) 자신의 디바이스의 성능과 램의 양에 따라 최대 세로 길이를 늘일 수 있습니다. (발생하는 문제에 대한 책임은 본인에게 있음.)",
             max_pages_warning: "⚠️ 이 값을 늘리면 기기의 성능에 따라 앱 종료나 데이터 손실이 발생할 수 있습니다.",
-            reset_each: "기본값으로 되돌리기"
+            reset_each: "기본값으로 되돌리기",
+            save_apply: "저장 및 적용"
         },
         android: {
             exit_warning: "뒤로 가기 버튼을\n한 번 더 누르면 종료됩니다."
