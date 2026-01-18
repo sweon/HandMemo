@@ -239,22 +239,18 @@ const CanvasWrapper = styled.div<{ $bgColor?: string }>`
   overflow-y: auto;
   overflow-x: hidden;
   position: relative;
-  display: flex;
-  justify-content: center;
+  display: block; /* Using block for more stable scrolling than flex */
   
   /* Smooth scroll and momentum for mobile */
   -webkit-overflow-scrolling: touch;
   scroll-behavior: auto; /* Keeping jump/direct scroll fast */
   
-  /* GPU Hint */
-  will-change: transform, scroll-position;
+  /* GPU Hint - reduced to what's necessary */
+  will-change: transform;
   
-  /* Ensure no pull-to-refresh interference on some browsers */
-  overscroll-behavior-y: contain;
-  
-  /* Fabric container */
+  /* Fabric container - center it horizontally */
   .canvas-container {
-    margin: 0;
+    margin: 0 auto !important;
   }
 
   /* Default: larger screens */
@@ -2736,7 +2732,8 @@ export const FabricCanvasModal: React.FC<FabricCanvasModalProps> = ({ initialDat
             rafId = requestAnimationFrame(() => {
                 const scrollTop = container.scrollTop;
                 const height = viewportHeightRef.current || container.clientHeight;
-                const newCurrentPage = Math.floor(scrollTop / height) + 1;
+                // Add a small 1px offset to make boundary calculation more stable
+                const newCurrentPage = Math.floor((scrollTop + 1) / height) + 1;
 
                 // Only update if page actually changed to avoid redundant renders
                 setCurrentPage(prev => {
