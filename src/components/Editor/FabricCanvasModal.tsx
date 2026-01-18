@@ -800,12 +800,13 @@ const ToolbarConfigurator: React.FC<ToolbarConfiguratorProps> = ({ currentItems,
                                         flex: 1,
                                         padding: '12px',
                                         borderRadius: '10px',
-                                        border: `2px solid ${scrollbarSide === 'left' ? '#333' : '#e5e7eb'}`,
-                                        background: scrollbarSide === 'left' ? '#f9fafb' : '#ffffff',
+                                        border: `2px solid ${scrollbarSide === 'left' ? '#111827' : '#e5e7eb'}`,
+                                        background: scrollbarSide === 'left' ? '#f3f4f6' : '#ffffff',
+                                        color: scrollbarSide === 'left' ? '#111827' : '#9ca3af',
                                         cursor: 'pointer',
                                         textAlign: 'center',
                                         fontSize: '0.9rem',
-                                        fontWeight: scrollbarSide === 'left' ? 600 : 400,
+                                        fontWeight: scrollbarSide === 'left' ? 600 : 500,
                                         transition: 'all 0.2s'
                                     }}
                                 >
@@ -817,12 +818,13 @@ const ToolbarConfigurator: React.FC<ToolbarConfiguratorProps> = ({ currentItems,
                                         flex: 1,
                                         padding: '12px',
                                         borderRadius: '10px',
-                                        border: `2px solid ${scrollbarSide === 'right' ? '#333' : '#e5e7eb'}`,
-                                        background: scrollbarSide === 'right' ? '#f9fafb' : '#ffffff',
+                                        border: `2px solid ${scrollbarSide === 'right' ? '#111827' : '#e5e7eb'}`,
+                                        background: scrollbarSide === 'right' ? '#f3f4f6' : '#ffffff',
+                                        color: scrollbarSide === 'right' ? '#111827' : '#9ca3af',
                                         cursor: 'pointer',
                                         textAlign: 'center',
                                         fontSize: '0.9rem',
-                                        fontWeight: scrollbarSide === 'right' ? 600 : 400,
+                                        fontWeight: scrollbarSide === 'right' ? 600 : 500,
                                         transition: 'all 0.2s'
                                     }}
                                 >
@@ -874,11 +876,11 @@ const ToolbarConfigurator: React.FC<ToolbarConfiguratorProps> = ({ currentItems,
                                                                 {...provided.dragHandleProps}
                                                                 style={{
                                                                     ...provided.draggableProps.style,
-                                                                    background: '#ffffff',
-                                                                    boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-                                                                    borderRadius: '8px',
-                                                                    width: '40px',
-                                                                    height: '40px'
+                                                                    background: 'transparent',
+                                                                    boxShadow: 'none',
+                                                                    borderRadius: '0',
+                                                                    width: '32px',
+                                                                    height: '32px'
                                                                 }}
                                                             >
                                                                 {getToolbarItemIcon(item, colors, brushSizes)}
@@ -920,11 +922,11 @@ const ToolbarConfigurator: React.FC<ToolbarConfiguratorProps> = ({ currentItems,
                                                                 {...provided.dragHandleProps}
                                                                 style={{
                                                                     ...provided.draggableProps.style,
-                                                                    background: '#f9fafb',
-                                                                    border: '1px solid #f3f4f6',
-                                                                    borderRadius: '8px',
-                                                                    width: '40px',
-                                                                    height: '40px'
+                                                                    background: 'transparent',
+                                                                    border: 'none',
+                                                                    borderRadius: '0',
+                                                                    width: '32px',
+                                                                    height: '32px'
                                                                 }}
                                                             >
                                                                 {getToolbarItemIcon(item, colors, brushSizes)}
