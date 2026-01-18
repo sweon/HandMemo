@@ -791,6 +791,21 @@ const ToolbarConfigurator: React.FC<ToolbarConfiguratorProps> = ({
     // Section 3: Max Pages
     const [tempMaxPages, setTempMaxPages] = useState(maxPages);
 
+    const [isCancelConfirmOpen, setIsCancelConfirmOpen] = useState(false);
+
+    const handleCancelClick = () => {
+        const hasChanges =
+            JSON.stringify(tempActiveItems) !== JSON.stringify(currentItems) ||
+            tempScrollbarSide !== scrollbarSide ||
+            tempMaxPages !== maxPages;
+
+        if (hasChanges) {
+            setIsCancelConfirmOpen(true);
+        } else {
+            onClose();
+        }
+    };
+
     const onDragEnd = (result: DropResult) => {
         const { source, destination } = result;
         if (!destination) return;
@@ -817,13 +832,13 @@ const ToolbarConfigurator: React.FC<ToolbarConfiguratorProps> = ({
 
     return (
         <SettingsOverlay onClick={(e) => {
-            if (e.target === e.currentTarget) onClose();
+            if (e.target === e.currentTarget) handleCancelClick();
         }}>
             <SettingsContainer onClick={(e) => e.stopPropagation()}>
                 <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', height: '100%' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexShrink: 0 }}>
                         <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 600, color: '#111827' }}>{t.drawing?.customize_title || 'Settings'}</h3>
-                        <CompactModalButton onClick={onClose} style={{ borderRadius: '8px', padding: '6px 12px' }}>{t.drawing?.close || 'Close'}</CompactModalButton>
+                        <CompactModalButton onClick={handleCancelClick} style={{ borderRadius: '8px', padding: '6px 12px' }}>{t.drawing?.close || 'Close'}</CompactModalButton>
                     </div>
 
                     <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '32px', paddingRight: '8px' }}>
@@ -930,10 +945,7 @@ const ToolbarConfigurator: React.FC<ToolbarConfiguratorProps> = ({
                                     {t.drawing?.reset_each}
                                 </span>
                                 <CompactModalButton
-                                    onClick={() => {
-                                        setTempActiveItems(currentItems);
-                                        setTempReservoirItems(allItems.filter(item => !currentItems.some(curr => curr.id === item.id)));
-                                    }}
+                                    onClick={handleCancelClick}
                                     style={{ fontSize: '0.75rem', padding: '6px 12px' }}
                                 >
                                     {t.drawing?.cancel}
@@ -1002,7 +1014,7 @@ const ToolbarConfigurator: React.FC<ToolbarConfiguratorProps> = ({
                                 >
                                     {t.drawing?.reset_each}
                                 </span>
-                                <CompactModalButton onClick={() => setTempScrollbarSide(scrollbarSide)} style={{ fontSize: '0.75rem', padding: '6px 12px' }}>
+                                <CompactModalButton onClick={handleCancelClick} style={{ fontSize: '0.75rem', padding: '6px 12px' }}>
                                     {t.drawing?.cancel}
                                 </CompactModalButton>
                                 <CompactModalButton
@@ -1073,7 +1085,7 @@ const ToolbarConfigurator: React.FC<ToolbarConfiguratorProps> = ({
                                 >
                                     {t.drawing?.reset_each}
                                 </span>
-                                <CompactModalButton onClick={() => setTempMaxPages(maxPages)} style={{ fontSize: '0.75rem', padding: '6px 12px' }}>
+                                <CompactModalButton onClick={handleCancelClick} style={{ fontSize: '0.75rem', padding: '6px 12px' }}>
                                     {t.drawing?.cancel}
                                 </CompactModalButton>
                                 <CompactModalButton
@@ -1090,6 +1102,31 @@ const ToolbarConfigurator: React.FC<ToolbarConfiguratorProps> = ({
                         </section>
                     </div>
                 </div>
+
+                {isCancelConfirmOpen && (
+                    <SettingsOverlay style={{ zIndex: 13000, background: 'rgba(0,0,0,0.3)' }}>
+                        <CompactModal onClick={e => e.stopPropagation()} style={{ padding: '20px', minWidth: '300px', maxWidth: '80vw' }}>
+                            <h3 style={{ marginTop: 0, fontSize: '1.1rem', color: '#111827' }}>
+                                {t.drawing.exit_title}
+                            </h3>
+                            <p style={{ color: '#4b5563', lineHeight: '1.5', margin: '10px 0 20px 0', fontSize: '0.9rem' }}>
+                                {t.drawing.cancel_confirm}
+                            </p>
+                            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+                                <CompactModalButton onClick={() => setIsCancelConfirmOpen(false)}>
+                                    {t.drawing.exit_cancel}
+                                </CompactModalButton>
+                                <CompactModalButton
+                                    $variant="primary"
+                                    onClick={onClose}
+                                    style={{ background: '#ef4444', borderColor: '#ef4444' }}
+                                >
+                                    {t.drawing.discard}
+                                </CompactModalButton>
+                            </div>
+                        </CompactModal>
+                    </SettingsOverlay>
+                )}
             </SettingsContainer>
         </SettingsOverlay>
     );
