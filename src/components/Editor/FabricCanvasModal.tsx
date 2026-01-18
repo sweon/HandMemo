@@ -718,6 +718,35 @@ const ConfigItem = styled.div`
   }
 `;
 
+const SettingsOverlay = styled.div`
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 12000;
+`;
+
+const SettingsContainer = styled.div`
+    width: 90vw;
+    max-width: 600px;
+    height: 90vh;
+    max-height: 90vh;
+    background: #ffffff;
+    border-radius: 16px;
+    box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+    pointer-events: auto;
+`;
+
 const ConfigArea = styled.div<{ $isDraggingOver: boolean }>`
 background: ${({ $isDraggingOver }) => $isDraggingOver ? '#f1f3f5' : '#f8f9fa'};
 border: 2px dashed #dee2e6;
@@ -787,9 +816,11 @@ const ToolbarConfigurator: React.FC<ToolbarConfiguratorProps> = ({
     };
 
     return (
-        <ModalOverlay style={{ zIndex: 11000, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)' }}>
-            <ModalContainer style={{ width: '90vw', maxWidth: '600px', maxHeight: '90vh', height: '90vh', overflow: 'hidden', borderRadius: '16px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04)' }}>
-                <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', height: '100%', background: '#ffffff' }}>
+        <SettingsOverlay onClick={(e) => {
+            if (e.target === e.currentTarget) onClose();
+        }}>
+            <SettingsContainer onClick={(e) => e.stopPropagation()}>
+                <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', height: '100%' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexShrink: 0 }}>
                         <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 600, color: '#111827' }}>{t.drawing?.customize_title || 'Settings'}</h3>
                         <CompactModalButton onClick={onClose} style={{ borderRadius: '8px', padding: '6px 12px' }}>{t.drawing?.close || 'Close'}</CompactModalButton>
@@ -1042,8 +1073,8 @@ const ToolbarConfigurator: React.FC<ToolbarConfiguratorProps> = ({
                         </section>
                     </div>
                 </div>
-            </ModalContainer >
-        </ModalOverlay >
+            </SettingsContainer>
+        </SettingsOverlay>
     );
 };
 
